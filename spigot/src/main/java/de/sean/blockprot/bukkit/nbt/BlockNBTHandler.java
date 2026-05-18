@@ -280,7 +280,7 @@ public final class BlockNBTHandler extends FriendSupportingHandler<NBTCompound> 
         // Ops bypass this check, matching vanilla spawn-protection behaviour.
         if (BlockProt.getDefaultConfig().shouldRespectSpawnProtection()
                 && !player.isOp() && !player.hasPermission(Permissions.ADMIN.key())) {
-            int spawnRadius = block.getWorld().getSpawnLocation().getWorld().getServer().getSpawnRadius();
+            int spawnRadius = org.bukkit.Bukkit.getServer().getSpawnRadius();
             if (spawnRadius > 0) {
                 org.bukkit.Location spawn = block.getWorld().getSpawnLocation();
                 double dx = block.getX() - spawn.getBlockX();

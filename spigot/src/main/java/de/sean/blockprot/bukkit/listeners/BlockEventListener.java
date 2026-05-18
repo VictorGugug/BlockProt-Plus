@@ -100,10 +100,10 @@ public class BlockEventListener implements Listener {
         if (BlockProt.getDefaultConfig().isWorldExcluded(event.getBlock().getWorld())) return;
         if (!BlockProt.getDefaultConfig().isLockableShulkerBox(event.getBlock().getType(), event.getBlock().getWorld())) return;
 
-        // Guard: the block state must be a BlockEntityState before we attempt NBT access.
+        // Guard: the block state must point to a live TileEntity before we attempt NBT access.
         // If the block was already removed by another plugin at LOWEST priority the state
-        // may no longer point to a live TileEntity, causing NbtApiException (issue #344).
-        if (!(event.getBlock().getState() instanceof org.bukkit.block.BlockEntityState)) return;
+        // may no longer be valid, causing NbtApiException (issue #344).
+        if (!(event.getBlock().getState() instanceof org.bukkit.block.TileState)) return;
 
         BlockNBTHandler handler;
         try {
@@ -216,7 +216,7 @@ public class BlockEventListener implements Listener {
                             StatHandler.removeContainer(event.getPlayer(), block);
                         }
                     } else {
-                        if (block.getState() instanceof org.bukkit.block.BlockEntityState) {
+                        if (block.getState() instanceof org.bukkit.block.TileState) {
                             handler.setName(BlockUtil.getHumanReadableBlockName(block.getType()));
                             handler.applyToOtherContainer();
                         }
