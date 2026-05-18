@@ -5,12 +5,12 @@
 [![CI](https://img.shields.io/github/actions/workflow/status/VictorGugug/BlockProt-SP26-ZV/ci.yml?branch=main&style=flat-square&label=CI)](https://github.com/VictorGugug/BlockProt-SP26-ZV/actions)
 [![Release](https://img.shields.io/github/v/release/VictorGugug/BlockProt-SP26-ZV?style=flat-square&color=brightgreen&label=Release)](https://github.com/VictorGugug/BlockProt-SP26-ZV/releases)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg?style=flat-square)](LICENSE)
-[![Java](https://img.shields.io/badge/Java-25-orange?style=flat-square)](https://openjdk.org/projects/jdk/25/)
+[![Java](https://img.shields.io/badge/Java-21+-orange?style=flat-square)](https://openjdk.org/projects/jdk/21/)
 [![Paper](https://img.shields.io/badge/Paper-1.21%2B%20%7C%2026.x-white?style=flat-square)](https://papermc.io/)
 
 **Fork created and maintained by [Zar](https://github.com/VictorGugug)**
 
-*Java 25 · Paper 26.x · MySQL index · per-world config · access audit · auto-backup*
+*Java 21+ · Paper 26.x · MySQL index · per-world config · access audit · auto-backup*
 
 </div>
 
