@@ -20,10 +20,10 @@
 > Players lock chests, furnaces, and other blocks through a modern GUI — no commands to memorize.  
 > This fork extends the original NBT core with production-grade features for large or long-running servers.
 
-![Main menu](https://raw.githubusercontent.com/VictorGugug/BlockProt-SP26-ZV/main/images/main_menu.png)
-![Friend settings](https://raw.githubusercontent.com/VictorGugug/BlockProt-SP26-ZV/main/images/friend_settings.png)
-![Player settings](https://raw.githubusercontent.com/VictorGugug/BlockProt-SP26-ZV/main/images/user_settings.png)
-![Redstone settings](https://raw.githubusercontent.com/VictorGugug/BlockProt-SP26-ZV/main/images/redstone_settings.png)
+![Main menu](https://raw.githubusercontent.com/VictorGugug/BlockProt-Plus/main/images/main_menu.png)
+![Friend settings](https://raw.githubusercontent.com/VictorGugug/BlockProt-PlusV/main/images/friend_settings.png)
+![Player settings](https://raw.githubusercontent.com/VictorGugug/BlockProt-Plus/main/images/user_settings.png)
+![Redstone settings](https://raw.githubusercontent.com/VictorGugug/BlockProt-Plus/main/images/redstone_settings.png)
 
 ---
 
