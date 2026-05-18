@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="360" viewBox="0 0 720 360">
+  <rect width="720" height="360" fill="#20232a"/>
+  <rect x="30" y="30" width="660" height="300" rx="20" ry="20" fill="#282c34" stroke="#61dafb" stroke-width="4"/>
+  <text x="50" y="70" fill="#ffffff" font-family="Arial, sans-serif" font-size="28">BlockProt Audit Log</text>
+  <rect x="50" y="100" width="170" height="170" rx="16" ry="16" fill="#31363f" stroke="#61dafb" stroke-width="2"/>
+  <text x="65" y="135" fill="#61dafb" font-family="Arial, sans-serif" font-size="18">Player Heads</text>
+  <text x="65" y="160" fill="#ffffff" font-family="Arial, sans-serif" font-size="14">Grouped by player,</text>
+  <text x="65" y="180" fill="#ffffff" font-family="Arial, sans-serif" font-size="14">click head for history</text>
+  <rect x="250" y="100" width="410" height="170" rx="16" ry="16" fill="#31363f" stroke="#61dafb" stroke-width="2"/>
+  <text x="270" y="135" fill="#61dafb" font-family="Arial, sans-serif" font-size="18">Selected player</text>
+  <text x="270" y="160" fill="#ffffff" font-family="Arial, sans-serif" font-size="14">Full action list with timestamps</text>
+  <text x="270" y="185" fill="#ffffff" font-family="Arial, sans-serif" font-size="14">and location details</text>
+  <line x1="265" y1="205" x2="650" y2="205" stroke="#61dafb" stroke-width="1" stroke-dasharray="8 6"/>
+  <text x="270" y="236" fill="#ffffff" font-family="Arial, sans-serif" font-size="14">§aOK / §cX actions</text>
+  <text x="270" y="260" fill="#ffffff" font-family="Arial, sans-serif" font-size="14">World, x,y,z, and time</text>
+</svg>

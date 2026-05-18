@@ -104,11 +104,13 @@ used as an optional index for fast lookups, auditing, and cross-server global tr
 
 ### 5. SQLite Access Audit Log
 
+![Audit log screenshot](images/audit-log.svg)
+
 - Database: `plugins/BlockProt/blockprot_audit.sqlite`.
 - Records `ACCESS_DENIED` and `ACCESS_GRANTED` events with player UUID, name, location, and timestamp.
 - All writes are asynchronous (`CompletableFuture`).
 - Automatic pruning when the table exceeds 50 000 entries.
-- In-game GUI (`AuditInventory`) shows access history per block, with admin teleport button.
+- In-game GUI (`AuditInventory`) groups events by player, shows player heads, and lets you click a player head to view their full action history.
 
 ### 6. Automatic Backup & Safe Migration
 

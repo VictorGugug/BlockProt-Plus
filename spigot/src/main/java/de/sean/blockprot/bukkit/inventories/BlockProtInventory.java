@@ -46,8 +46,11 @@ import org.bukkit.profile.PlayerProfile;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -453,6 +456,71 @@ public abstract class BlockProtInventory implements InventoryHolder {
 
         stack.setItemMeta(meta);
         inventory.setItem(index, stack);
+    }
+
+    /**
+     * Create a player profile that prefers SkinRestorer skins when available.
+     *
+     * @param uuid The player's UUID.
+     * @param name The player's current name.
+     * @return A player profile, or null if one cannot be created.
+     * @since 1.1.16
+     */
+    @Nullable
+    public static PlayerProfile createPlayerProfile(@NotNull final UUID uuid, @NotNull final String name) {
+        PlayerProfile profile = Bukkit.getServer().createPlayerProfile(uuid, name);
+        PlayerProfile skinRestorerProfile = resolveSkinRestorerProfile(uuid, name);
+        return skinRestorerProfile != null ? skinRestorerProfile : profile;
+    }
+
+    @Nullable
+    private static PlayerProfile resolveSkinRestorerProfile(@NotNull final UUID uuid, @NotNull final String name) {
+        var plugin = Bukkit.getPluginManager().getPlugin("SkinRestorer");
+        if (plugin == null || !plugin.isEnabled()) {
+            return null;
+        }
+
+        try {
+            Class<?> apiClass;
+            try {
+                apiClass = Class.forName("com.github.games647.skinrestorer.api.SkinRestorerAPI");
+            } catch (ClassNotFoundException ignored) {
+                apiClass = Class.forName("skinsrestorer.SkinRestorer");
+            }
+
+            Method getApi = apiClass.getMethod("getApi");
+            Object api = Modifier.isStatic(getApi.getModifiers()) ? getApi.invoke(null) : getApi.invoke(plugin);
+            if (api == null) {
+                return null;
+            }
+
+            for (Method method : api.getClass().getMethods()) {
+                if (!method.getName().equals("getPlayerProfile") || method.getParameterCount() != 1) {
+                    continue;
+                }
+
+                Object result = null;
+                Class<?> paramType = method.getParameterTypes()[0];
+                if (UUID.class.equals(paramType)) {
+                    result = method.invoke(api, uuid);
+                } else if (String.class.equals(paramType)) {
+                    result = method.invoke(api, name);
+                } else if (org.bukkit.OfflinePlayer.class.equals(paramType)) {
+                    result = method.invoke(api, Bukkit.getOfflinePlayer(uuid));
+                }
+
+                if (result instanceof PlayerProfile profileResult) {
+                    return profileResult;
+                }
+                if (result instanceof Optional<?> optionalResult && optionalResult.isPresent()
+                    && optionalResult.get() instanceof PlayerProfile profileResult) {
+                    return profileResult;
+                }
+            }
+        } catch (ReflectiveOperationException ignored) {
+        }
+
+        return null;
     }
 
     /**

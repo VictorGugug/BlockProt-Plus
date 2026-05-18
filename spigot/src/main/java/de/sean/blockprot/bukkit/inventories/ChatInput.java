@@ -85,7 +85,9 @@ public final class ChatInput implements Listener {
 
         String prompt = Translator.get(TranslationKey.MESSAGES__CHAT_INPUT_PROMPT)
             .replace("{cancel}", cancelWord);
-        player.sendMessage(LegacyComponentSerializer.legacySection().deserialize(prompt));
+        var component = LegacyComponentSerializer.legacySection().deserialize(prompt);
+        player.sendMessage(component);
+        player.sendActionBar(component);
     }
 
     public static void open(

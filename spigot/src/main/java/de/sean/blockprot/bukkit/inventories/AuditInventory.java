@@ -14,15 +14,21 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.inventory.Inventory;
+import org.bukkit.NamespacedKey;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.profile.PlayerProfile;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 // GUI that shows the access history for a protected block.
 // Owners see denied attempts. Admins also get a teleport button.
@@ -34,6 +40,9 @@ public final class AuditInventory extends BlockProtInventory {
     private List<AuditEntry> entries = new ArrayList<>();
     private String blockWorld;
     private int blockX, blockY, blockZ;
+    private String selectedPlayerUuid;
+
+    private static final int GROUP_PAGE_SIZE = PAGE_SIZE;
 
     @Override
     int getSize() { return InventoryConstants.sextupletLine; }
@@ -55,6 +64,14 @@ public final class AuditInventory extends BlockProtInventory {
 
         switch (item.getType()) {
             case BLACK_STAINED_GLASS_PANE -> {
+                if (selectedPlayerUuid != null) {
+                    // Back to grouped player view.
+                    selectedPlayerUuid = null;
+                    state.currentPageIndex = 0;
+                    closeAndOpen(player, fill(player));
+                    break;
+                }
+
                 // Return to the block menu.
                 if (state.getBlock() != null) {
                     var handler = getNbtHandlerOrNull(state.getBlock());
@@ -84,6 +101,17 @@ public final class AuditInventory extends BlockProtInventory {
                     if (world != null) {
                         player.closeInventory();
                         player.teleport(new Location(world, blockX + 0.5, blockY + 1, blockZ + 0.5));
+                    }
+                }
+            }
+            case PLAYER_HEAD -> {
+                ItemMeta meta = item.getItemMeta();
+                if (meta != null && selectedPlayerUuid == null) {
+                    NamespacedKey key = new NamespacedKey(BlockProt.getInstance(), "audit_player_uuid");
+                    if (meta.getPersistentDataContainer().has(key, PersistentDataType.STRING)) {
+                        selectedPlayerUuid = meta.getPersistentDataContainer().get(key, PersistentDataType.STRING);
+                        state.currentPageIndex = 0;
+                        closeAndOpen(player, fill(player));
                     }
                 }
             }
@@ -127,32 +155,77 @@ public final class AuditInventory extends BlockProtInventory {
             return inventory;
         }
 
-        int offset = state.currentPageIndex * PAGE_SIZE;
-        int count  = Math.min(PAGE_SIZE, entries.size() - offset);
+        // Group entries by player for the overview page.
+        Map<String, List<AuditEntry>> groupedEntries = new LinkedHashMap<>();
+        for (AuditEntry entry : entries) {
+            groupedEntries.computeIfAbsent(entry.playerUuid(), k -> new ArrayList<>()).add(entry);
+        }
 
+        int offset = state.currentPageIndex * GROUP_PAGE_SIZE;
+        List<AuditEntry> displayEntries;
+        if (selectedPlayerUuid == null) {
+            displayEntries = new ArrayList<>();
+            groupedEntries.values().forEach(group -> displayEntries.add(group.get(0)));
+        } else {
+            displayEntries = groupedEntries.getOrDefault(selectedPlayerUuid, new ArrayList<>());
+        }
+
+        if (displayEntries.isEmpty()) {
+            setItemStack(22, Material.PAPER, Translator.get(TranslationKey.INVENTORIES__AUDIT__NO_ENTRIES));
+            setBackButton();
+            return inventory;
+        }
+
+        int count = Math.min(GROUP_PAGE_SIZE, displayEntries.size() - offset);
         for (int i = 0; i < count; i++) {
-            AuditEntry e = entries.get(offset + i);
-            ItemStack skull = new ItemStack(Material.SKELETON_SKULL, 1);
-            ItemMeta meta = skull.getItemMeta();
-            if (meta != null) {
-                String actionLabel = e.action() == AuditLogger.Action.ACCESS_DENIED ? "§cX" : "§aOK";
-                meta.setDisplayName(actionLabel + " §f" + (e.playerName() != null ? e.playerName() : e.playerUuid()));
+            AuditEntry entry = displayEntries.get(offset + i);
+            PlayerProfile profile = BlockProtInventory.createPlayerProfile(UUID.fromString(entry.playerUuid()),
+                entry.playerName() != null ? entry.playerName() : entry.playerUuid());
+
+            ItemStack skull = new ItemStack(Material.PLAYER_HEAD, 1);
+            var skullMeta = (org.bukkit.inventory.meta.SkullMeta) skull.getItemMeta();
+            if (skullMeta != null) {
+                try {
+                    skullMeta.setOwnerProfile(profile);
+                    NamespacedKey key = new NamespacedKey(BlockProt.getInstance(), "audit_player_uuid");
+                    skullMeta.getPersistentDataContainer().set(key, PersistentDataType.STRING, entry.playerUuid());
+                } catch (Exception ignored) {
+                }
+
+                String displayName;
                 List<String> lore = new ArrayList<>();
-                lore.add("§7" + DATE_FMT.format(new Date(e.timestamp())));
-                lore.add("§8" + e.world() + " " + e.x() + "," + e.y() + "," + e.z());
-                meta.setLore(lore);
-                skull.setItemMeta(meta);
+                if (selectedPlayerUuid == null) {
+                    List<AuditEntry> group = groupedEntries.get(entry.playerUuid());
+                    int total = group == null ? 1 : group.size();
+                    AuditEntry latest = group == null ? entry : group.get(0);
+                    String actionLabel = latest.action() == AuditLogger.Action.ACCESS_DENIED ? "§cX" : "§aOK";
+                    displayName = actionLabel + " §f" + (latest.playerName() != null ? latest.playerName() : latest.playerUuid());
+                    lore.add("§7" + DATE_FMT.format(new Date(latest.timestamp())) + " · " + total + " action(s)");
+                    lore.add("§8" + latest.world() + " " + latest.x() + "," + latest.y() + "," + latest.z());
+                    lore.add("§7Click to view this player's full history.");
+                } else {
+                    String actionLabel = entry.action() == AuditLogger.Action.ACCESS_DENIED ? "§cX" : "§aOK";
+                    displayName = actionLabel + " §f" + (entry.playerName() != null ? entry.playerName() : entry.playerUuid());
+                    lore.add("§7" + DATE_FMT.format(new Date(entry.timestamp())));
+                    lore.add("§8" + entry.world() + " " + entry.x() + "," + entry.y() + "," + entry.z());
+                }
+
+                skullMeta.setDisplayName(displayName);
+                skullMeta.setLore(lore);
+                skull.setItemMeta(skullMeta);
             }
+
             inventory.setItem(i, skull);
         }
 
-        // Controls on the last row.
         setItemStack(45, Material.CYAN_STAINED_GLASS_PANE,  TranslationKey.INVENTORIES__LAST_PAGE);
         setItemStack(46, Material.BLUE_STAINED_GLASS_PANE,  TranslationKey.INVENTORIES__NEXT_PAGE);
-
-        // Teleport button for admins only.
-        if (player.hasPermission(Permissions.ADMIN.key())) {
+        if (selectedPlayerUuid == null && player.hasPermission(Permissions.ADMIN.key())) {
             setItemStack(49, Material.COMPASS, TranslationKey.INVENTORIES__AUDIT__TELEPORT);
+        }
+
+        if (selectedPlayerUuid != null) {
+            setItemStack(52, Material.PAPER, "§aPlayer history");
         }
 
         setBackButton(53);
