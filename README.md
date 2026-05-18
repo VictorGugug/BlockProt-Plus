@@ -2,7 +2,7 @@
 
 # BlockProt — SP26-ZV
 
-[![CI](https://img.shields.io/github/actions/workflow/status/VictorGugug/BlockProt-SP26-ZV/ci.yml?branch=master&style=flat-square&label=CI)](https://github.com/VictorGugug/BlockProt-SP26-ZV/actions)
+[![CI](https://img.shields.io/github/actions/workflow/status/VictorGugug/BlockProt-SP26-ZV/ci.yml?branch=main&style=flat-square&label=CI)](https://github.com/VictorGugug/BlockProt-SP26-ZV/actions)
 [![Release](https://img.shields.io/github/v/release/VictorGugug/BlockProt-SP26-ZV?style=flat-square&color=brightgreen&label=Release)](https://github.com/VictorGugug/BlockProt-SP26-ZV/releases)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg?style=flat-square)](LICENSE)
 [![Java](https://img.shields.io/badge/Java-25-orange?style=flat-square)](https://openjdk.org/projects/jdk/25/)
@@ -20,9 +20,10 @@
 > Players lock chests, furnaces, and other blocks through a modern GUI — no commands to memorize.  
 > This fork extends the original NBT core with production-grade features for large or long-running servers.
 
-
-<!-- ![Main menu](https://raw.githubusercontent.com/VictorGugug/BlockProt-SP26-ZV/master/images/main_menu.png) -->
-<!-- ![Audit GUI](https://raw.githubusercontent.com/VictorGugug/BlockProt-SP26-ZV/master/images/audit_gui.png) -->
+![Main menu](https://raw.githubusercontent.com/VictorGugug/BlockProt-SP26-ZV/main/images/main_menu.png)
+![Friend settings](https://raw.githubusercontent.com/VictorGugug/BlockProt-SP26-ZV/main/images/friend_settings.png)
+![Player settings](https://raw.githubusercontent.com/VictorGugug/BlockProt-SP26-ZV/main/images/user_settings.png)
+![Redstone settings](https://raw.githubusercontent.com/VictorGugug/BlockProt-SP26-ZV/main/images/redstone_settings.png)
 
 ---
 
@@ -265,29 +266,21 @@ are welcome. Language files are in `spigot/src/main/resources/lang/`.
 
 ## Contact / Support
 
-This fork is created and maintained by **Zar**. For bugs or questions specific to this fork,
+This fork is created and maintained by **Zar**. For bugs or questions,
 [open an issue](https://github.com/VictorGugug/BlockProt-SP26-ZV/issues) in this repository.
-
-For upstream BlockProt issues, use the [original issue tracker](https://github.com/spnda/BlockProt/issues)
-or the [Discord server](https://discord.gg/WVy6DHScFb).
 
 ---
 
 ## Developing Addons
 
-The fork exposes the same `BlockProtAPI` as the upstream plugin. See the upstream documentation
-for usage examples:
+The fork exposes the same `BlockProtAPI` as the upstream plugin:
 
 ```java
-// A BlockNBTHandler is an NBT handler designed to lock blocks, add friends, and edit settings.
-// One handler exists per block.
 BlockNBTHandler handler = BlockProtAPI.getInstance().getBlockHandler(block);
-
-// The PlayerSettingsHandler manages player-level settings accessible via /blockprot settings.
 PlayerSettingsHandler playerHandler = BlockProtAPI.getInstance().getPlayerSettings(player);
 ```
 
-SP26-specific classes (`HybridDatabase`, `AuditLogger`, `WorldsConfig`, etc.) are internal and
+SP26-ZV classes (`HybridDatabase`, `AuditLogger`, `WorldsConfig`, etc.) are internal and
 not part of the public API.
 
 ---
@@ -336,14 +329,7 @@ The suffix can also be passed on the command line without editing the file:
 ./gradlew :blockprot-spigot:shadowJar -PversionSuffix=SNAPSHOT
 ```
 
-Builds from non-`master` branches append the branch name automatically:
-`BlockProt-1.2.9-dev.jar`, `BlockProt-1.2.9-SNAPSHOT-feature-xyz.jar`, etc.
-
----
-
-## bStats
-
-[![bStats Graph](https://bstats.org/signatures/bukkit/BlockProt.svg)](https://bstats.org/plugin/bukkit/BlockProt)
+Builds from non-`main` branches append the branch name automatically.
 
 ---
 
