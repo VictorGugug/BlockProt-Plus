@@ -20,7 +20,7 @@
 > Players lock chests, furnaces, and other blocks through a modern GUI — no commands to memorize.  
 > This fork extends the original NBT core with production-grade features for large or long-running servers.
 
-<!-- Replace these placeholders with actual screenshots once available -->
+
 <!-- ![Main menu](https://raw.githubusercontent.com/VictorGugug/BlockProt-SP26-ZV/master/images/main_menu.png) -->
 <!-- ![Audit GUI](https://raw.githubusercontent.com/VictorGugug/BlockProt-SP26-ZV/master/images/audit_gui.png) -->
 
