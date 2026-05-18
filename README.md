@@ -1,9 +1,9 @@
 <div align="center">
 
-# BlockProt — SP26-ZV
+# BlockProt — Plus
 
-[![CI](https://img.shields.io/github/actions/workflow/status/VictorGugug/BlockProt-SP26-ZV/ci.yml?branch=main&style=flat-square&label=CI)](https://github.com/VictorGugug/BlockProt-SP26-ZV/actions)
-[![Release](https://img.shields.io/github/v/release/VictorGugug/BlockProt-SP26-ZV?style=flat-square&color=brightgreen&label=Release)](https://github.com/VictorGugug/BlockProt-SP26-ZV/releases)
+[![CI](https://img.shields.io/github/actions/workflow/status/VictorGugug/BlockProt-Plus/ci.yml?branch=main&style=flat-square&label=CI)](https://github.com/VictorGugug/BlockProt-Plus/actions)
+[![Release](https://img.shields.io/github/v/release/VictorGugug/BlockProt-Plus?style=flat-square&color=brightgreen&label=Release)](https://github.com/VictorGugug/BlockProt-Plus/releases)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg?style=flat-square)](LICENSE)
 [![Java](https://img.shields.io/badge/Java-21+-orange?style=flat-square)](https://openjdk.org/projects/jdk/21/)
 [![Paper](https://img.shields.io/badge/Paper-1.21%2B%20%7C%2026.x-white?style=flat-square)](https://papermc.io/)
@@ -21,7 +21,7 @@
 > This fork extends the original NBT core with production-grade features for large or long-running servers.
 
 ![Main menu](https://raw.githubusercontent.com/VictorGugug/BlockProt-Plus/main/images/main_menu.png)
-![Friend settings](https://raw.githubusercontent.com/VictorGugug/BlockProt-PlusV/main/images/friend_settings.png)
+![Friend settings](https://raw.githubusercontent.com/VictorGugug/BlockProt-Plus/main/images/friend_settings.png)
 ![Player settings](https://raw.githubusercontent.com/VictorGugug/BlockProt-Plus/main/images/user_settings.png)
 ![Redstone settings](https://raw.githubusercontent.com/VictorGugug/BlockProt-Plus/main/images/redstone_settings.png)
 
@@ -39,15 +39,15 @@ new year-based 26.x version family.
 
 ### Pre-built JAR
 
-Download the latest JAR from [Releases](https://github.com/VictorGugug/BlockProt-SP26-ZV/releases)
+Download the latest JAR from [Releases](https://github.com/VictorGugug/BlockProt-Plus/releases)
 and drop it in your `plugins/` folder. Requires **Java 25** and Paper/Spigot 1.21+.
 
 ### Build from source
 
 ```bash
 # Requires JDK 25
-git clone https://github.com/VictorGugug/BlockProt-SP26-ZV.git
-cd BlockProt-SP26-ZV
+git clone https://github.com/VictorGugug/BlockProt-Plus.git
+cd BlockProt-Plus
 ./gradlew :blockprot-spigot:shadowJar
 # Output → spigot/build/libs/BlockProt-VERSION.jar
 ```
@@ -59,7 +59,7 @@ cd BlockProt-SP26-ZV
 
 ---
 
-## SP26-ZV Features — by Zar
+## BlockProt Plus Features — by Zar
 
 All additions are **disabled by default** in `config.yml`. The upstream NBT protection core
 works exactly as in the original — nothing changes unless you opt in.
@@ -275,7 +275,7 @@ as a chat message or action bar notification.
 ## Contact / Support
 
 This fork is created and maintained by **Zar**. For bugs or questions,
-[open an issue](https://github.com/VictorGugug/BlockProt-SP26-ZV/issues) in this repository.
+[open an issue](https://github.com/VictorGugug/BlockProt-Plus/issues) in this repository.
 
 ---
 
@@ -288,12 +288,12 @@ BlockNBTHandler handler = BlockProtAPI.getInstance().getBlockHandler(block);
 PlayerSettingsHandler playerHandler = BlockProtAPI.getInstance().getPlayerSettings(player);
 ```
 
-SP26-ZV classes (`HybridDatabase`, `AuditLogger`, `WorldsConfig`, etc.) are internal and
+BlockProt Plus classes (`HybridDatabase`, `AuditLogger`, `WorldsConfig`, etc.) are internal and
 not part of the public API.
 
 ---
 
-## Dependencies Added by SP26-ZV
+## Dependencies Added by BlockProt Plus
 
 | Library | Version | Notes |
 |---------|---------|-------|

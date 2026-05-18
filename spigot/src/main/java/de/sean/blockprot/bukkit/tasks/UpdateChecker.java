@@ -28,17 +28,31 @@ import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.PluginDescriptionFile;
-import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.*;
-import java.net.URL;
-import java.net.URLConnection;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.Duration;
 import java.util.List;
 
 public final class UpdateChecker implements Runnable {
+
+    /**
+     * GitHub Releases API endpoint for this fork.
+     * Returns the latest published release (non-prerelease, non-draft).
+     */
+    private static final String GITHUB_API_URL =
+        "https://api.github.com/repos/VictorGugug/BlockProt-Plus/releases/latest";
+
+    /** Release page shown to players when an update is available. */
+    private static final String RELEASE_URL =
+        "https://github.com/VictorGugug/BlockProt-Plus/releases/latest";
+
     @Nullable
     private static SemanticVersion latestVersion;
 
@@ -47,73 +61,82 @@ public final class UpdateChecker implements Runnable {
 
     @NotNull
     private final PluginDescriptionFile description;
-    
+
     @NotNull
-    private final SemanticVersion currentVersion; // Cache current version at creation time
+    private final SemanticVersion currentVersion;
 
     /**
-     * Creates a new update checker. This uses a empty list of players and
-     * therefore only prints the message to the console.
+     * Creates a new update checker that only prints to the console.
      *
-     * @param description The plugin.yml file of the plugin. See
-     *                    {@link JavaPlugin#getDescription()}.
+     * @param description The plugin.yml file of the plugin.
      */
     public UpdateChecker(@NotNull final PluginDescriptionFile description) {
         this.description = description;
         this.recipients = null;
-        this.currentVersion = new SemanticVersion(description.getVersion()); // Cache at creation
+        this.currentVersion = new SemanticVersion(description.getVersion());
     }
 
     /**
-     * Creates a new update checker. This exclusively messages the players
-     * that were passed in the list.
+     * Creates a new update checker that messages the given players.
      *
-     * @param description The plugin.yml file of the plugin. See
-     *                    {@link JavaPlugin#getDescription()}.
+     * @param description The plugin.yml file of the plugin.
      * @param recipients  The list of players to message.
      */
     public UpdateChecker(@NotNull final PluginDescriptionFile description, @Nullable final List<Player> recipients) {
         this.recipients = recipients;
         this.description = description;
-        this.currentVersion = new SemanticVersion(description.getVersion()); // Cache at creation
+        this.currentVersion = new SemanticVersion(description.getVersion());
     }
 
     @Override
     public void run() {
         if (latestVersion != null) {
-            // Use the cached result.
             this.sendMessage(currentVersion, latestVersion);
-        } else {
-            // Fetch the newest version from Spigot API.
-            try {
-                // Documentation for API at https://github.com/SpigotMC/XenforoResourceManagerAPI
-                URL url = new URL("https://api.spigotmc.org/simple/0.2/index.php?action=getResource&id=87829");
-                URLConnection connection = url.openConnection();
-                connection.connect();
-                InputStream inputStream = connection.getInputStream();
-                Reader reader = new BufferedReader(new InputStreamReader(inputStream));
+            return;
+        }
 
-                SpigotResource latest = new Gson().fromJson(reader, SpigotResource.class);
-                SemanticVersion latestVersion = latest.asSemantic();
-                UpdateChecker.latestVersion = latestVersion;
+        try {
+            HttpClient client = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(5))
+                .build();
 
-                this.sendMessage(currentVersion, latestVersion);
+            HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(GITHUB_API_URL))
+                // GitHub API requires a User-Agent header.
+                .header("User-Agent", "BlockProt-SP26-ZV-UpdateChecker")
+                .header("Accept", "application/vnd.github+json")
+                .timeout(Duration.ofSeconds(5))
+                .GET()
+                .build();
 
-                inputStream.close();
-            } catch (IOException ignored) {
-                // Network error — silently ignore.
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+            if (response.statusCode() != 200) {
+                // No release published yet, or API rate-limited — silently ignore.
+                return;
             }
+
+            GitHubRelease release = new Gson().fromJson(response.body(), GitHubRelease.class);
+            SemanticVersion fetched = release.asSemantic();
+            UpdateChecker.latestVersion = fetched;
+            this.sendMessage(currentVersion, fetched);
+
+        } catch (Exception ignored) {
+            // Network error or JSON parse failure — silently ignore.
         }
     }
 
     private void sendMessage(SemanticVersion currentVersion, SemanticVersion latestVersion) {
         String message;
         boolean isOutdated = false;
+
         if (latestVersion.compareTo(currentVersion) > 0) {
             isOutdated = true;
-            message = description.getName() + " v" + currentVersion + " detected, but v" + latestVersion + " is available.";
+            message = description.getName() + " v" + currentVersion
+                + " detected, but v" + latestVersion + " is available.";
         } else if (latestVersion.compareTo(currentVersion) < 0) {
-            message = description.getName() + " is running v" + currentVersion + " (newer than the latest public release v" + latestVersion + ")";
+            message = description.getName() + " is running v" + currentVersion
+                + " (newer than the latest public release v" + latestVersion + ")";
         } else {
             message = description.getName() + " is up to date (v" + currentVersion + ")";
         }
@@ -122,8 +145,9 @@ public final class UpdateChecker implements Runnable {
             var comp = Component.text(message);
             if (isOutdated) {
                 comp = comp.color(NamedTextColor.YELLOW)
-                    .clickEvent(ClickEvent.openUrl("https://www.spigotmc.org/resources/blockprot.87829/"))
-                    .hoverEvent(HoverEvent.showText(Component.text("Click to visit the SpigotMC resource page")));
+                    .clickEvent(ClickEvent.openUrl(RELEASE_URL))
+                    .hoverEvent(HoverEvent.showText(
+                        Component.text("Click to visit the GitHub Releases page")));
             }
             for (Player player : recipients) {
                 player.sendMessage(comp);
@@ -138,22 +162,27 @@ public final class UpdateChecker implements Runnable {
     }
 
     /**
-     * Represents a spigot resource from the Spigot API.
-     * See <a href="https://github.com/SpigotMC/XenforoResourceManagerAPI#getresource">https://github.com/SpigotMC/XenforoResourceManagerAPI#getresource</a>
-     * for the exact documentation on this class.
+     * Represents the response from the GitHub Releases API
+     * ({@code GET /repos/{owner}/{repo}/releases/latest}).
+     *
+     * <p>Only the {@code tag_name} field is used; everything else is ignored.</p>
      */
-    public final static class SpigotResource {
-        @SerializedName("current_version") String currentVersion;
+    public static final class GitHubRelease {
+        /** The release tag, e.g. {@code "1.2.9"} or {@code "v1.2.9"}. */
+        @SerializedName("tag_name")
+        String tagName;
 
         /**
-         * Converts the {@link #currentVersion} to a {@link SemanticVersion},
-         * for easily comparing the version.
-         *
-         * @return The semantic version of this current version.
+         * Converts {@link #tagName} to a {@link SemanticVersion}.
+         * Strips a leading {@code v} if present (e.g. {@code v1.2.9} → {@code 1.2.9}).
          */
         @Contract(" -> new")
         public @NotNull SemanticVersion asSemantic() {
-            return new SemanticVersion(this.currentVersion);
+            String version = tagName != null ? tagName : "0.0.0";
+            if (version.startsWith("v") || version.startsWith("V")) {
+                version = version.substring(1);
+            }
+            return new SemanticVersion(version);
         }
     }
 }

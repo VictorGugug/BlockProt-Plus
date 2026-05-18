@@ -155,7 +155,7 @@ jobs:
         uses: HangarMC/hangar-publish-plugin@v0.1.0
         with:
           # Change to your Hangar username/project-slug after creating the project.
-          slug:          "VictorGugug/BlockProt-SP26-ZV"
+          slug:          "VictorGugug/BlockProt-Plus"
           version:       ${{ needs.build.outputs.version }}
           channel:       ${{ steps.channel.outputs.name }}
           changelog:     ${{ github.event.release.body || 'See the GitHub release for the full changelog.' }}

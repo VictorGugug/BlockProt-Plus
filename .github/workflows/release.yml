@@ -15,7 +15,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: actions/checkout marks the directory as safe, but its not picked up by fabric-action-scripts.
-        run: git config --global --add safe.directory /__w/BlockProt-SP26-ZV/BlockProt-SP26-ZV
+        run: git config --global --add safe.directory /__w/BlockProt-Plus/BlockProt-Plus
       - uses: FabricMC/fabric-action-scripts@v2
         id: changelog
         with:
