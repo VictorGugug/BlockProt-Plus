@@ -2,10 +2,10 @@ name: BlockProt
 version: ${version}
 main: de.sean.blockprot.bukkit.BlockProt
 api-version: '1.21'
-authors: [ spnda ]
-description: A simple block protection plugin
+authors: [ Zar ]
+description: Block protection plugin — SP26-ZV fork by Zar
 prefix: BlockProt
-website: https://www.github.com/spnda/BlockProt
+website: https://github.com/VictorGugug/BlockProt-SP26-ZV
 permissions:
   blockprot.lock:
     default: true

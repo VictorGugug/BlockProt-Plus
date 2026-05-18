@@ -68,7 +68,7 @@ allprojects {
 
     tasks.jar {
         archiveClassifier.set(
-            if (ext["gitBranchName"] == "master" || ext["gitBranchName"] == "HEAD") null
+            if (ext["gitBranchName"] == "master" || ext["gitBranchName"] == "HEAD" || ext["gitBranchName"] == "main") null
             else (ext["gitBranchName"] as String)
         )
     }
@@ -102,6 +102,6 @@ tasks.register("github") {
         files.forEach {
             ghRelease.uploadAsset(it, "application/java-archive")
         }
-        ghRelease.update().name("BlockProt $version").update()
+        ghRelease.update().name("BlockProt SP26-ZV $version").update()
     }
 }

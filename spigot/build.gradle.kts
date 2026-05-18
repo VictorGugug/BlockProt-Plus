@@ -116,7 +116,7 @@ tasks.shadowJar {
 
     // Output: BlockProt-1.2.9.jar  /  BlockProt-1.2.9-SNAPSHOT.jar  /  BlockProt-1.2.9-dev.jar (non-master)
     val branch = ext["gitBranchName"] as String
-    val isMaster = branch == "master" || branch == "HEAD"
+    val isMaster = branch == "master" || branch == "HEAD" || branch == "main"
     val jarVersion = project.version as String
     val jarSuffix  = if (isMaster) "" else "-$branch"
     archiveFileName.set("BlockProt-${jarVersion}${jarSuffix}.jar")

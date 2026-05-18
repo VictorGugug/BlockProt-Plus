@@ -1,15 +1,15 @@
-Copyright (C) ${year} spnda
-This file is part of BlockProt <https://github.com/spnda/BlockProt>.
+Copyright (C) ${year} Zar (VictorGugug)
+This file is part of BlockProt SP26-ZV <https://github.com/VictorGugug/BlockProt-SP26-ZV>.
 
-BlockProt is free software: you can redistribute it and/or modify
+BlockProt SP26-ZV is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
 (at your option) any later version.
 
-BlockProt is distributed in the hope that it will be useful,
+BlockProt SP26-ZV is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with BlockProt.  If not, see <http://www.gnu.org/licenses/>.
+along with BlockProt SP26-ZV.  If not, see <http://www.gnu.org/licenses/>.

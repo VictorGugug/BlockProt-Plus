@@ -1,26 +1,36 @@
-# BlockProt - SP26 Fork
+<div align="center">
 
-[![BlockProt CI](https://img.shields.io/github/actions/workflow/status/spnda/BlockProt/ci.yml?branch=master&style=flat-square&label=CI)](https://github.com/spnda/BlockProt)
-[![JitPack](https://img.shields.io/jitpack/version/com.github.spnda/BlockProt?style=flat-square)](https://jitpack.io/#spnda/BlockProt)
+# BlockProt — SP26-ZV
+
+[![CI](https://img.shields.io/github/actions/workflow/status/VictorGugug/BlockProt-SP26-ZV/ci.yml?branch=master&style=flat-square&label=CI)](https://github.com/VictorGugug/BlockProt-SP26-ZV/actions)
+[![Release](https://img.shields.io/github/v/release/VictorGugug/BlockProt-SP26-ZV?style=flat-square&color=brightgreen&label=Release)](https://github.com/VictorGugug/BlockProt-SP26-ZV/releases)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg?style=flat-square)](LICENSE)
+[![Java](https://img.shields.io/badge/Java-25-orange?style=flat-square)](https://openjdk.org/projects/jdk/25/)
+[![Paper](https://img.shields.io/badge/Paper-1.21%2B%20%7C%2026.x-white?style=flat-square)](https://papermc.io/)
 
-> **This is the SP26 community fork** of [BlockProt by spnda](https://github.com/spnda/BlockProt).  
-> It extends the original plugin with Java 25 / Paper 26.x compatibility, a hybrid MySQL index,
-> per-world configuration, access auditing, automatic backups, and several quality-of-life features.  
-> The upstream NBT block-protection core is preserved and untouched.
+**Fork created and maintained by [Zar](https://github.com/VictorGugug)**
 
-![Main menu](https://raw.githubusercontent.com/VictorGugug/BlockProt-SP26-U/master/images/main_menu.png)
+*Java 25 · Paper 26.x · MySQL index · per-world config · access audit · auto-backup*
+
+</div>
+
+---
+
+> Block protection plugin for Paper/Spigot servers.  
+> Players lock chests, furnaces, and other blocks through a modern GUI — no commands to memorize.  
+> This fork extends the original NBT core with production-grade features for large or long-running servers.
+
+<!-- Replace these placeholders with actual screenshots once available -->
+<!-- ![Main menu](https://raw.githubusercontent.com/VictorGugug/BlockProt-SP26-ZV/master/images/main_menu.png) -->
+<!-- ![Audit GUI](https://raw.githubusercontent.com/VictorGugug/BlockProt-SP26-ZV/master/images/audit_gui.png) -->
 
 ---
 
 ## What is BlockProt?
 
-BlockProt is a lightweight Bukkit/Spigot plugin that lets players protect chests, furnaces, and
-many other blocks. It uses a modern GUI instead of commands, so any player can immediately
-understand how to lock and share their blocks.
-
-This fork targets Paper/Spigot-family servers on Minecraft 1.21+ and the new
-year-based 26.x version family, including the 26.1.2 development target.
+BlockProt lets players protect chests, furnaces, and many other blocks using a modern GUI —
+no commands to memorize. This fork targets Paper/Spigot servers on Minecraft 1.21+ and the
+new year-based 26.x version family.
 
 ---
 
@@ -28,30 +38,30 @@ year-based 26.x version family, including the 26.1.2 development target.
 
 ### Pre-built JAR
 
-Build the JAR yourself (see below) and place it in your `plugins/` directory. No other
-dependencies are required for the base plugin. The produced JAR targets Java 25
-class files, so servers must run JDK 25.
+Download the latest JAR from [Releases](https://github.com/VictorGugug/BlockProt-SP26-ZV/releases)
+and drop it in your `plugins/` folder. Requires **Java 25** and Paper/Spigot 1.21+.
 
 ### Build from source
 
 ```bash
 # Requires JDK 25
-git clone https://github.com/VictorGugug/BlockProt-SP26-U.git
-cd BlockProt-SP26-U
+git clone https://github.com/VictorGugug/BlockProt-SP26-ZV.git
+cd BlockProt-SP26-ZV
 ./gradlew :blockprot-spigot:shadowJar
-# Output: spigot/build/libs/BlockProt-VERSION.jar
+# Output → spigot/build/libs/BlockProt-VERSION.jar
 ```
 
-> The project compiles against `targetJavaVersion = 25`; the produced JAR uses
-> Java class file version `69.0` and must be deployed on Java 25.
+```powershell
+# Windows
+.\gradlew.bat :blockprot-spigot:shadowJar
+```
 
 ---
 
-## SP26 Fork Features
+## SP26-ZV Features — by Zar
 
-All new features are **disabled by default** in `config.yml` so that existing servers are
-never affected without an explicit admin decision. The base NBT block-protection system
-works exactly as in the upstream plugin.
+All additions are **disabled by default** in `config.yml`. The upstream NBT protection core
+works exactly as in the original — nothing changes unless you opt in.
 
 ### 1. Java 25 / Paper 26.x Compatibility
 
@@ -255,8 +265,8 @@ are welcome. Language files are in `spigot/src/main/resources/lang/`.
 
 ## Contact / Support
 
-This fork is maintained by the SP26 community. For bugs or questions specific to this fork, open
-an issue in this repository.
+This fork is created and maintained by **Zar**. For bugs or questions specific to this fork,
+[open an issue](https://github.com/VictorGugug/BlockProt-SP26-ZV/issues) in this repository.
 
 For upstream BlockProt issues, use the [original issue tracker](https://github.com/spnda/BlockProt/issues)
 or the [Discord server](https://discord.gg/WVy6DHScFb).
@@ -282,7 +292,7 @@ not part of the public API.
 
 ---
 
-## Dependencies Added by SP26
+## Dependencies Added by SP26-ZV
 
 | Library | Version | Notes |
 |---------|---------|-------|
@@ -339,4 +349,8 @@ Builds from non-`master` branches append the branch name automatically:
 
 ## License
 
-BlockProt is licensed under the **GNU General Public License v3**. See `LICENSE` for details.
+This project is licensed under the **GNU General Public License v3**. See [`LICENSE`](LICENSE) for details.
+
+---
+
+<sub>Based on <a href="https://github.com/spnda/BlockProt">BlockProt</a> by spnda — original copyright notices are preserved in each source file as required by GPL v3.</sub>
