@@ -17,6 +17,7 @@ val papiVersion: String by project
 val worldGuardVersion: String by project
 
 repositories {
+    mavenCentral()
     maven("https://hub.spigotmc.org/nexus/content/repositories/snapshots/") {
         name = "Spigot"
     }
@@ -62,16 +63,17 @@ dependencies {
     compileOnly("me.clip:placeholderapi:$papiVersion")
     compileOnly("com.sk89q.worldguard:worldguard-bukkit:$worldGuardVersion")
     compileOnly("com.github.angeschossen:LandsAPI:6.28.11")
+    compileOnly("com.cjburkey.claimchunk:claimchunk:0.0.25-FIX3")
 }
 
 val targetJavaVersion: String by project
 
 java {
     toolchain {
-        languageVersion.set(JavaLanguageVersion.of(targetJavaVersion.toInt()))
+        languageVersion.set(JavaLanguageVersion.of(25))
     }
-    sourceCompatibility = JavaVersion.toVersion(targetJavaVersion)
-    targetCompatibility = JavaVersion.toVersion(targetJavaVersion)
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
     withJavadocJar()
     withSourcesJar()
 }
@@ -86,7 +88,7 @@ tasks.processResources {
 
 tasks.javadoc {
     options {
-            source = targetJavaVersion
+            source = "21"
         encoding = "UTF-8"
         memberLevel = JavadocMemberLevel.PACKAGE
         (this as CoreJavadocOptions).addStringOption("Xdoclint:none", "-quiet")

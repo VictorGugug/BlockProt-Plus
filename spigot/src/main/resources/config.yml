@@ -105,6 +105,14 @@ protect_locked_blocks_from_explosions: true
 # Absolute immovable protection for locked NBT blocks.
 block_protected_block_piston_movement: true
 
+# When true, breaking a shulker box you own drops it WITHOUT the protection NBT,
+# so the next player who places it will not inherit the lock.
+clear_protection_on_shulker_break: false
+
+# When true, ANY player can break a protected block regardless of ownership.
+# Intended for servers that use a separate reinforcement plugin for break protection.
+allow_break_protected_blocks: false
+
 # WorldEdit/FAWE paste watcher. Disabled by default.
 # When enabled, BlockProt watches //paste commands and performs a bounded scan
 # near the player after the paste finishes, locking lockable blocks with NBT.
@@ -191,6 +199,7 @@ lockable_blocks:
   - SPRUCE_TRAPDOOR
   - WARPED_FENCE_GATE
   - WARPED_TRAPDOOR
+  - IRON_TRAPDOOR
   - COPPER_TRAPDOOR
   - EXPOSED_COPPER_TRAPDOOR
   - OXIDIZED_COPPER_TRAPDOOR
@@ -203,6 +212,7 @@ lockable_blocks:
 # Doors are two blocks and are therefore handled differently.
 # This only works with Spigot 1.16.4 or higher.
 lockable_doors:
+  - IRON_DOOR
   - ACACIA_DOOR
   - BAMBOO_DOOR
   - BIRCH_DOOR

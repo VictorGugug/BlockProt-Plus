@@ -56,12 +56,12 @@ allprojects {
 
     java {
         toolchain {
-            languageVersion.set(JavaLanguageVersion.of(targetJavaVersion.toInt()))
+            languageVersion.set(JavaLanguageVersion.of(25))
         }
     }
 
     tasks.compileJava {
-        options.release.set(targetJavaVersion.toInt())
+        options.release.set(21)
     }
 
     ext["gitBranchName"] = gitBranchName()

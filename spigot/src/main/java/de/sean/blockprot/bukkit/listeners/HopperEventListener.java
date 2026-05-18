@@ -41,13 +41,14 @@ public class HopperEventListener implements Listener {
      *
      * <p>InventoryMoveItemEvent fires up to 20 times per second per hopper. Reading
      * NBT from disk on each call adds measurable overhead on busy farms. This cache
-     * stores whether a block is protected and who owns it, keyed by world+coords.
-     * Entries expire after {@link #CACHE_TTL_MS} milliseconds so changes (lock/unlock)
-     * are visible within one second without requiring an explicit invalidation.</p>
+     * stores whether a block is protected, who owns it, and the hopper-protection flag,
+     * keyed by world+coords. Entries expire after {@link #CACHE_TTL_MS} milliseconds
+     * so changes (lock/unlock) are visible within one second without requiring an
+     * explicit invalidation.</p>
      */
     private static final long CACHE_TTL_MS = 1_000L;
 
-    private record CacheEntry(boolean isProtected, String owner, long expiresAt) {}
+    private record CacheEntry(boolean isProtected, String owner, boolean hopperProtection, long expiresAt) {}
 
     // Concurrent because the scheduler may access this from different threads.
     private static final ConcurrentHashMap<Long, CacheEntry> cache = new ConcurrentHashMap<>();
@@ -79,6 +80,7 @@ public class HopperEventListener implements Listener {
             entry = new CacheEntry(
                 handler.isProtected(),
                 handler.getOwner(),
+                handler.getRedstoneHandler().getHopperProtection(),
                 System.currentTimeMillis() + CACHE_TTL_MS
             );
             cache.put(key, entry);
@@ -111,31 +113,23 @@ public class HopperEventListener implements Listener {
         CacheEntry sourceEntry = getEntry(source);
         if (sourceEntry == null || !sourceEntry.isProtected()) return;
 
-        // Source is protected. Check whether destination is owned by the same player.
+        // Fast-path: hopper protection is disabled on the source — allow the move.
+        if (!sourceEntry.hopperProtection()) return;
+
+        // Source is protected and hopper-protection is on.
+        // Allow the move only when the destination is a container owned by the same player.
         InventoryHolder destinationHolder = event.getDestination().getHolder();
         if (destinationHolder instanceof Container || destinationHolder instanceof DoubleChest) {
             Block destination = getBlock(destinationHolder);
             if (destination != null && BlockProt.getDefaultConfig().isLockable(destination.getType())) {
                 CacheEntry destEntry = getEntry(destination);
-                // Need the full handler only to check hopper-protection flag; read it lazily.
-                if (destEntry != null && destEntry.isProtected()
-                        && !destEntry.owner().equals(sourceEntry.owner())) {
-                    // Different owners — use full handler to check hopper protection flag.
-                    if (new BlockNBTHandler(source).getRedstoneHandler().getHopperProtection()) {
-                        event.setCancelled(true);
-                    }
-                } else if ((destEntry == null || !destEntry.isProtected())
-                        && new BlockNBTHandler(source).getRedstoneHandler().getHopperProtection()) {
-                    event.setCancelled(true);
-                }
-            } else if (new BlockNBTHandler(source).getRedstoneHandler().getHopperProtection()) {
-                event.setCancelled(true);
-            }
-        } else if (destinationHolder instanceof Minecart) {
-            if (new BlockNBTHandler(source).getRedstoneHandler().getHopperProtection()) {
-                event.setCancelled(true);
+                // Same owner — allow regardless of destination protection state.
+                if (destEntry != null && destEntry.owner().equals(sourceEntry.owner())) return;
             }
         }
+
+        // All other cases (different owner, unprotected destination, minecart, etc.) — block.
+        event.setCancelled(true);
     }
 
     @Nullable

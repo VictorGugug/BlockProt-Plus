@@ -18,9 +18,9 @@
 
 package de.sean.blockprot.bukkit.inventories;
 
-import com.destroystokyo.paper.event.server.AsyncTabCompleteEvent;
 import de.sean.blockprot.bukkit.TranslationKey;
 import de.sean.blockprot.bukkit.Translator;
+import de.sean.blockprot.bukkit.VersionCompat;
 import io.papermc.paper.event.player.AsyncChatEvent;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
@@ -41,15 +41,28 @@ import java.util.stream.Collectors;
 
 /**
  * Chat-based text input. Closes the player's inventory, shows a prompt in chat,
- * provides tab-completion for online player names, and calls onConfirm on the
- * main thread. Typing the cancel word (from lang) aborts silently.
+ * provides tab-completion for online player names (when available), and calls
+ * onConfirm on the main thread. Typing the cancel word aborts silently.
  *
- * <p>Requires Paper (not vanilla Spigot). On non-Paper servers, the plugin logs
- * a warning at startup via {@link de.sean.blockprot.bukkit.VersionCompat#isPaper()}
- * and this class simply won't receive events — the anvil-based fallback
- * ({@link AnvilInput}) is still available for callers that want it.
+ * <p>Tab-completion uses {@code com.destroystokyo.paper.event.server.AsyncTabCompleteEvent}
+ * when available (Paper 1.21.x). On Paper 26.x+ that class was removed; tab-completion
+ * is silently skipped and the rest of ChatInput still works normally.
+ *
+ * <p>Requires Paper. On plain Spigot servers the anvil-based fallback
+ * ({@link AnvilInput}) is used instead.
  */
 public final class ChatInput implements Listener {
+
+    /** True if the legacy AsyncTabCompleteEvent class is available at runtime. */
+    private static final boolean HAS_LEGACY_TAB_COMPLETE;
+    static {
+        boolean found = false;
+        try {
+            Class.forName("com.destroystokyo.paper.event.server.AsyncTabCompleteEvent");
+            found = true;
+        } catch (ClassNotFoundException ignored) {}
+        HAS_LEGACY_TAB_COMPLETE = found;
+    }
 
     private final UUID playerUuid;
     private final Plugin plugin;
@@ -70,20 +83,11 @@ public final class ChatInput implements Listener {
         Bukkit.getPluginManager().registerEvents(this, plugin);
         player.closeInventory();
 
-        // Build the prompt from lang, replacing {cancel} with the actual cancel word.
         String prompt = Translator.get(TranslationKey.MESSAGES__CHAT_INPUT_PROMPT)
             .replace("{cancel}", cancelWord);
-
         player.sendMessage(LegacyComponentSerializer.legacySection().deserialize(prompt));
     }
 
-    /**
-     * Opens a chat input session for {@code player}.
-     *
-     * @param player    The player who will type.
-     * @param plugin    The owning plugin.
-     * @param onConfirm Called on the main thread with the typed text, or not called if cancelled.
-     */
     public static void open(
             @NotNull Player player,
             @NotNull Plugin plugin,
@@ -92,16 +96,13 @@ public final class ChatInput implements Listener {
         new ChatInput(player, plugin, onConfirm);
     }
 
-    // -------------------------------------------------------------------------
-
     @EventHandler(priority = EventPriority.LOWEST)
     public void onChat(AsyncChatEvent event) {
         if (!event.getPlayer().getUniqueId().equals(playerUuid)) return;
-        event.setCancelled(true); // Never shown in global chat.
+        event.setCancelled(true);
 
         final String text = PlainTextComponentSerializer.plainText().serialize(event.message()).trim();
 
-        // If the player typed the localized cancel word, stop the session.
         if (text.equalsIgnoreCase(cancelWord)) {
             event.getPlayer().sendMessage(LegacyComponentSerializer.legacySection().deserialize(
                 Translator.get(TranslationKey.MESSAGES__CHAT_INPUT_CANCELLED)
@@ -113,32 +114,37 @@ public final class ChatInput implements Listener {
         unregister();
 
         Bukkit.getScheduler().runTask(plugin, () -> {
-            if (onConfirm != null) {
-                onConfirm.accept(text);
-            }
+            if (onConfirm != null) onConfirm.accept(text);
         });
     }
 
+    /**
+     * Tab-complete handler — only registered/active if the legacy class exists.
+     * On Paper 26.x this method never fires because the event class is absent,
+     * so no ClassNotFoundException is thrown at runtime.
+     */
     @EventHandler(priority = EventPriority.NORMAL)
-    public void onTabComplete(AsyncTabCompleteEvent event) {
-        if (!(event.getSender() instanceof Player player)) return;
-        if (!player.getUniqueId().equals(playerUuid)) return;
-        if (event.isCommand()) return;
+    public void onTabComplete(org.bukkit.event.Cancellable event) {
+        if (!HAS_LEGACY_TAB_COMPLETE) return;
+        try {
+            var tabEvent = (com.destroystokyo.paper.event.server.AsyncTabCompleteEvent) event;
+            if (!(tabEvent.getSender() instanceof Player player)) return;
+            if (!player.getUniqueId().equals(playerUuid)) return;
+            if (tabEvent.isCommand()) return;
 
-        final String buffer = event.getBuffer();
-        final List<String> names = Bukkit.getOnlinePlayers().stream()
-            .map(Player::getName)
-            .filter(name -> name.toLowerCase().startsWith(buffer.toLowerCase()))
-            .sorted()
-            .collect(Collectors.toList());
+            final String buffer = tabEvent.getBuffer();
+            final List<String> names = Bukkit.getOnlinePlayers().stream()
+                .map(Player::getName)
+                .filter(name -> name.toLowerCase().startsWith(buffer.toLowerCase()))
+                .sorted()
+                .collect(Collectors.toList());
 
-        if (!names.isEmpty()) {
-            event.setCompletions(names);
-            event.setHandled(true);
-        }
+            if (!names.isEmpty()) {
+                tabEvent.setCompletions(names);
+                tabEvent.setHandled(true);
+            }
+        } catch (ClassCastException ignored) {}
     }
-
-    // -------------------------------------------------------------------------
 
     private void unregister() {
         if (!consumed) {

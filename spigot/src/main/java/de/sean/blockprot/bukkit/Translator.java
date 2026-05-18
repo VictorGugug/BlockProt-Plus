@@ -20,6 +20,7 @@ package de.sean.blockprot.bukkit;
 
 import com.google.common.collect.Sets;
 import de.sean.blockprot.nbt.LockReturnValue;
+import org.bukkit.ChatColor;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.jetbrains.annotations.NotNull;
 
@@ -167,6 +168,10 @@ public final class Translator {
      * {@link TranslationValue#getValue()}, so values that are not
      * translated still use their default value.
      *
+     * <p>Legacy color codes using {@code &} are translated to their
+     * {@code §} equivalents, supporting all standard Minecraft formatting
+     * codes (e.g. {@code &6}, {@code &a}, {@code &l}).</p>
+     *
      * @param key the translation key to search for.
      * @return A translated String or an empty string if not found.
      * @since 0.1.10
@@ -174,7 +179,8 @@ public final class Translator {
     @NotNull
     public static String get(@NotNull final TranslationKey key) {
         TranslationValue value = values.get(key);
-        return value == null ? key.toString() : value.getValue();
+        String raw = value == null ? key.toString() : value.getValue();
+        return ChatColor.translateAlternateColorCodes('&', raw);
     }
 
     /**

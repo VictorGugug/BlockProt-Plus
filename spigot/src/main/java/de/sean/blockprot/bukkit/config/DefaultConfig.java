@@ -529,4 +529,20 @@ public final class DefaultConfig extends BlockProtConfig {
     public boolean isLockableInventory(InventoryType type) {
         return lockableInventories.contains(type);
     }
+
+    /**
+     * When true, shulker boxes broken by their owner drop without protection NBT,
+     * so the recipient can open and re-lock the box as their own.
+     */
+    public boolean shouldClearProtectionOnShulkerBreak() {
+        return config.getBoolean("clear_protection_on_shulker_break", false);
+    }
+
+    /**
+     * When true, any player may break a protected block regardless of ownership.
+     * Intended for servers that delegate break-resistance to a separate reinforcement plugin.
+     */
+    public boolean shouldAllowBreakProtectedBlocks() {
+        return config.getBoolean("allow_break_protected_blocks", false);
+    }
 }

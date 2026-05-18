@@ -79,17 +79,14 @@ public class BlockEventListener implements Listener {
 
         BlockNBTHandler handler = new BlockNBTHandler(event.getBlock());
         if (!handler.isOwner(event.getPlayer().getUniqueId().toString()) && handler.isProtected()) {
-            // Prevent unauthorized players from breaking locked blocks.
-            event.setCancelled(true);
+            if (!BlockProt.getDefaultConfig().shouldAllowBreakProtectedBlocks()) {
+                event.setCancelled(true);
+            }
         }
 
-        // If access is not cancelled and the player is allowed to break the block.
         if (!event.isCancelled()) {
             StatHandler.removeContainer(event.getPlayer(), event.getBlock());
             HopperEventListener.invalidate(event.getBlock());
-
-            // For blocks, we want to clear the NBT data, as that lives
-            // independently of the actual block state.
             handler.clear();
         }
     }
@@ -105,39 +102,37 @@ public class BlockEventListener implements Listener {
 
         BlockNBTHandler handler = new BlockNBTHandler(event.getBlock());
         if (handler.isOwner(event.getPlayer().getUniqueId().toString()) && (!event.isCancelled() && event.isDropItems() && event.getPlayer().getGameMode() != GameMode.CREATIVE)) {
-            // The player can break the block. We will now check if it's a shulker box,
-            // so we can add NBT to the shulker box that it gets locked upon placing again.
-            event.setDropItems(false); // Prevent the event from dropping items itself
+            event.setDropItems(false);
             Collection<ItemStack> itemsToDrop = event.getBlock().getDrops();
             if (itemsToDrop.isEmpty()) return;
 
-            var item = Iterables.getFirst(itemsToDrop, null); // Shulker blocks should only have a single drop anyway
+            var item = Iterables.getFirst(itemsToDrop, null);
             if (item == null) return;
 
-            if (MinecraftVersion.isAtLeastVersion(MinecraftVersion.MC1_20_R4)) {
-                final var meta = item.getItemMeta();
-                final var pdc = meta.getPersistentDataContainer();
-                pdc.set(new NamespacedKey(BlockProt.getInstance(), "shulker_data"), PersistentDataType.STRING, "Hi!");
-                item.setItemMeta(meta);
+            boolean clearProtection = BlockProt.getDefaultConfig().shouldClearProtectionOnShulkerBreak();
 
-                // Since Minecraft 1.20.6 item stacks use components instead of NBT.
-                // The block_entity_data tag works like the BlockEntityTag used to, but requires an "id" field for the type of block.
-                final var nbt = NBT.itemStackToNBT(item);
-                final var entityData = nbt.getOrCreateCompound("components").getOrCreateCompound("minecraft:block_entity_data");
-                // See https://github.com/spnda/BlockProt/issues/339#issuecomment-3690954598
-                entityData.setString("id", "minecraft:shulker_box");
-                entityData.getOrCreateCompound("PublicBukkitValues").mergeCompound(handler.getNbtCopy());
-                item = Objects.requireNonNull(NBT.itemStackFromNBT(nbt));
-            } else {
-                NBT.modify(item, readWriteItemNBT -> {
-                    readWriteItemNBT.getOrCreateCompound("BlockEntityTag").getOrCreateCompound("PublicBukkitValues").mergeCompound(handler.getNbtCopy());
-                });
+            if (!clearProtection) {
+                if (MinecraftVersion.isAtLeastVersion(MinecraftVersion.MC1_20_R4)) {
+                    final var meta = item.getItemMeta();
+                    final var pdc = meta.getPersistentDataContainer();
+                    pdc.set(new NamespacedKey(BlockProt.getInstance(), "shulker_data"), PersistentDataType.STRING, "Hi!");
+                    item.setItemMeta(meta);
+
+                    final var nbt = NBT.itemStackToNBT(item);
+                    final var entityData = nbt.getOrCreateCompound("components").getOrCreateCompound("minecraft:block_entity_data");
+                    entityData.setString("id", "minecraft:shulker_box");
+                    entityData.getOrCreateCompound("PublicBukkitValues").mergeCompound(handler.getNbtCopy());
+                    item = Objects.requireNonNull(NBT.itemStackFromNBT(nbt));
+                } else {
+                    NBT.modify(item, readWriteItemNBT -> {
+                        readWriteItemNBT.getOrCreateCompound("BlockEntityTag").getOrCreateCompound("PublicBukkitValues").mergeCompound(handler.getNbtCopy());
+                    });
+                }
             }
 
             event.getPlayer().getWorld().dropItemNaturally(event.getBlock().getLocation(), item);
-
             event.getBlock().setType(Material.AIR);
-            event.setCancelled(true); // So that other plugins don't fiddle with this.
+            event.setCancelled(true);
         }
     }
 
@@ -210,8 +205,10 @@ public class BlockEventListener implements Listener {
                             StatHandler.removeContainer(event.getPlayer(), block);
                         }
                     } else {
-                        handler.setName(BlockUtil.getHumanReadableBlockName(block.getType()));
-                        handler.applyToOtherContainer();
+                        if (block.getState() instanceof org.bukkit.block.BlockEntityState) {
+                            handler.setName(BlockUtil.getHumanReadableBlockName(block.getType()));
+                            handler.applyToOtherContainer();
+                        }
                     }
                 },
                 1

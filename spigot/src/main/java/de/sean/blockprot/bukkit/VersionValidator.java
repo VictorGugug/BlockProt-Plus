@@ -59,10 +59,10 @@ public final class VersionValidator {
         String javaVersion = System.getProperty("java.version");
         int majorVersion = extractMajorVersion(javaVersion);
 
-        if (majorVersion < 25) {
+        if (majorVersion < 21) {
             warn(Translator.get(TranslationKey.CONSOLE__JAVA_TOO_OLD)
                 .replace("{version}", javaVersion));
-            BlockProtLogger.warn("Java version " + javaVersion + " detected. Requires 25+.");
+            BlockProtLogger.warn("Java version " + javaVersion + " detected. Requires 21+.");
         } else {
             BlockProtLogger.log("Java", "Version " + javaVersion + " OK");
         }
