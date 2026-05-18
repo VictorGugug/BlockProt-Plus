@@ -90,12 +90,10 @@ public final class WorldEditPasteListener implements Listener {
                         if (!handler.isNotProtected()) continue;
                         if (!handler.lockBlock(player, BlockProtLockEvent.Cause.WORLDEDIT_PASTE).success) continue;
 
-                        if (true) {
-                            settings.getFriendsStream()
-                                .filter(fh -> PluginIntegration.filterFriendByUuidForAll(
-                                    UUID.fromString(fh.getName()), player, block))
-                                .forEach(handler::addFriend);
-                        }
+                        settings.getFriendsStream()
+                            .filter(fh -> PluginIntegration.filterFriendByUuidForAll(
+                                UUID.fromString(fh.getName()), player, block))
+                            .forEach(handler::addFriend);
                         locked++;
                     } catch (RuntimeException ignored) {
                     }

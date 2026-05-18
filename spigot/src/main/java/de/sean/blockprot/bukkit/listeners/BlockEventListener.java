@@ -100,7 +100,18 @@ public class BlockEventListener implements Listener {
         if (BlockProt.getDefaultConfig().isWorldExcluded(event.getBlock().getWorld())) return;
         if (!BlockProt.getDefaultConfig().isLockableShulkerBox(event.getBlock().getType(), event.getBlock().getWorld())) return;
 
-        BlockNBTHandler handler = new BlockNBTHandler(event.getBlock());
+        // Guard: the block state must be a BlockEntityState before we attempt NBT access.
+        // If the block was already removed by another plugin at LOWEST priority the state
+        // may no longer point to a live TileEntity, causing NbtApiException (issue #344).
+        if (!(event.getBlock().getState() instanceof org.bukkit.block.BlockEntityState)) return;
+
+        BlockNBTHandler handler;
+        try {
+            handler = new BlockNBTHandler(event.getBlock());
+        } catch (RuntimeException e) {
+            return;
+        }
+
         if (handler.isOwner(event.getPlayer().getUniqueId().toString()) && (!event.isCancelled() && event.isDropItems() && event.getPlayer().getGameMode() != GameMode.CREATIVE)) {
             event.setDropItems(false);
             Collection<ItemStack> itemsToDrop = event.getBlock().getDrops();

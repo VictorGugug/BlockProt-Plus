@@ -113,6 +113,12 @@ clear_protection_on_shulker_break: false
 # Intended for servers that use a separate reinforcement plugin for break protection.
 allow_break_protected_blocks: false
 
+# When true, BlockProt prevents players from locking blocks inside the server's
+# spawn-protection radius (defined by spawn-radius in server.properties).
+# Ops and players with the blockprot.admin permission always bypass this check.
+# Set to false to allow locking inside the spawn area.
+respect_spawn_protection: true
+
 # WorldEdit/FAWE paste watcher. Disabled by default.
 # When enabled, BlockProt watches //paste commands and performs a bounded scan
 # near the player after the paste finishes, locking lockable blocks with NBT.

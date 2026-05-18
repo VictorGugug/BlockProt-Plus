@@ -276,8 +276,10 @@ public final class BlockNBTHandler extends FriendSupportingHandler<NBTCompound> 
 
     private LockReturnValue performClaim(@NotNull final Player player, @NotNull final BlockProtLockEvent.Cause cause, String playerUuid) {
         // Issue #303: respect spawn-protection radius from server.properties.
+        // Controlled by the `respect_spawn_protection` config key (default: true).
         // Ops bypass this check, matching vanilla spawn-protection behaviour.
-        if (!player.isOp() && !player.hasPermission(Permissions.ADMIN.key())) {
+        if (BlockProt.getDefaultConfig().shouldRespectSpawnProtection()
+                && !player.isOp() && !player.hasPermission(Permissions.ADMIN.key())) {
             int spawnRadius = block.getWorld().getSpawnLocation().getWorld().getServer().getSpawnRadius();
             if (spawnRadius > 0) {
                 org.bukkit.Location spawn = block.getWorld().getSpawnLocation();

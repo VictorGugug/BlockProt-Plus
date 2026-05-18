@@ -545,4 +545,17 @@ public final class DefaultConfig extends BlockProtConfig {
     public boolean shouldAllowBreakProtectedBlocks() {
         return config.getBoolean("allow_break_protected_blocks", false);
     }
+
+    /**
+     * Whether BlockProt should deny locking blocks inside the server's spawn-protection
+     * radius (defined by {@code spawn-radius} in {@code server.properties}).
+     * Ops and players with the admin permission always bypass this check.
+     * Defaults to {@code true}.
+     *
+     * @since SP26 (issue #303)
+     */
+    public boolean shouldRespectSpawnProtection() {
+        if (!config.contains("respect_spawn_protection")) return true;
+        return config.getBoolean("respect_spawn_protection");
+    }
 }

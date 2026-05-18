@@ -147,6 +147,8 @@ used as an optional index for fast lookups, auditing, and cross-server global tr
 |---|---|---|
 | `protect_locked_blocks_from_explosions` | `true` | Prevents explosions from destroying NBT-protected blocks |
 | `block_protected_block_piston_movement` | `true` | Prevents pistons from pushing or pulling NBT-protected blocks |
+| `allow_break_protected_blocks` | `false` | When enabled, any player can break a protected block (for reinforcement-plugin servers) |
+| `respect_spawn_protection` | `true` | Denies locking inside the server's spawn-protection radius; ops always bypass |
 
 ### 11. `/bp help` Command
 
@@ -217,6 +219,8 @@ mysql:
 # ── Security hardening ────────────────────────────────────────────────────
 protect_locked_blocks_from_explosions: true
 block_protected_block_piston_movement: true
+allow_break_protected_blocks: false    # Allow non-owners to break protected blocks
+respect_spawn_protection: true         # Deny locking inside server spawn-radius (issue #303)
 
 # ── WorldEdit paste auto-lock ─────────────────────────────────────────────
 worldedit_paste_autolock:
@@ -261,6 +265,10 @@ inactivity_cleanup_days: -1   # -1 = disabled
 
 If you know a language that is not yet supported, or you found a translation error, contributions
 are welcome. Language files are in `spigot/src/main/resources/lang/`.
+
+All message values in `translations_xx.yml` support Minecraft legacy color and formatting codes
+(`§a`, `§b`, `§l`, etc.). Use them freely in any translation string that is displayed to players
+as a chat message or action bar notification.
 
 ---
 
