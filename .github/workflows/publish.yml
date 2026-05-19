@@ -92,26 +92,17 @@ jobs:
           fi
 
       - name: Upload to Modrinth
-        env:
-          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
-        if: ${{ env.MODRINTH_TOKEN != '' }}
-        uses: modrinth/minotaur@v2
+        if: ${{ secrets.MODRINTH_TOKEN != '' }}
+        uses: HSGamer/action-mcreleaser@main
         with:
-          token:          ${{ env.MODRINTH_TOKEN }}
-          project_id:     blockprot-reloaded
-          version_type:   ${{ steps.channel.outputs.type }}
-          name:           "BlockProt Plus ${{ needs.build.outputs.version }}"
-          version_number: ${{ needs.build.outputs.version }}
-          changelog:      ${{ github.event.release.body || 'See the GitHub release for the full changelog.' }}
-          files:          ./artifacts/*.jar
-          game_versions: |
-            1.21
-            1.21.1
-            1.21.4
-          loaders: |
-            paper
-            spigot
-            bukkit
+          files: |
+            ./artifacts/*.jar
+          platforms: modrinth
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+          MODRINTH_PROJECT: blockprot-reloaded
+          MODRINTH_LOADERS: paper
 
   # ────────────────────────────────────────────────────────────────────────────
   # 3. Hangar — project: VictorGugug/BlockProtPlus
@@ -146,16 +137,14 @@ jobs:
           fi
 
       - name: Upload to Hangar
-        env:
-          HANGAR_TOKEN: ${{ secrets.HANGAR_TOKEN }}
-        if: ${{ env.HANGAR_TOKEN != '' }}
-        uses: HangarMC/hangar-publish-plugin@v0.1.0
+        if: ${{ secrets.HANGAR_TOKEN != '' }}
+        uses: HSGamer/action-mcreleaser@main
         with:
-          slug:          "VictorGugug/BlockProtPlus"
-          version:       ${{ needs.build.outputs.version }}
-          channel:       ${{ steps.channel.outputs.name }}
-          changelog:     ${{ github.event.release.body || 'See the GitHub release for the full changelog.' }}
-          api_key:       ${{ env.HANGAR_TOKEN }}
-          files:         ./artifacts/*.jar
-          game_versions: "1.21,1.21.1,1.21.4"
-          platforms:     "PAPER"
+          files: |
+            ./artifacts/*.jar
+          platforms: hangar
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          HANGAR_KEY: ${{ secrets.HANGAR_TOKEN }}
+          HANGAR_PROJECT: VictorGugug/BlockProtPlus
+          HANGAR_PLATFORM: paper
