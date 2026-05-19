@@ -104,7 +104,7 @@ used as an optional index for fast lookups, auditing, and cross-server global tr
 
 ### 5. SQLite Access Audit Log
 
-![Audit log screenshot](images/audit-log.svg)
+![Audit log screenshot](images/audit-log.png)
 
 - Database: `plugins/BlockProt/blockprot_audit.sqlite`.
 - Records `ACCESS_DENIED` and `ACCESS_GRANTED` events with player UUID, name, location, and timestamp.
