@@ -560,7 +560,7 @@ public final class DefaultConfig extends BlockProtConfig {
     }
 
     /**
-     * Whether to play a particle ring and sound around a block when it is locked or unlocked.
+     * Whether to play a particle ring around a block when it is locked or unlocked.
      * Lock produces green dust particles; unlock produces red dust particles.
      * Defaults to {@code true}.
      *
@@ -569,5 +569,16 @@ public final class DefaultConfig extends BlockProtConfig {
     public boolean isLockEffectEnabled() {
         if (!config.contains("block_lock_effects")) return true;
         return config.getBoolean("block_lock_effects");
+    }
+
+    /**
+     * Whether sound should play for lock/unlock and setting-toggle effects.
+     * Defaults to {@code true}.
+     *
+     * @since SP26
+     */
+    public boolean isLockSoundEnabled() {
+        if (!config.contains("block_lock_sounds")) return true;
+        return config.getBoolean("block_lock_sounds");
     }
 }

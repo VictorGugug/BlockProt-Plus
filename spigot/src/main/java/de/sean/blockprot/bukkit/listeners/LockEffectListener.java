@@ -112,8 +112,10 @@ public final class LockEffectListener implements Listener {
         };
 
         spawnTransitionRingsForBlock(block, transition);
-        Location center = centroid(block);
-        center.getWorld().playSound(center, Sound.BLOCK_LEVER_CLICK, 0.5f, enabled ? 1.4f : 0.9f);
+        if (BlockProt.getDefaultConfig().isLockSoundEnabled()) {
+            Location center = centroid(block);
+            center.getWorld().playSound(center, Sound.BLOCK_LEVER_CLICK, 0.35f, enabled ? 1.4f : 0.9f);
+        }
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -219,10 +221,11 @@ public final class LockEffectListener implements Listener {
     }
 
     private static void playChestSound(@NotNull Location loc, boolean locked) {
+        if (!BlockProt.getDefaultConfig().isLockSoundEnabled()) return;
         loc.getWorld().playSound(loc,
                 locked ? Sound.BLOCK_CHEST_CLOSE : Sound.BLOCK_CHEST_OPEN,
-                0.6f,
-                1.2f
+                0.35f,
+                1.0f
         );
     }
 }
