@@ -60,19 +60,12 @@ jobs:
           retention-days: 1
 
   # ────────────────────────────────────────────────────────────────────────────
-  # 2. Modrinth
-  #
-  # One-time setup:
-  #   1. modrinth.com → Settings → Personal access tokens → Create token (scope: CREATE_VERSION)
-  #   2. GitHub repo → Settings → Secrets and variables → Actions → New secret:
-  #        MODRINTH_TOKEN   = your token
-  #        MODRINTH_PROJECT_ID = your project slug (e.g. blockprot-plus)
+  # 2. Modrinth — project: blockprot-reloaded
   # ────────────────────────────────────────────────────────────────────────────
   publish_modrinth:
     name: Publish → Modrinth
     needs: build
     runs-on: ubuntu-latest
-    # secrets cannot be used in `if` expressions directly; use env var workaround.
     env:
       HAS_TOKEN: ${{ secrets.MODRINTH_TOKEN != '' }}
     if: env.HAS_TOKEN == 'true'
@@ -99,7 +92,7 @@ jobs:
         uses: modrinth/minotaur@v2
         with:
           token:          ${{ secrets.MODRINTH_TOKEN }}
-          project_id:     ${{ secrets.MODRINTH_PROJECT_ID }}
+          project_id:     blockprot-reloaded
           version_type:   ${{ steps.channel.outputs.type }}
           name:           "BlockProt Plus ${{ needs.build.outputs.version }}"
           version_number: ${{ needs.build.outputs.version }}
@@ -115,13 +108,7 @@ jobs:
             bukkit
 
   # ────────────────────────────────────────────────────────────────────────────
-  # 3. Hangar (PaperMC)
-  #
-  # One-time setup:
-  #   1. hangar.papermc.io → Settings → API keys → Create key (permission: create_version)
-  #   2. GitHub repo → Settings → Secrets → Actions → New secret:
-  #        HANGAR_TOKEN = your API key
-  #   3. In this file, set `slug` below to YourUsername/YourProjectSlug.
+  # 3. Hangar — project: VictorGugug/BlockProtPlus
   # ────────────────────────────────────────────────────────────────────────────
   publish_hangar:
     name: Publish → Hangar
@@ -152,8 +139,7 @@ jobs:
       - name: Upload to Hangar
         uses: HangarMC/hangar-publish-plugin@v0.1.0
         with:
-          # Change to your Hangar username/project-slug after creating the project.
-          slug:          "VictorGugug/BlockProt-Plus"
+          slug:          "VictorGugug/BlockProtPlus"
           version:       ${{ needs.build.outputs.version }}
           channel:       ${{ steps.channel.outputs.name }}
           changelog:     ${{ github.event.release.body || 'See the GitHub release for the full changelog.' }}
