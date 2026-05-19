@@ -20,22 +20,14 @@
 > Players lock chests, furnaces, and other blocks through a modern GUI — no commands to memorize.
 > This fork extends the original NBT core with production-grade features for large or long-running servers.
 
+> **This README is the authoritative feature reference.**
+> Modrinth, Hangar, and SpigotMC pages contain a summary and link here for full detail.
+> This is the only file that needs updating when new features are added.
+
 ![Main menu](https://raw.githubusercontent.com/VictorGugug/BlockProt-Plus/main/images/main_menu.png)
 ![Friend settings](https://raw.githubusercontent.com/VictorGugug/BlockProt-Plus/main/images/friend_settings.png)
 ![Player settings](https://raw.githubusercontent.com/VictorGugug/BlockProt-Plus/main/images/user_settings.png)
 ![Redstone settings](https://raw.githubusercontent.com/VictorGugug/BlockProt-Plus/main/images/redstone_settings.png)
-
----
-
-## What is BlockProt Plus?
-
-BlockProt lets players protect chests, furnaces, and many other blocks using a modern GUI —
-no commands to memorize. This fork targets Paper/Spigot servers on Minecraft 1.21+ and the
-new year-based 26.x version family.
-
-> **This README is the authoritative feature reference.**
-> The Modrinth and Hangar pages contain a summary and link here for the full detail,
-> so this is the only file that needs updating when new features are added.
 
 ---
 
@@ -104,7 +96,7 @@ used as an optional index for fast lookups, auditing, and cross-server global tr
 
 ### 5. SQLite Access Audit Log
 
-![Audit log screenshot](images/audit-log.png)
+![Audit log screenshot](https://raw.githubusercontent.com/VictorGugug/BlockProt-Plus/main/images/audit-log.png)
 
 - Database: `plugins/BlockProt/blockprot_audit.sqlite`.
 - Records `ACCESS_DENIED` and `ACCESS_GRANTED` events with player UUID, name, location, and timestamp.
@@ -217,12 +209,19 @@ used as an optional index for fast lookups, auditing, and cross-server global tr
   is available.
 - Result is cached per session; the API is only called once per server start.
 
-### 21. Auto-Publish to Modrinth & Hangar
+### 21. Cached Profile Service
+
+- `CachedProfileService` wraps Mojang profile lookups (name → UUID and skin) with an
+  in-memory cache.
+- Eliminates repeated HTTP calls during a single session when the same player is resolved
+  multiple times (e.g. from `FriendsAddAllCommand` or friend search).
+- Thread-safe; results expire after a configurable TTL.
+
+### 22. Auto-Publish to Modrinth & Hangar
 
 - `.github/workflows/publish.yml` builds the shadow JAR and publishes it to **Modrinth** and
   **Hangar** automatically when a GitHub Release is published.
 - Release channel (`release` / `beta` / `alpha`) is inferred from the version suffix.
-- Requires `MODRINTH_TOKEN`, `MODRINTH_PROJECT_ID`, and `HANGAR_TOKEN` repository secrets.
 
 ---
 
@@ -345,6 +344,7 @@ optional_features_enable_all: false
 | File | Description |
 |------|-------------|
 | `BlockProtLogger.java` | Persistent session log writer |
+| `CachedProfileService.java` | In-memory cache for Mojang profile lookups |
 | `VersionCompat.java` | Runtime version detection (1.x and 26.x) |
 | `VersionValidator.java` | Startup compatibility checks |
 | `audit/AuditLogger.java` | SQLite access audit log |
@@ -377,14 +377,6 @@ optional_features_enable_all: false
 
 ---
 
-## Translating
-
-Language files are in `spigot/src/main/resources/lang/`. Contributions welcome.
-
-All message values support Minecraft legacy color and formatting codes (`§a`, `§b`, `§l`, etc.).
-
----
-
 ## Developing addons
 
 The fork exposes the same `BlockProtAPI` as the upstream plugin:
@@ -394,7 +386,8 @@ BlockNBTHandler handler = BlockProtAPI.getInstance().getBlockHandler(block);
 PlayerSettingsHandler playerHandler = BlockProtAPI.getInstance().getPlayerSettings(player);
 ```
 
-Internal classes (`HybridDatabase`, `AuditLogger`, `WorldsConfig`, etc.) are not part of the public API.
+Internal classes (`HybridDatabase`, `AuditLogger`, `WorldsConfig`, `CachedProfileService`, etc.)
+are not part of the public API.
 
 ---
 
@@ -414,6 +407,14 @@ Output JAR: `spigot/build/libs/BlockProt-VERSION.jar`
 | `1.2.9` | `SNAPSHOT` | `BlockProt-1.2.9-SNAPSHOT.jar` |
 | `1.2.9` | `beta.1` | `BlockProt-1.2.9-beta.1.jar` |
 | `1.2.9` | `fix.1` | `BlockProt-1.2.9-fix.1.jar` |
+
+---
+
+## Translating
+
+Language files are in `spigot/src/main/resources/lang/`. Contributions welcome.
+
+All message values support Minecraft legacy color and formatting codes (`§a`, `§b`, `§l`, etc.).
 
 ---
 

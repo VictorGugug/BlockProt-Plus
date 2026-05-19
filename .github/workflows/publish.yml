@@ -62,21 +62,20 @@ jobs:
   # ────────────────────────────────────────────────────────────────────────────
   # 2. Modrinth
   #
-  # Setup (one-time):
-  #   • Go to modrinth.com → Settings → Personal access tokens → Create token
-  #   • GitHub repo → Settings → Secrets and variables → Actions → New secret
-  #       Name:  MODRINTH_TOKEN
-  #       Value: (your token)
-  #   • After creating your project on Modrinth, copy its ID or slug and add:
-  #       Name:  MODRINTH_PROJECT_ID
-  #       Value: blockprot-sp26-zv   (your project slug)
+  # One-time setup:
+  #   1. modrinth.com → Settings → Personal access tokens → Create token (scope: CREATE_VERSION)
+  #   2. GitHub repo → Settings → Secrets and variables → Actions → New secret:
+  #        MODRINTH_TOKEN   = your token
+  #        MODRINTH_PROJECT_ID = your project slug (e.g. blockprot-plus)
   # ────────────────────────────────────────────────────────────────────────────
   publish_modrinth:
     name: Publish → Modrinth
     needs: build
     runs-on: ubuntu-latest
-    # Skips silently if the secret is not configured yet.
-    if: ${{ secrets.MODRINTH_TOKEN != '' }}
+    # secrets cannot be used in `if` expressions directly; use env var workaround.
+    env:
+      HAS_TOKEN: ${{ secrets.MODRINTH_TOKEN != '' }}
+    if: env.HAS_TOKEN == 'true'
 
     steps:
       - uses: actions/download-artifact@v4
@@ -102,7 +101,7 @@ jobs:
           token:          ${{ secrets.MODRINTH_TOKEN }}
           project_id:     ${{ secrets.MODRINTH_PROJECT_ID }}
           version_type:   ${{ steps.channel.outputs.type }}
-          name:           "BlockProt SP26-ZV ${{ needs.build.outputs.version }}"
+          name:           "BlockProt Plus ${{ needs.build.outputs.version }}"
           version_number: ${{ needs.build.outputs.version }}
           changelog:      ${{ github.event.release.body || 'See the GitHub release for the full changelog.' }}
           files:          ./artifacts/*.jar
@@ -118,20 +117,19 @@ jobs:
   # ────────────────────────────────────────────────────────────────────────────
   # 3. Hangar (PaperMC)
   #
-  # Setup (one-time):
-  #   • Go to hangar.papermc.io → Settings → API keys → Create key
-  #     (permissions needed: create_version)
-  #   • GitHub repo → Settings → Secrets → New secret
-  #       Name:  HANGAR_TOKEN
-  #       Value: (your API key)
-  #   • Create your project on Hangar first, then set the slug below in the
-  #     'slug' field (format: YourUsername/YourProjectSlug).
+  # One-time setup:
+  #   1. hangar.papermc.io → Settings → API keys → Create key (permission: create_version)
+  #   2. GitHub repo → Settings → Secrets → Actions → New secret:
+  #        HANGAR_TOKEN = your API key
+  #   3. In this file, set `slug` below to YourUsername/YourProjectSlug.
   # ────────────────────────────────────────────────────────────────────────────
   publish_hangar:
     name: Publish → Hangar
     needs: build
     runs-on: ubuntu-latest
-    if: ${{ secrets.HANGAR_TOKEN != '' }}
+    env:
+      HAS_TOKEN: ${{ secrets.HANGAR_TOKEN != '' }}
+    if: env.HAS_TOKEN == 'true'
 
     steps:
       - uses: actions/download-artifact@v4
