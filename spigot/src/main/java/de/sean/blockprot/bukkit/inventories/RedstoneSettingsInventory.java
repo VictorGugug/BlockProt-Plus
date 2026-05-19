@@ -18,6 +18,7 @@
 
 package de.sean.blockprot.bukkit.inventories;
 
+import de.sean.blockprot.bukkit.listeners.LockEffectListener;
 import de.sean.blockprot.bukkit.TranslationKey;
 import de.sean.blockprot.bukkit.Translator;
 import de.sean.blockprot.bukkit.nbt.BlockNBTHandler;
@@ -60,14 +61,20 @@ public class RedstoneSettingsInventory extends BlockProtInventory {
             case REDSTONE -> {
                 currentProtection = !currentProtection;
                 inventory.setItem(0, toggleOption(item, null));
+                if (state.getBlock() != null)
+                    LockEffectListener.playSettingEffect(state.getBlock(), LockEffectListener.Setting.REDSTONE, currentProtection);
             }
             case HOPPER -> {
                 hopperProtection = !hopperProtection;
                 inventory.setItem(1, toggleOption(item, null));
+                if (state.getBlock() != null)
+                    LockEffectListener.playSettingEffect(state.getBlock(), LockEffectListener.Setting.HOPPER, hopperProtection);
             }
             case PISTON -> {
                 pistonProtection = !pistonProtection;
                 inventory.setItem(2, toggleOption(item, null));
+                if (state.getBlock() != null)
+                    LockEffectListener.playSettingEffect(state.getBlock(), LockEffectListener.Setting.PISTON, pistonProtection);
             }
             case RED_STAINED_GLASS_PANE -> overrideAllSettings(false);
             case GREEN_STAINED_GLASS_PANE -> overrideAllSettings(true);

@@ -119,6 +119,11 @@ allow_break_protected_blocks: false
 # Set to false to allow locking inside the spawn area.
 respect_spawn_protection: true
 
+# When true, a ring of colored dust particles and a click sound plays around
+# a block when it is locked (green) or unlocked (red).
+# Set to false to disable visual/audio feedback entirely.
+block_lock_effects: true
+
 # WorldEdit/FAWE paste watcher. Disabled by default.
 # When enabled, BlockProt watches //paste commands and performs a bounded scan
 # near the player after the paste finishes, locking lockable blocks with NBT.

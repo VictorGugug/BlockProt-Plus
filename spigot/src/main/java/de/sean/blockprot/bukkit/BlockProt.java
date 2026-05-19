@@ -222,9 +222,9 @@ public final class BlockProt extends JavaPlugin {
         // SQLite audit logger; no external database is required.
         try {
             auditLogger = new AuditLogger(this.getDataFolder());
-            getLogger().info(Translator.get(TranslationKey.CONSOLE__AUDIT_LOGGER_STARTED));
+            BlockProtConsole.success(Translator.get(TranslationKey.CONSOLE__AUDIT_LOGGER_STARTED));
         } catch (Exception e) {
-            getLogger().warning(Translator.get(TranslationKey.CONSOLE__AUDIT_LOGGER_FAILED)
+            BlockProtConsole.warn(Translator.get(TranslationKey.CONSOLE__AUDIT_LOGGER_FAILED)
                 .replace("{error}", e.getMessage()));
         }
 
@@ -253,9 +253,10 @@ public final class BlockProt extends JavaPlugin {
         registerEvent(pm, new JoinEventListener());
         registerEvent(pm, new PistonEventListener());
         registerEvent(pm, new RedstoneEventListener());
+        registerEvent(pm, new LockEffectListener());
         if (defaultConfig.isWorldEditPasteAutolockEnabled()) {
             registerEvent(pm, new WorldEditPasteListener(this));
-            getLogger().info(Translator.get(TranslationKey.CONSOLE__WORLDEDIT_LISTENER_ENABLED));
+            BlockProtConsole.info(Translator.get(TranslationKey.CONSOLE__WORLDEDIT_LISTENER_ENABLED));
         }
 
         Objects.requireNonNull(this.getCommand("blockprot"))
@@ -266,6 +267,7 @@ public final class BlockProt extends JavaPlugin {
             try {
                 integration.enable();
                 if (integration.isEnabled()) {
+                    BlockProtConsole.integrationEnabled(integration.name);
                     BlockProtLogger.log("integration", "Enabled plugin integration for plugin with id '" + integration.name + "'");
                 }
             } catch (NoClassDefFoundError ignored) {}
@@ -354,7 +356,7 @@ public final class BlockProt extends JavaPlugin {
 
     void registerIntegration(@NotNull PluginIntegration integration) {
         this.integrations.add(integration);
-        getLogger().info(String.format("Registered plugin integration for plugin with id '%s'", integration.name));
+        BlockProtConsole.integration(integration.name);
     }
 
     /**

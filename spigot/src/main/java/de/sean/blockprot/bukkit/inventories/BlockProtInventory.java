@@ -27,6 +27,7 @@ import de.sean.blockprot.bukkit.nbt.PlayerSettingsHandler;
 import de.sean.blockprot.nbt.FriendModifyAction;
 import de.sean.blockprot.nbt.LockReturnValue;
 import de.tr7zw.changeme.nbtapi.NBTCompound;
+import de.sean.blockprot.bukkit.util.SkinCache;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
@@ -459,18 +460,29 @@ public abstract class BlockProtInventory implements InventoryHolder {
     }
 
     /**
-     * Create a player profile that prefers SkinRestorer skins when available.
+     * Create a player profile that prefers SkinRestorer skins when available,
+     * and falls back to Mojang API lookup for offline/cracked servers.
      *
-     * @param uuid The player's UUID.
+     * <p>On cracked servers offline UUIDs don't match Mojang's database so the
+     * vanilla profile API returns no skin. {@link SkinCache} resolves the real
+     * Mojang UUID by username asynchronously; the first call returns a plain
+     * profile and subsequent calls return the skinned one once the fetch is done.
+     *
+     * @param uuid The player's UUID (may be offline/cracked).
      * @param name The player's current name.
-     * @return A player profile, or null if one cannot be created.
+     * @return A player profile, never {@code null}.
      * @since 1.1.16
      */
-    @Nullable
+    @NotNull
     public static PlayerProfile createPlayerProfile(@NotNull final UUID uuid, @NotNull final String name) {
-        PlayerProfile profile = Bukkit.getServer().createPlayerProfile(uuid, name);
+        // 1. SkinRestorer takes priority (explicit user-installed skin plugin).
         PlayerProfile skinRestorerProfile = resolveSkinRestorerProfile(uuid, name);
-        return skinRestorerProfile != null ? skinRestorerProfile : profile;
+        if (skinRestorerProfile != null) return skinRestorerProfile;
+
+        // 2. On online-mode servers Bukkit resolves skins fine.
+        //    On offline servers the UUID is a name-hash and the skin API returns nothing,
+        //    so we use SkinCache which fetches from Mojang by name and caches the result.
+        return SkinCache.getOrFetch(name, uuid);
     }
 
     @Nullable

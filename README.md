@@ -223,12 +223,65 @@ used as an optional index for fast lookups, auditing, and cross-server global tr
   **Hangar** automatically when a GitHub Release is published.
 - Release channel (`release` / `beta` / `alpha`) is inferred from the version suffix.
 
+### 23. Colored Particle Effects on Lock / Unlock / Settings Toggle
+
+- **Lock** → green dust-particle ring around the block + chest-locked sound.
+- **Unlock** → red dust-particle ring + sound.
+- **Double chests** are handled correctly: both halves receive the particle ring simultaneously.
+- **Redstone setting toggle** → red ↔ white `DUST_COLOR_TRANSITION` ring + lever click sound.
+- **Hopper setting toggle** → light-gray ↔ dark-gray transition ring.
+- **Piston setting toggle** → brown ↔ gray transition ring.
+- All effects respect `block_lock_effects: true/false` in `config.yml` (default: true).
+
+### 24. Shulker Box — Shift+Right-Click Places Without Protection
+
+- Placing a shulker box while **sneaking** (Shift+right-click) skips the lock-on-place step.
+- The shulker is placed without any owner, so the recipient can open and lock it as their own.
+- Normal placement still auto-locks as configured.
+- Configurable via the existing `lock_on_place_by_default` flow; no extra config key needed.
+
+### 25. Skin Resolution for Cracked / Offline-Mode Servers
+
+`SkinCache` provides an async Mojang-API fallback for offline servers where UUIDs
+are name-derived and don't correspond to Mojang profiles:
+
+1. On first GUI open for a player, a plain (no-texture) head is shown immediately.
+2. In the background, BlockProt queries `api.mojang.com` to resolve the real Mojang UUID
+   from the username, then fetches the skin texture from the session server.
+3. On the next GUI open the skinned head is returned from cache.
+4. **SkinRestorer** (if installed) always takes priority over the Mojang fallback.
+5. Fetch failures (network errors, rate limits, unknown names) are silently skipped;
+   the plain head continues to be shown without any console errors.
+
+### 26. Admin Teleport from Statistics Inventory
+
+- In the **Statistics → Your Blocks** list, players with `blockprot.admin` permission
+  can **click any block entry** to teleport directly to that block.
+- The inventory closes after teleporting.
+- Players without the admin permission see no change on click.
+
+### 27. Amber Console Colors for BlockProt-Plus Messages
+
+- Integration registration and enable messages print in **gold/amber** via `BlockProtConsole`.
+- Informational startup messages use §e yellow, success messages use §a green, warnings §c red.
+- Uses `Bukkit.getConsoleSender().sendMessage()` with legacy color codes — rendered natively
+  by Paper's Log4j2 console renderer on 1.21+ and falls back to plain text on Spigot.
+- Example: `§6[BlockProt]§r §6Integration enabled: §eclaimchunk§r`
+
+### 28. Per-Player Sections in the Access Audit Log
+
+- The audit GUI overview now shows **one head per unique player** with a clear label:
+  `§cX §fname` (access denied) or `§aOK §fname` (access granted).
+- Lore shows the last event timestamp, total event count, and world/coordinates.
+- Clicking a player head opens their **full personal history** (all events in order).
+- The detail view shows individual event timestamps and actions.
+- Navigation arrows are consistent across both views.
+
 ---
 
 ## Commands
 
 | Command | Description |
-|---|---|
 | `/bp help` | List all subcommands |
 | `/bp settings` | Open player settings GUI |
 | `/bp friends` | Open global friend list GUI |
@@ -276,7 +329,7 @@ Alias: `/blockprot`. Spanish aliases available when `localized_command_aliases: 
 
 | | |
 |---|---|
-| **Minecraft** | 1.21, 1.21.1, 1.21.4, 26.x |
+| **Minecraft** | 1.21, 1.21.1, 1.21.4, 26.1.x (latest Paper builds) |
 | **Server** | Paper, Spigot |
 | **Java** | 25+ required |
 | **MySQL** | MySQL 8+, MariaDB 10.5+ (optional) |
@@ -305,6 +358,10 @@ block_protected_block_piston_movement: true
 allow_break_protected_blocks: false
 respect_spawn_protection: true
 clear_protection_on_shulker_break: false
+
+# ── Particle effects ─────────────────────────────────────────────────────
+# true = colored dust rings on lock/unlock and redstone/hopper/piston toggles
+block_lock_effects: true
 
 # ── Optional MySQL index ──────────────────────────────────────────────────
 mysql:
@@ -363,7 +420,9 @@ optional_features_enable_all: false
 | `tasks/ConfigFileWatcher.java` | Auto-reload on config file change |
 | `tasks/InactivityCleanupTask.java` | Remove protections of inactive players |
 | `util/PlayerNameResolver.java` | Offline player UUID resolution via Mojang API |
+| `util/SkinCache.java` | Async Mojang skin fetcher for offline/cracked servers |
 | `util/TemporaryActionBar.java` | Repeating action bar message utility |
+| `BlockProtConsole.java` | Amber-colored console message helper |
 
 ---
 

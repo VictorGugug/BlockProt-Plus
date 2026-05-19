@@ -162,8 +162,14 @@ public class BlockEventListener implements Listener {
         if (handler.isNotProtected()) {
             PlayerSettingsHandler settingsHandler = new PlayerSettingsHandler(event.getPlayer());
 
+            // Shulker boxes placed while sneaking are intentionally left unprotected so the
+            // player can hand them off to others without requiring manual unlock afterwards.
+            // This lets players gift shulkers without the recipient needing to ask for unlock.
+            boolean shulkerPlacedSneaking = BlockProt.getDefaultConfig().isLockableShulkerBox(block.getType())
+                && event.getPlayer().isSneaking();
+
             // Lock the block instantly if the setting is enabled.
-            if (settingsHandler.getLockOnPlace()) {
+            if (settingsHandler.getLockOnPlace() && !shulkerPlacedSneaking) {
                 BlockLockOnPlaceEvent lockOnPlaceEvent = new BlockLockOnPlaceEvent(event.getBlock(), event.getPlayer());
 
                 Bukkit.getPluginManager().callEvent(lockOnPlaceEvent);

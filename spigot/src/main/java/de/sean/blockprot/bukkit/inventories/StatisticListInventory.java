@@ -19,10 +19,12 @@
 package de.sean.blockprot.bukkit.inventories;
 
 import de.sean.blockprot.bukkit.BlockProt;
+import de.sean.blockprot.bukkit.Permissions;
 import de.sean.blockprot.bukkit.TranslationKey;
 import de.sean.blockprot.bukkit.Translator;
 import de.sean.blockprot.bukkit.nbt.stats.BukkitListStatistic;
 import de.sean.blockprot.nbt.stats.ListStatisticItem;
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryClickEvent;
@@ -72,7 +74,32 @@ public final class StatisticListInventory extends BlockProtInventory {
                 closeAndOpen(event.getWhoClicked(), new StatisticsInventory().fill((Player) event.getWhoClicked()));
                 break;
             default:
-                // Ignore clicks on statistic items.
+                // Admin TP: clicking a block item teleports the admin to that block.
+                if (event.getWhoClicked() instanceof Player player
+                        && player.hasPermission(Permissions.ADMIN.key())) {
+                    int slot = event.getSlot();
+                    final InventoryState tpState = InventoryState.get(player.getUniqueId());
+                    if (tpState != null) {
+                        int offset2 = (this.getSize() - 3) * tpState.currentPageIndex;
+                        int idx = offset2 + slot;
+                        List<ListStatisticItem<?, Material>> fullList = this.statistic.get()
+                            .stream()
+                            .filter(i2 -> BlockProt.getDefaultConfig().isLockable(i2.getItemType()))
+                            .collect(java.util.stream.Collectors.toList());
+                        if (idx >= 0 && idx < fullList.size()) {
+                            ListStatisticItem<?, Material> entry = fullList.get(idx);
+                            if (entry instanceof de.sean.blockprot.bukkit.nbt.stats.LocationListEntry locEntry) {
+                                Location loc = locEntry.get();
+                                if (loc.getWorld() != null) {
+                                    player.closeInventory();
+                                    player.teleport(loc.clone().add(0.5, 1.0, 0.5));
+                                    InventoryState.remove(player.getUniqueId());
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                }
                 break;
         }
     }
