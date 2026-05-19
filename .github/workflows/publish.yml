@@ -66,20 +66,18 @@ jobs:
     name: Publish → Modrinth
     needs: build
     runs-on: ubuntu-latest
+    env:
+      MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
 
     steps:
       - uses: actions/download-artifact@v4
-        env:
-          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
-        if: ${{ env.MODRINTH_TOKEN != '' }}
+        if: env.MODRINTH_TOKEN != ''
         with:
           name: blockprot-jar
           path: ./artifacts
 
       - name: Determine release channel
-        env:
-          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
-        if: ${{ env.MODRINTH_TOKEN != '' }}
+        if: env.MODRINTH_TOKEN != ''
         id: channel
         run: |
           VERSION="${{ needs.build.outputs.version }}"
@@ -92,7 +90,7 @@ jobs:
           fi
 
       - name: Upload to Modrinth
-        if: ${{ secrets.MODRINTH_TOKEN != '' }}
+        if: env.MODRINTH_TOKEN != ''
         uses: HSGamer/action-mcreleaser@main
         with:
           files: |
@@ -111,20 +109,18 @@ jobs:
     name: Publish → Hangar
     needs: build
     runs-on: ubuntu-latest
+    env:
+      HANGAR_TOKEN: ${{ secrets.HANGAR_TOKEN }}
 
     steps:
       - uses: actions/download-artifact@v4
-        env:
-          HANGAR_TOKEN: ${{ secrets.HANGAR_TOKEN }}
-        if: ${{ env.HANGAR_TOKEN != '' }}
+        if: env.HANGAR_TOKEN != ''
         with:
           name: blockprot-jar
           path: ./artifacts
 
       - name: Determine Hangar channel
-        env:
-          HANGAR_TOKEN: ${{ secrets.HANGAR_TOKEN }}
-        if: ${{ env.HANGAR_TOKEN != '' }}
+        if: env.HANGAR_TOKEN != ''
         id: channel
         run: |
           VERSION="${{ needs.build.outputs.version }}"
@@ -137,7 +133,7 @@ jobs:
           fi
 
       - name: Upload to Hangar
-        if: ${{ secrets.HANGAR_TOKEN != '' }}
+        if: env.HANGAR_TOKEN != ''
         uses: HSGamer/action-mcreleaser@main
         with:
           files: |
