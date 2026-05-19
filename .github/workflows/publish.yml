@@ -66,9 +66,7 @@ jobs:
     name: Publish → Modrinth
     needs: build
     runs-on: ubuntu-latest
-    env:
-      HAS_TOKEN: ${{ secrets.MODRINTH_TOKEN != '' }}
-    if: env.HAS_TOKEN == 'true'
+    if: ${{ secrets.MODRINTH_TOKEN != '' }}
 
     steps:
       - uses: actions/download-artifact@v4
@@ -114,9 +112,7 @@ jobs:
     name: Publish → Hangar
     needs: build
     runs-on: ubuntu-latest
-    env:
-      HAS_TOKEN: ${{ secrets.HANGAR_TOKEN != '' }}
-    if: env.HAS_TOKEN == 'true'
+    if: ${{ secrets.HANGAR_TOKEN != '' }}
 
     steps:
       - uses: actions/download-artifact@v4
