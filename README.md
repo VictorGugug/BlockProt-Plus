@@ -363,6 +363,10 @@ clear_protection_on_shulker_break: false
 # true = colored dust rings on lock/unlock and redstone/hopper/piston toggles
 block_lock_effects: true
 
+# When true, sound plays for lock/unlock and setting-toggle effects.
+# Set to false to keep particles enabled but mute those sounds.
+block_lock_sounds: true
+
 # ── Optional MySQL index ──────────────────────────────────────────────────
 mysql:
   enabled: false
