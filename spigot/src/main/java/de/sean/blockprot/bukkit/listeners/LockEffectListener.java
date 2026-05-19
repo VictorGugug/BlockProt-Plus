@@ -70,7 +70,7 @@ public final class LockEffectListener implements Listener {
         // Green ring
         Particle.DustOptions green = new Particle.DustOptions(Color.fromRGB(0, 220, 80), 1.2f);
         spawnRingsForBlock(event.getBlock(), green);
-        playClick(centroid(event.getBlock()));
+        playChestSound(centroid(event.getBlock()), true);
     }
 
     @EventHandler
@@ -79,7 +79,7 @@ public final class LockEffectListener implements Listener {
         // Red ring
         Particle.DustOptions red = new Particle.DustOptions(Color.fromRGB(220, 50, 50), 1.2f);
         spawnRingsForBlock(event.getBlock(), red);
-        playClick(centroid(event.getBlock()));
+        playChestSound(centroid(event.getBlock()), false);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -218,7 +218,11 @@ public final class LockEffectListener implements Listener {
         return block.getLocation().add(0.5, 0.5, 0.5);
     }
 
-    private static void playClick(@NotNull Location loc) {
-        loc.getWorld().playSound(loc, Sound.BLOCK_CHEST_LOCKED, 0.6f, 1.2f);
+    private static void playChestSound(@NotNull Location loc, boolean locked) {
+        loc.getWorld().playSound(loc,
+                locked ? Sound.BLOCK_CHEST_CLOSE : Sound.BLOCK_CHEST_OPEN,
+                0.6f,
+                1.2f
+        );
     }
 }
