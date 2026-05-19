@@ -69,13 +69,17 @@ jobs:
 
     steps:
       - uses: actions/download-artifact@v4
-        if: ${{ secrets.MODRINTH_TOKEN != '' }}
+        env:
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+        if: ${{ env.MODRINTH_TOKEN != '' }}
         with:
           name: blockprot-jar
           path: ./artifacts
 
       - name: Determine release channel
-        if: ${{ secrets.MODRINTH_TOKEN != '' }}
+        env:
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+        if: ${{ env.MODRINTH_TOKEN != '' }}
         id: channel
         run: |
           VERSION="${{ needs.build.outputs.version }}"
@@ -88,10 +92,12 @@ jobs:
           fi
 
       - name: Upload to Modrinth
-        if: ${{ secrets.MODRINTH_TOKEN != '' }}
+        env:
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+        if: ${{ env.MODRINTH_TOKEN != '' }}
         uses: modrinth/minotaur@v2
         with:
-          token:          ${{ secrets.MODRINTH_TOKEN }}
+          token:          ${{ env.MODRINTH_TOKEN }}
           project_id:     blockprot-reloaded
           version_type:   ${{ steps.channel.outputs.type }}
           name:           "BlockProt Plus ${{ needs.build.outputs.version }}"
@@ -117,13 +123,17 @@ jobs:
 
     steps:
       - uses: actions/download-artifact@v4
-        if: ${{ secrets.HANGAR_TOKEN != '' }}
+        env:
+          HANGAR_TOKEN: ${{ secrets.HANGAR_TOKEN }}
+        if: ${{ env.HANGAR_TOKEN != '' }}
         with:
           name: blockprot-jar
           path: ./artifacts
 
       - name: Determine Hangar channel
-        if: ${{ secrets.HANGAR_TOKEN != '' }}
+        env:
+          HANGAR_TOKEN: ${{ secrets.HANGAR_TOKEN }}
+        if: ${{ env.HANGAR_TOKEN != '' }}
         id: channel
         run: |
           VERSION="${{ needs.build.outputs.version }}"
@@ -136,14 +146,16 @@ jobs:
           fi
 
       - name: Upload to Hangar
-        if: ${{ secrets.HANGAR_TOKEN != '' }}
+        env:
+          HANGAR_TOKEN: ${{ secrets.HANGAR_TOKEN }}
+        if: ${{ env.HANGAR_TOKEN != '' }}
         uses: HangarMC/hangar-publish-plugin@v0.1.0
         with:
           slug:          "VictorGugug/BlockProtPlus"
           version:       ${{ needs.build.outputs.version }}
           channel:       ${{ steps.channel.outputs.name }}
           changelog:     ${{ github.event.release.body || 'See the GitHub release for the full changelog.' }}
-          api_key:       ${{ secrets.HANGAR_TOKEN }}
+          api_key:       ${{ env.HANGAR_TOKEN }}
           files:         ./artifacts/*.jar
           game_versions: "1.21,1.21.1,1.21.4"
           platforms:     "PAPER"
