@@ -55,6 +55,15 @@ inventories:
     no_entries: "Sin registros."
     teleport: "Teletransportarse al bloque"
     open: "Registro de Accesos"
+  # ── Protección de mascotas (SP26-ZV) ─────────────────────────────────────
+  pet:
+    settings: "§dAjustes de Mascota"
+    protect: "§dProtección de mascota"
+    no_damage: "§cBloquear daño"
+    no_interact: "§eBloquear interacción"
+    no_leash: "§6Bloquear correa"
+    no_pickup: "§bBloquear recoger (loro)"
+  # ─────────────────────────────────────────────────────────────────────────
 messages:
   permission_granted: Protegido.
   unlocked: Desprotegido.
@@ -73,7 +82,6 @@ messages:
   chat_input_cancel_word: "cancelar"
   chat_input_cancelled: "§cBúsqueda cancelada."
   lock_on_place_success: "§aBloque protegido!"
-  # Mensaje temporal en action-bar mientras se busca un jugador. {player} = nombre buscado.
   friends_searching: "§eBuscando a §f{player}§e..."
   friends_addall_success: "§a§f{player}§a añadido como amigo en §f{count}§a bloque(s)."
   friends_addall_usage: "§cUso: /blockprot friends addall <jugador> o /blockprot amigos agregartodos <jugador>"
@@ -114,7 +122,6 @@ console:
   java_too_old: "Versión de Java demasiado antigua: {version} (BlockProt SP26 requiere Java 25+)"
   not_paper: "El servidor no está ejecutando Paper. La búsqueda por chat se desactiva y se usará la GUI de yunque. Se recomienda Paper."
   typed_views_fallback: "Servidor Paper/Spigot 1.21.0-1.21.3 detectado, sin vistas de inventario tipadas. Se usarán fallbacks de AnvilInput."
-
 worlds:
   scan_start: "Escaneando mundos... ({count} cargados)"
   scan_world_added: "Mundo '{world}' agregado a worlds.yml con proteccion activada."

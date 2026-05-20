@@ -52,11 +52,16 @@ public final class InventoryState {
     private final Block block;
 
     /**
+     * UUID of the pet entity currently open in {@link de.sean.blockprot.bukkit.inventories.PetSettingsInventory}.
+     * Null when the player is not in a pet-settings menu.
+     *
+     * @since SP26-ZV
+     */
+    @Nullable
+    private UUID petEntityId = null;
+
+    /**
      * The current state of the friend search mechanism.
-     * When adding default friends this should be {@link FriendSearchState#DEFAULT_FRIEND_SEARCH},
-     * which will then add the new friends to the current players NBT.
-     * When adding friends for a single block this should be {@link FriendSearchState#FRIEND_SEARCH},
-     * which will then add the new friends to {@link #block}'s NBT.
      *
      * @since 0.4.7
      */
@@ -64,9 +69,8 @@ public final class InventoryState {
     public FriendSearchState friendSearchState = FriendSearchState.FRIEND_SEARCH;
 
     /**
-     * The current index of the page, if the inventory
-     * has any multi-page capabilities.
-     * 
+     * The current index of the page, if the inventory has any multi-page capabilities.
+     *
      * @since 1.0.0
      */
     public int currentPageIndex = 0;
@@ -81,7 +85,7 @@ public final class InventoryState {
 
     /**
      * The current cached menu permissions for this player.
-     * 
+     *
      * @since 1.0.0
      */
     @NotNull
@@ -91,103 +95,87 @@ public final class InventoryState {
         this.block = block;
     }
 
-    /**
-     * Set's {@code state} to the UUID compatible
-     * String {@code player}. Overrides any previous state.
-     *
-     * @since 0.4.7
-     */
+    // ── Static accessors ──────────────────────────────────────────────────────
+
     public static void set(String player, InventoryState state) {
         players.put(player, state);
     }
 
-    /**
-     * Set's {@code state} to the player with UUID
-     * {@code player}. Overrides any previous state.
-     *
-     * @since 0.4.7
-     */
     public static void set(UUID player, InventoryState state) {
         players.put(player.toString(), state);
     }
 
-    /**
-     * Get the state for the UUID {@code player}. Might
-     * be null, if {@code player} is not a valid UUID or
-     * there is no state for that player currently.
-     *
-     * @since 0.4.7
-     */
     public static InventoryState get(String player) {
         return players.get(player);
     }
 
-    /**
-     * Get the state for the UUID {@code player}. Might
-     * be null, if {@code player} is not a valid UUID or
-     * there is no state for that player currently.
-     *
-     * @since 0.4.7
-     */
     public static InventoryState get(UUID player) {
         return players.get(player.toString());
     }
 
     /**
-     * Removes the state for {@code player}. This will not throw
-     * an exception if there was no state for {@code player}.
+     * Returns the existing state for the player, or creates a new one (with no block)
+     * if none exists. This is used by pet-menu open paths where there is no block.
      *
-     * @since 0.4.7
+     * @since SP26-ZV
      */
+    @NotNull
+    public static InventoryState getOrCreate(@NotNull UUID player) {
+        InventoryState existing = players.get(player.toString());
+        if (existing != null) return existing;
+        InventoryState fresh = new InventoryState(null);
+        players.put(player.toString(), fresh);
+        return fresh;
+    }
+
     public static void remove(String player) {
         players.remove(player);
     }
 
-    /**
-     * Removes the state for {@code player}. This will not throw
-     * an exception if there was no state for {@code player}.
-     *
-     * @param player The UUID for the player.
-     * @since 0.4.7
-     */
     public static void remove(UUID player) {
         players.remove(player.toString());
     }
 
-    /**
-     * The block that backs the values of the inventory state.
-     * If this inventory state is for a user settings inventory, this
-     * block will be null.
-     *
-     * @return The block or null, if not in a block specific inventory.
-     * @since 0.2.2
-     */
+    // ── Instance accessors ────────────────────────────────────────────────────
+
     @Nullable
     public Block getBlock() {
         return this.block;
     }
 
     /**
-     * The current search state of the friend menu. Indicates
-     * whether we're searching for default friends or for friends
-     * to be added directly to a block.
+     * Returns the UUID of the pet entity currently being configured,
+     * or null when not in a pet settings menu.
+     *
+     * @since SP26-ZV
+     */
+    @Nullable
+    public UUID getPetEntityId() {
+        return petEntityId;
+    }
+
+    /**
+     * Sets the pet entity UUID for this state. Used by
+     * {@link de.sean.blockprot.bukkit.inventories.PetSettingsInventory} to track
+     * which entity is being edited across click events.
+     *
+     * @since SP26-ZV
+     */
+    public void setPetEntityId(@Nullable UUID id) {
+        this.petEntityId = id;
+    }
+
+    // ── Enum ──────────────────────────────────────────────────────────────────
+
+    /**
+     * The current search state of the friend menu.
      *
      * @since 0.1.9
      */
     public enum FriendSearchState {
-        /**
-         * This search is currently for a single block.
-         *
-         * @since 0.1.9
-         */
+        /** This search is currently for a single block. @since 0.1.9 */
         FRIEND_SEARCH,
-
-        /**
-         * This search is currently for the default friends
-         * of a player.
-         *
-         * @since 0.1.9
-         */
+        /** This search is currently for the default friends of a player. @since 0.1.9 */
         DEFAULT_FRIEND_SEARCH,
     }
 }

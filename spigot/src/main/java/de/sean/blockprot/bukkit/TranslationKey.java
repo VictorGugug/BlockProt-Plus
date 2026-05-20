@@ -67,6 +67,21 @@ public enum TranslationKey {
     INVENTORIES__STATISTICS__CONTAINER_COUNT,
     INVENTORIES__STATISTICS__YOUR_BLOCKS,
 
+    // ── Pet protection (SP26-ZV) ──────────────────────────────────────────────
+    /** Title of the pet settings inventory. */
+    INVENTORIES__PET__SETTINGS,
+    /** Main on/off toggle for pet protection. */
+    INVENTORIES__PET__PROTECT,
+    /** Prevents other players from damaging this pet. */
+    INVENTORIES__PET__NO_DAMAGE,
+    /** Prevents other players from right-clicking (feeding, naming, etc.) this pet. */
+    INVENTORIES__PET__NO_INTERACT,
+    /** Prevents other players from leashing or unleashing this pet. */
+    INVENTORIES__PET__NO_LEASH,
+    /** Prevents other players from picking up a parrot onto their shoulder. */
+    INVENTORIES__PET__NO_PICKUP,
+    // ── End pet protection ────────────────────────────────────────────────────
+
     MESSAGES__PERMISSION_GRANTED,
     MESSAGES__UNLOCKED,
     MESSAGES__NO_PERMISSION,
@@ -85,10 +100,7 @@ public enum TranslationKey {
     MESSAGES__CHAT_INPUT_CANCEL_WORD,
     MESSAGES__CHAT_INPUT_CANCELLED,
     MESSAGES__LOCK_ON_PLACE_SUCCESS,
-
-    /** Temporary action-bar message while a player lookup is running. */
     MESSAGES__FRIENDS_SEARCHING,
-
     MESSAGES__FRIENDS_ADDALL_SUCCESS,
     MESSAGES__FRIENDS_ADDALL_USAGE,
     MESSAGES__INACTIVITY_CLEANUP_DONE,
@@ -165,12 +177,6 @@ public enum TranslationKey {
     HELP__DISABLE_HINTS,
     HELP__DEBUG;
 
-    /**
-     * Get the string representation of this {@link TranslationKey} as
-     * a valid YAML key. {@link TranslationKey#INVENTORIES__BACK} becomes
-     * "inventories.back", whereas {@link TranslationKey#INVENTORIES__BLOCK_LOCK}
-     * becomes "inventories.block_lock".
-     */
     @Override
     public String toString() {
         return name().replace("__", ".").toLowerCase(Locale.ENGLISH);

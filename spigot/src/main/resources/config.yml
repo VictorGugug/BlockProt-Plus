@@ -1,177 +1,231 @@
-# BlockProt Config
-#
-# The default configuration is grouped into logical sections so server admins
-# can find the right options faster.
-#
-# Sections:
-#   - General settings
-#   - Player and protection defaults
-#   - Optional feature presets
-#   - MySQL / storage
-#   - Safety and protection behavior
-#   - Effects and console
-#   - Integration settings
-#   - Block definitions
+# ┌─────────────────────────────────────────────────────────────────┐
+# │                     BlockProt Configuration                     │
+# │                        SP26-ZV Edition                         │
+# ├─────────────────────────────────────────────────────────────────┤
+# │  Sections:                                                      │
+# │   1. General                                                    │
+# │   2. Player & Protection Defaults                               │
+# │   3. Safety & Protection Behavior                               │
+# │   4. Pet Protection (SP26-ZV)                                   │
+# │   5. Effects & Console                                          │
+# │   6. Optional Features                                          │
+# │   7. MySQL / Storage                                            │
+# │   8. WorldEdit Auto-Lock                                        │
+# │   9. Block Definitions                                          │
+# └─────────────────────────────────────────────────────────────────┘
 
-# === General Settings ===
+# ════════════════════════════════════════════════════════════════════
+# ─────────────────────── 1. GENERAL ────────────────────────────────
+# ════════════════════════════════════════════════════════════════════
 
-# Load a language file from the plugins/BlockProt/ directory.
-# You can create your own language files and edit existing ones.
-# Translations can be missing from this file and will instead be loaded
-# from an internal version of "translations_en.yml".
+# Translation file loaded from /lang/. Example: translations_en.yml
 language_file: translations_en.yml
 
-# The fallback translation when the translation was not found in the
-# language_file specified above, and it was also missing from the resources
-# within the .jar file. This should most likely never happen.
+# Fallback text when a translation key is missing.
 fallback_string: "Unknown translation"
 
-# If this is true, we will copy and replace the translation files on
-# each startup. This is so that when you should update this plugin, any
-# new or updated translations are automatically copied and applied. If
-# you want to modify and included translation file, you will have to make
-# this false, it is however always recommended to make your own, custom file.
+# Overwrite player translation files with the plugin's bundled version on startup.
 replace_translations: true
 
-# If set to "true", anytime an admin joins the server, they will
-# receive an in-game message if this plugin is outdated.
-# If set to "false", no message will be sent but /blockprot update
-# will still work.
+# Notify online operators when a plugin update is available.
 notify_op_of_updates: false
 
-# If set to "true", redstone will be automatically disallowed on every
-# placed block, if the player has lock on place enabled.
-redstone_disallowed_by_default: false
-
-# A list of world names the plugin should not be usable in.
-# The case of each name is ignored.
-# Useful for a mining-only world where a block should not be
-# owned by anyone. For example:
-#   - world_mining
-#   - world_end
-excluded_worlds: [ ]
-
-# Advanced per-world lockable lists in worlds.yml.
-# Disabled by default so a generated worlds.yml cannot disable the core
-# BlockProt chest/container protection. Enable only after reviewing worlds.yml.
-worlds_config_enabled: false
-
-# Setting this to 'false' will make every new player have
-# their "lock on place" setting disabled. This will be by
-# default set to 'true'.
-# Note: This does NOT affect players who have previously
-# played on the server.
-lock_on_place_by_default: true
-
-# Setting this to 'true' will make "the public" a friend by
-# default.
-public_is_friend_by_default: false
-
-# The maximum amount of blocks a player can lock. If removed
-# or set to any negative value, this is interpreted as setting
-# no limit.
-player_max_locked_block_count: -1
-
-# The cooldown between messages hinting players that they can
-# protect their blocks.
-lock_hint_cooldown_in_seconds: 10
-
-# This defines the minimum similarity percentage that a player name
-# can have to the friend search query at which it still shows up. By
-# default, this is 0.3, meaning only names that are less than 30% similar
-# are shown in the friend search. To determine similarity, the levenshtein
-# algorithm is used.
-friend_search_similarity: 0.5
-
-# If desired, you can disable the friends functionality entirely. This will
-# no longer allow players to give other players access to their blocks, and
-# current settings are ignored until re-activated.
-disable_friend_functionality: false
-
-# Enables translated aliases for subcommands. English commands always continue
-# to work, so scripts and documentation remain stable.
+# Use localized aliases for /bp subcommands (loaded from the translation file).
 localized_command_aliases: true
 
-# === Optional Feature Presets ===
+# Worlds where BlockProt is entirely disabled.
+excluded_worlds: [ ]
 
-# When true, enables optional SP26 features that do not require external credentials.
-# This does not automatically enable MySQL or inactivity cleanup.
-optional_features_enable_all: false
+# Enable per-world configuration from worlds.yml.
+worlds_config_enabled: false
 
-# === MySQL / Storage ===
-
-# Optional MySQL/MariaDB index configuration. NBT remains the source of truth.
-# SQL is only used for fast audits, global trust lookup, and indexing.
-mysql:
-  enabled: false
-  host: "127.0.0.1"
-  port: 3306
-  database: "blockprot"
-  username: "blockprot"
-  password: ""
-  # Leave empty to build the URL from host/port/database.
-  jdbc_url: ""
-  pool:
-    maximum_pool_size: 10
-    minimum_idle: 2
-    connection_timeout_ms: 10000
-
-# === Safety & Protection Behavior ===
-
-# Prevent TNT/Wither explosions from destroying locked NBT blocks.
-protect_locked_blocks_from_explosions: true
-
-# Prevent pistons from moving locked NBT blocks.
-block_protected_block_piston_movement: true
-
-# When true, breaking your own shulker drops it without protection NBT.
-clear_protection_on_shulker_break: false
-
-# When true, any player can break protected blocks regardless of ownership.
-allow_break_protected_blocks: false
-
-# When true, players cannot lock blocks inside the server's spawn-protection radius.
-# Ops and blockprot.admin bypass this restriction.
-respect_spawn_protection: true
-
-# === Effects & Console ===
-
-# Enable colored lock/unlock particle effects.
-block_lock_effects: true
-
-# Enable sound effects for lock/unlock and setting toggle events.
-# Set to false to keep particles enabled but mute sounds.
-block_lock_sounds: true
-
-# Console color customization.
-# Supports legacy codes like §6 or hex style like §x§R§R§G§G§B§B.
-console:
-  prefix_color: "§x§8§0§4§0§0§0"
-  info_color: "§x§D§2§B§4§8§C"
-
-# WorldEdit/FAWE paste watcher. Disabled by default.
-# When enabled, BlockProt watches //paste commands and performs a bounded scan
-# near the player after the paste finishes, locking lockable blocks with NBT.
-worldedit_paste_autolock:
-  enabled: false
-  radius: 24
-  max_blocks_per_paste: 5000
-  delay_ticks: 20
-
-# Floodgate/Geyser Bedrock username prefixes to try when resolving friend names.
-# Floodgate defaults vary by server; keep all prefixes used by your network here.
+# Bedrock (Geyser) player username prefixes. Used to skip UUID lookups.
 bedrock_username_prefixes:
   - "."
   - "*"
   - "_"
 
-# Inactivity cleanup: automatically expire block protections from players
-# who have not connected for this many days. Set to -1 to disable.
+# Remove protection data for players inactive longer than this many days.
+# Set to -1 to disable.
 inactivity_cleanup_days: -1
 
-# Tile entities that should be locked. Tile entities are blocks
-# that can contain items. You can find a detailed list of all
-# possible values at https://hub.spigotmc.org/javadocs/bukkit/org/bukkit/Material.html.
+
+# ════════════════════════════════════════════════════════════════════
+# ─────────── 2. PLAYER & PROTECTION DEFAULTS ───────────────────────
+# ════════════════════════════════════════════════════════════════════
+
+# Automatically lock a block when a player places it.
+lock_on_place_by_default: true
+
+# Treat the public (everyone) as a friend by default for newly locked blocks.
+public_is_friend_by_default: false
+
+# Maximum number of blocks a single player can lock. -1 = unlimited.
+player_max_locked_block_count: -1
+
+# Seconds before the "this block is locked" hint is shown again to the same player.
+lock_hint_cooldown_in_seconds: 10
+
+# Minimum string similarity (0.0–1.0) for the friend name search to accept a match.
+friend_search_similarity: 0.5
+
+# Disable the add-friend / friend-search functionality entirely.
+disable_friend_functionality: false
+
+# Treat redstone as disallowed on newly locked blocks.
+redstone_disallowed_by_default: false
+
+
+# ════════════════════════════════════════════════════════════════════
+# ───────── 3. SAFETY & PROTECTION BEHAVIOR ─────────────────────────
+# ════════════════════════════════════════════════════════════════════
+
+# Prevent explosions (TNT, creepers, etc.) from breaking locked blocks.
+protect_locked_blocks_from_explosions: true
+
+# Prevent pistons from pushing or pulling protected blocks.
+block_protected_block_piston_movement: true
+
+# Remove protection data when a shulker box is broken.
+clear_protection_on_shulker_break: false
+
+# Allow any player to break a protected block (protection data is removed on break).
+allow_break_protected_blocks: false
+
+# Respect the vanilla spawn-protection radius; do not lock blocks inside it.
+respect_spawn_protection: true
+
+
+# ════════════════════════════════════════════════════════════════════
+# ──────────── 4. PET PROTECTION  (SP26-ZV) ─────────────────────────
+# ════════════════════════════════════════════════════════════════════
+#
+# Protects tamed animals (wolves, cats, parrots, horses, etc.)
+# similarly to how blocks are protected.
+# Use /bp reload to apply changes — no restart required.
+#
+# ┌─ Functions provided by this system ─────────────────────────────┐
+# │  auto_protect_on_tame  — enable protection when a pet is tamed  │
+# │  no_damage             — block other players from damaging pet   │
+# │  no_interact           — block right-click (feed, name, etc.)   │
+# │  no_leash              — block others from leashing the pet      │
+# │  no_pickup             — block parrot shoulder-pickup by others  │
+# │  denied_message        — message shown when access is denied     │
+# │  menu_item             — item used to open pet settings GUI      │
+# └─────────────────────────────────────────────────────────────────┘
+#
+# Note: players with blockprot.admin or blockprot.bypass always
+#       bypass pet protection regardless of these settings.
+
+pet_protection:
+
+  # Master switch. false = entire system disabled.
+  enabled: true
+
+  # Automatically protect a pet the moment it is tamed.
+  # The owner can still fine-tune individual toggles via the settings menu.
+  auto_protect_on_tame: true
+
+  # Item the player must hold (main hand) to open the pet settings menu
+  # by right-clicking a pet they own.
+  # Must be a valid Bukkit Material name.
+  menu_item: STICK
+
+  # Message sent to a player who tries to interact with a pet they do not own.
+  # Supports legacy colour codes (§).
+  denied_message: "§c[BlockProt] §rNo tienes permiso para interactuar con esta mascota."
+
+
+# ════════════════════════════════════════════════════════════════════
+# ──────────────── 5. EFFECTS & CONSOLE ─────────────────────────────
+# ════════════════════════════════════════════════════════════════════
+
+# Play particle effects when a block is locked/unlocked.
+block_lock_effects: true
+
+# Play sounds when a block is locked/unlocked.
+block_lock_sounds: true
+
+console:
+  # Hex colour for the [BlockProt] prefix in console output.
+  prefix_color: "§x§8§0§4§0§0§0"
+
+  # Hex colour for informational messages in console output.
+  info_color: "§x§D§2§B§4§8§C"
+
+
+# ════════════════════════════════════════════════════════════════════
+# ─────────────── 6. OPTIONAL FEATURES ──────────────────────────────
+# ════════════════════════════════════════════════════════════════════
+
+# Enable ALL optional features at once regardless of their individual settings.
+optional_features_enable_all: false
+
+# ── WorldEdit Auto-Lock ──────────────────────────────────────────
+# Automatically lock blocks placed via a WorldEdit paste operation.
+
+worldedit_paste_autolock:
+  # Enable the WorldEdit paste auto-lock feature.
+  enabled: false
+
+  # Radius (in blocks) around the paste origin to scan for new blocks.
+  radius: 24
+
+  # Maximum number of blocks that will be auto-locked per paste event.
+  max_blocks_per_paste: 5000
+
+  # Delay in server ticks before the scan runs after the paste.
+  delay_ticks: 20
+
+
+# ════════════════════════════════════════════════════════════════════
+# ──────────────── 7. MYSQL / STORAGE ───────────────────────────────
+# ════════════════════════════════════════════════════════════════════
+#
+# When disabled, BlockProt uses NBT/PDC stored on the blocks themselves.
+# Enable MySQL to use a shared relational database instead.
+
+mysql:
+  # Switch to MySQL as the storage backend.
+  enabled: false
+
+  # Database host address.
+  host: "127.0.0.1"
+
+  # Database port.
+  port: 3306
+
+  # Database name.
+  database: "blockprot"
+
+  # Database user.
+  username: "blockprot"
+
+  # Database password.
+  password: ""
+
+  # Optional: full JDBC URL. When set, host/port/database above are ignored.
+  jdbc_url: ""
+
+  pool:
+    # Maximum number of connections in the HikariCP pool.
+    maximum_pool_size: 10
+
+    # Minimum number of idle connections kept alive.
+    minimum_idle: 2
+
+    # Time in milliseconds before a connection attempt times out.
+    connection_timeout_ms: 10000
+
+
+# ════════════════════════════════════════════════════════════════════
+# ──────────────── 8. BLOCK DEFINITIONS ─────────────────────────────
+# ════════════════════════════════════════════════════════════════════
+#
+# These lists define which blocks can be locked.
+# Edit blocks.yml (generated on first start) to add or remove entries
+# without touching this file.
+
 lockable_tile_entities:
   - CHEST
   - TRAPPED_CHEST
@@ -185,7 +239,6 @@ lockable_tile_entities:
   - DROPPER
   - LECTERN
 
-# All varieties of shulker boxes that should be lockable.
 lockable_shulker_boxes:
   - BLACK_SHULKER_BOX
   - BLUE_SHULKER_BOX
@@ -205,8 +258,6 @@ lockable_shulker_boxes:
   - WHITE_SHULKER_BOX
   - YELLOW_SHULKER_BOX
 
-# Blocks that should be lockable.
-# This only works with Spigot 1.16.4 or higher.
 lockable_blocks:
   - ANVIL
   - CHIPPED_ANVIL
@@ -245,8 +296,6 @@ lockable_blocks:
   - WAXED_OXIDIZED_COPPER_TRAPDOOR
   - WAXED_WEATHERED_COPPER_TRAPDOOR
 
-# Doors are two blocks and are therefore handled differently.
-# This only works with Spigot 1.16.4 or higher.
 lockable_doors:
   - IRON_DOOR
   - ACACIA_DOOR

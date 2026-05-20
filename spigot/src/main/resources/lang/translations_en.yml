@@ -61,6 +61,15 @@ inventories:
     no_entries: "No entries found."
     teleport: "Teleport to block"
     open: "Access Log"
+  # ── Pet protection (SP26-ZV) ──────────────────────────────────────────────
+  pet:
+    settings: "§dPet Settings"
+    protect: "§dPet protection"
+    no_damage: "§cBlock damage"
+    no_interact: "§eBlock interaction"
+    no_leash: "§6Block leash"
+    no_pickup: "§bBlock pickup (parrot)"
+  # ─────────────────────────────────────────────────────────────────────────
 
 messages:
   permission_granted: "Permission granted."
@@ -83,7 +92,6 @@ messages:
   chat_input_cancel_word: "cancel"
   chat_input_cancelled: "§cSearch cancelled."
   lock_on_place_success: "§aBlock protected!"
-  # Temporary action-bar message while a player lookup is running. {player} = searched name.
   friends_searching: "§eSearching for §f{player}§e..."
   friends_addall_success: "§aAdded §f{player}§a as friend in §f{count}§a block(s)."
   friends_addall_usage: "§cUsage: /blockprot friends addall <player>"

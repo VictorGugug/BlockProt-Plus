@@ -25,7 +25,6 @@ import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.DoubleChest;
 import org.bukkit.configuration.Configuration;
-import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.event.inventory.InventoryType;
@@ -49,51 +48,30 @@ import java.util.stream.Collectors;
  * The default config of the {@link BlockProt} plugin.
  */
 public final class DefaultConfig extends BlockProtConfig {
-    /**
-     * A list of all lockable tile entities.
-     */
+
     private final ArrayList<Material> lockableTileEntities = new ArrayList<>();
-
-    /**
-     * A list of all available shulker boxes, so we
-     * can save the protection state even after breaking.
-     */
     private final ArrayList<Material> shulkerBoxes = new ArrayList<>();
-
-    /**
-     * We can only lock normal blocks after 1.16.4. Therefore, in all versions prior this list will
-     * be empty. Doors are separately listed inside of [lockableDoors].
-     */
     private final ArrayList<Material> lockableBlocks = new ArrayList<>();
-
-    /**
-     * Doors are separate for LockUtil#applyToDoor and also only work after 1.16.4 Spigot.
-     */
     private final ArrayList<Material> lockableDoors = new ArrayList<>();
 
     private final ArrayList<InventoryType> lockableInventories = new ArrayList<>(Arrays.asList(
-        InventoryType.CHEST, InventoryType.FURNACE, InventoryType.SMOKER, InventoryType.BLAST_FURNACE, InventoryType.HOPPER,
-        InventoryType.BARREL, InventoryType.BREWING, InventoryType.SHULKER_BOX, InventoryType.ANVIL, InventoryType.DISPENSER,
-        InventoryType.DROPPER, InventoryType.LECTERN
+        InventoryType.CHEST, InventoryType.FURNACE, InventoryType.SMOKER, InventoryType.BLAST_FURNACE,
+        InventoryType.HOPPER, InventoryType.BARREL, InventoryType.BREWING, InventoryType.SHULKER_BOX,
+        InventoryType.ANVIL, InventoryType.DISPENSER, InventoryType.DROPPER, InventoryType.LECTERN
     ));
 
-    /**
-     * As we differentiate between tile entities and blocks, it's best if we validate the values in the
-     * config so that {@link #lockableTileEntities} actually only contains tile entities.
-     */
     private final HashSet<Material> knownGoodTileEntities = new HashSet<>(Arrays.asList(
-            Material.CHEST, Material.TRAPPED_CHEST, Material.FURNACE, Material.SMOKER, Material.BLAST_FURNACE,
-            Material.HOPPER, Material.BARREL, Material.BREWING_STAND, Material.DISPENSER, Material.DROPPER,
-            Material.LECTERN, Material.BEEHIVE, Material.BEE_NEST,
-
-            Material.OAK_SIGN, Material.OAK_WALL_SIGN,
-            Material.SPRUCE_SIGN, Material.SPRUCE_WALL_SIGN,
-            Material.BIRCH_SIGN, Material.BIRCH_WALL_SIGN,
-            Material.JUNGLE_SIGN, Material.JUNGLE_WALL_SIGN,
-            Material.ACACIA_SIGN, Material.ACACIA_WALL_SIGN,
-            Material.DARK_OAK_SIGN, Material.DARK_OAK_WALL_SIGN,
-            Material.CRIMSON_SIGN, Material.CRIMSON_WALL_SIGN,
-            Material.WARPED_SIGN, Material.WARPED_WALL_SIGN
+        Material.CHEST, Material.TRAPPED_CHEST, Material.FURNACE, Material.SMOKER, Material.BLAST_FURNACE,
+        Material.HOPPER, Material.BARREL, Material.BREWING_STAND, Material.DISPENSER, Material.DROPPER,
+        Material.LECTERN, Material.BEEHIVE, Material.BEE_NEST,
+        Material.OAK_SIGN, Material.OAK_WALL_SIGN,
+        Material.SPRUCE_SIGN, Material.SPRUCE_WALL_SIGN,
+        Material.BIRCH_SIGN, Material.BIRCH_WALL_SIGN,
+        Material.JUNGLE_SIGN, Material.JUNGLE_WALL_SIGN,
+        Material.ACACIA_SIGN, Material.ACACIA_WALL_SIGN,
+        Material.DARK_OAK_SIGN, Material.DARK_OAK_WALL_SIGN,
+        Material.CRIMSON_SIGN, Material.CRIMSON_WALL_SIGN,
+        Material.WARPED_SIGN, Material.WARPED_WALL_SIGN
     ));
 
     private final List<String> excludedWorlds;
@@ -101,40 +79,25 @@ public final class DefaultConfig extends BlockProtConfig {
     private YamlConfiguration blocksConfig = null;
     private static final DateTimeFormatter BACKUP_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss");
 
-    /**
-     * Create a new default configuration from given {@code config}.
-     *
-     * @param config The yaml configuration, should be the {@code config.yml}.
-     * @since 0.3.3
-     */
     public DefaultConfig(@NotNull final FileConfiguration config) {
         this(config, null);
     }
 
-    /**
-     * New constructor that accepts the plugin data folder so external files can be loaded.
-     */
     public DefaultConfig(@NotNull final FileConfiguration config, final File dataFolder) {
         super(config);
         this.dataFolder = dataFolder;
-
         this.excludedWorlds = config.getStringList("excluded_worlds");
         this.removeBlockDefaults();
 
-        // If an external blocks file is configured, try to load or create it.
         if (dataFolder != null) {
-            // Place blocks.yml directly inside the plugin data folder by default
             String blocksFilePath = config.getString("blocks_file", "blocks.yml");
             File blocksFile = new File(dataFolder, blocksFilePath);
             try {
                 if (blocksFile.exists()) {
                     this.blocksConfig = YamlConfiguration.loadConfiguration(blocksFile);
                 } else {
-                    // Ensure parent exists (should be plugin data folder). Do not create nested folders by default.
                     File parent = blocksFile.getParentFile();
                     if (parent != null && !parent.exists()) parent.mkdirs();
-
-                    // Create a single timestamped backup of the original config.yml before migrating
                     try {
                         File backupsDir = new File(dataFolder, "backups");
                         if (!backupsDir.exists()) backupsDir.mkdirs();
@@ -143,14 +106,11 @@ public final class DefaultConfig extends BlockProtConfig {
                             String name = "config-backup-" + LocalDateTime.now().format(BACKUP_FMT) + ".yml";
                             Path target = new File(backupsDir, name).toPath();
                             Files.copy(source.toPath(), target, StandardCopyOption.COPY_ATTRIBUTES);
-                            BlockProtLogger.log("config-migration", "Created backup: " + target.toString());
+                            BlockProtLogger.log("config-migration", "Created backup: " + target);
                         }
                     } catch (IOException ioe) {
-                        // non-fatal
                         BlockProtLogger.warn("Failed to create config backup: " + ioe.getMessage());
                     }
-
-                    // Extract block lists from the main config into the blocks file
                     YamlConfiguration bc = new YamlConfiguration();
                     List<?> tEntities = config.getList("lockable_tile_entities");
                     if (tEntities != null) bc.set("lockable_tile_entities", tEntities);
@@ -160,43 +120,37 @@ public final class DefaultConfig extends BlockProtConfig {
                     if (blocks != null) bc.set("lockable_blocks", blocks);
                     List<?> doors = config.getList("lockable_doors");
                     if (doors != null) bc.set("lockable_doors", doors);
-
                     try {
                         bc.save(blocksFile);
                         this.blocksConfig = bc;
-
-                        // Remove the block lists from the main config and persist the change.
                         try {
                             config.set("lockable_tile_entities", null);
                             config.set("lockable_shulker_boxes", null);
                             config.set("lockable_blocks", null);
                             config.set("lockable_doors", null);
-
                             File cfgFile = new File(dataFolder, "config.yml");
-                            if (config instanceof YamlConfiguration) {
-                                ((YamlConfiguration) config).save(cfgFile);
+                            if (config instanceof YamlConfiguration yc) {
+                                yc.save(cfgFile);
                             } else if (BlockProt.getInstance() != null) {
-                                // Fallback to plugin saveConfig if available
                                 BlockProt.getInstance().saveConfig();
                             }
                         } catch (IOException ioe) {
                             BlockProtLogger.warn("Failed to save modified config.yml: " + ioe.getMessage());
                         }
-
                         BlockProtLogger.log("config-migration", "Extracted block lists to " + blocksFile.getPath());
                     } catch (IOException ioe) {
                         BlockProtLogger.warn("Failed to write blocks file: " + ioe.getMessage());
                     }
                 }
             } catch (Exception ex) {
-                // fail-safe: ignore and continue using the main config
                 BlockProtLogger.warn("blocks file handling failed: " + ex.getMessage());
                 this.blocksConfig = null;
             }
         }
-
         this.loadBlocksFromConfig();
     }
+
+    // ── Block lists ───────────────────────────────────────────────────────────
 
     private void addMaterialIfExists(Collection<Material> set, String... names) {
         for (String name : names) {
@@ -206,134 +160,71 @@ public final class DefaultConfig extends BlockProtConfig {
     }
 
     private <T extends Enum<?>> void loadBlockListFromConfig(
-            @NotNull String key, @NotNull final ArrayList<T> list, @NotNull final T[] enumValues, Function<T, Boolean> validateCallback) {
+            @NotNull String key, @NotNull final ArrayList<T> list,
+            @NotNull final T[] enumValues, Function<T, Boolean> validateCallback) {
         List<?> configList = null;
-        // Prefer the external blocks config when present
-        if (this.blocksConfig != null && this.blocksConfig.contains(key)) {
+        if (this.blocksConfig != null && this.blocksConfig.contains(key))
             configList = this.blocksConfig.getList(key);
-        }
         if (configList == null) configList = config.getList(key);
         if (configList == null) return;
-        final var stringList = configList
-            .stream()
-            .filter(String.class::isInstance)
-            .map(String.class::cast)
-            .distinct() // Remove duplicates
+        final var stringList = configList.stream()
+            .filter(String.class::isInstance).map(String.class::cast)
+            .distinct()
             .collect(Collectors.toCollection(ArrayList::new));
-
         final var newEnumValues = this.loadEnumValuesByName(enumValues, stringList);
         newEnumValues.removeIf((value) -> {
-           if (!validateCallback.apply(value)) {
-               BlockProt.getInstance().getLogger().warning("Caught invalid value passed to " + key + ": " + value.toString());
-               return true;
-           }
-           return false;
+            if (!validateCallback.apply(value)) {
+                BlockProt.getInstance().getLogger().warning("Caught invalid value passed to " + key + ": " + value);
+                return true;
+            }
+            return false;
         });
         list.addAll(newEnumValues);
     }
 
-    /**
-     * Loads all the different lists from the config.yml file and adds
-     * them to the various lists in LockUtil.
-     *
-     * @since 0.3.3
-     */
     private void loadBlocksFromConfig() {
-        // Add some materials which are not valid in some versions
-        if (MinecraftVersion.isAtLeastVersion(MinecraftVersion.MC1_19_R1)) {
+        if (MinecraftVersion.isAtLeastVersion(MinecraftVersion.MC1_19_R1))
             addMaterialIfExists(knownGoodTileEntities, "MANGROVE_SIGN", "MANGROVE_WALL_SIGN");
-        }
         if (MinecraftVersion.isAtLeastVersion(MinecraftVersion.MC1_20_R1)) {
             addMaterialIfExists(knownGoodTileEntities, "CHISELED_BOOKSHELF");
-            addMaterialIfExists(knownGoodTileEntities, "OAK_WALL_HANGING_SIGN", "OAK_HANGING_SIGN");
-            addMaterialIfExists(knownGoodTileEntities, "SPRUCE_WALL_HANGING_SIGN", "SPRUCE_HANGING_SIGN");
-            addMaterialIfExists(knownGoodTileEntities, "BIRCH_WALL_HANGING_SIGN", "BIRCH_HANGING_SIGN");
-            addMaterialIfExists(knownGoodTileEntities, "JUNGLE_WALL_HANGING_SIGN", "JUNGLE_HANGING_SIGN");
-            addMaterialIfExists(knownGoodTileEntities, "ACACIA_WALL_HANGING_SIGN", "ACACIA_HANGING_SIGN");
-            addMaterialIfExists(knownGoodTileEntities, "DARK_OAK_WALL_HANGING_SIGN", "DARK_OAK_HANGING_SIGN");
-            addMaterialIfExists(knownGoodTileEntities, "CRIMSON_WALL_HANGING_SIGN", "CRIMSON_HANGING_SIGN");
-            addMaterialIfExists(knownGoodTileEntities, "WARPED_WALL_HANGING_SIGN", "WARPED_HANGING_SIGN");
-            addMaterialIfExists(knownGoodTileEntities, "MANGROVE_HANGING_SIGN", "MANGROVE_WALL_HANGING_SIGN");
-            addMaterialIfExists(knownGoodTileEntities, "CHERRY_SIGN", "CHERRY_WALL_SIGN", "CHERRY_HANGING_SIGN", "CHERRY_WALL_HANGING_SIGN");
-            addMaterialIfExists(knownGoodTileEntities, "BAMBOO_SIGN", "BAMBOO_WALL_SIGN", "BAMBOO_HANGING_SIGN", "BAMBOO_WALL_HANGING_SIGN");
+            addMaterialIfExists(knownGoodTileEntities,
+                "OAK_WALL_HANGING_SIGN", "OAK_HANGING_SIGN",
+                "SPRUCE_WALL_HANGING_SIGN", "SPRUCE_HANGING_SIGN",
+                "BIRCH_WALL_HANGING_SIGN", "BIRCH_HANGING_SIGN",
+                "JUNGLE_WALL_HANGING_SIGN", "JUNGLE_HANGING_SIGN",
+                "ACACIA_WALL_HANGING_SIGN", "ACACIA_HANGING_SIGN",
+                "DARK_OAK_WALL_HANGING_SIGN", "DARK_OAK_HANGING_SIGN",
+                "CRIMSON_WALL_HANGING_SIGN", "CRIMSON_HANGING_SIGN",
+                "WARPED_WALL_HANGING_SIGN", "WARPED_HANGING_SIGN",
+                "MANGROVE_HANGING_SIGN", "MANGROVE_WALL_HANGING_SIGN",
+                "CHERRY_SIGN", "CHERRY_WALL_SIGN", "CHERRY_HANGING_SIGN", "CHERRY_WALL_HANGING_SIGN",
+                "BAMBOO_SIGN", "BAMBOO_WALL_SIGN", "BAMBOO_HANGING_SIGN", "BAMBOO_WALL_HANGING_SIGN");
         }
-
-        loadBlockListFromConfig("lockable_tile_entities", this.lockableTileEntities, Material.values(),
-                knownGoodTileEntities::contains);
-        loadBlockListFromConfig("lockable_shulker_boxes", this.shulkerBoxes, Material.values(),
-                material -> material.toString().contains("SHULKER_BOX"));
-
+        loadBlockListFromConfig("lockable_tile_entities", lockableTileEntities, Material.values(), knownGoodTileEntities::contains);
+        loadBlockListFromConfig("lockable_shulker_boxes", shulkerBoxes, Material.values(), m -> m.toString().contains("SHULKER_BOX"));
         if (MinecraftVersion.isAtLeastVersion(MinecraftVersion.MC1_16_R3)) {
-            loadBlockListFromConfig("lockable_blocks", this.lockableBlocks, Material.values(),
-                    material -> !knownGoodTileEntities.contains(material));
-            loadBlockListFromConfig("lockable_doors", this.lockableDoors, Material.values(),
-                    material -> material.toString().contains("DOOR"));
-
+            loadBlockListFromConfig("lockable_blocks", lockableBlocks, Material.values(), m -> !knownGoodTileEntities.contains(m));
+            loadBlockListFromConfig("lockable_doors", lockableDoors, Material.values(), m -> m.toString().contains("DOOR"));
             lockableBlocks.addAll(lockableDoors);
         }
     }
 
-    /**
-     * Get the filename of the language file we use.
-     * This file should be located in /plugins/BlockProt/.
-     *
-     * @return The name of the language file.
-     * @since 0.3.3
-     */
-    @Nullable
-    public String getLanguageFile() {
-        return config.getString("language_file");
-    }
+    // ── General settings ──────────────────────────────────────────────────────
 
-    /**
-     * Whether we should replace the translation files on each startup
-     * and therefore discard any potential changes made to the files
-     * by the server admin.
-     *
-     * @return True if translation files should be replaced.
-     */
+    @Nullable public String getLanguageFile() { return config.getString("language_file"); }
+
     public boolean shouldReplaceTranslations() {
-        if (!this.config.contains("replace_translations")) return true;
-        return this.config.getBoolean("replace_translations");
+        return !config.contains("replace_translations") || config.getBoolean("replace_translations");
     }
 
-    /**
-     * Whether or not to we should notify a OP player of any updates
-     * when they join the server.
-     *
-     * @return True if a op should be notified of updates.
-     * @since 0.3.3
-     */
     public boolean shouldNotifyOpOfUpdates() {
-        if (!this.config.contains("notify_op_of_updates")) return false;
-        return this.config.getBoolean("notify_op_of_updates");
+        return config.contains("notify_op_of_updates") && config.getBoolean("notify_op_of_updates");
     }
 
-    /**
-     * Checks the config if the "redstone_disallowed_by_default" key is
-     * set to true. If it was not found, it defaults to false.
-     *
-     * @return True if redstone should be automatically disabled when a
-     * block is placed.
-     * @since 0.3.3
-     */
     public boolean disallowRedstoneOnPlace() {
-        if (this.config.contains("redstone_disallowed_by_default")) {
-            return config.getBoolean("redstone_disallowed_by_default");
-        } else {
-            return true;
-        }
+        return !config.contains("redstone_disallowed_by_default") || config.getBoolean("redstone_disallowed_by_default");
     }
 
-    /**
-     * Checks if given {@code world} should be excluded from any
-     * block protection functionality.
-     *
-     * @param world The world to check for.
-     * @return If true, we shall not allow players to own and protect
-     * any blocks in given {@code world}.
-     * @since 0.4.4
-     */
     public boolean isWorldExcluded(World world) {
         if (isWorldsConfigEnabled()) {
             WorldsConfig wc = BlockProt.getWorldsConfig();
@@ -342,27 +233,8 @@ public final class DefaultConfig extends BlockProtConfig {
         return listContainsIgnoreCase(excludedWorlds, world.getName());
     }
 
-    /**
-     * Advanced per-world lockable lists are opt-in so generated worlds.yml
-     * entries cannot disable the core protection system by accident.
-     */
-    public boolean isWorldsConfigEnabled() {
-        return config.getBoolean("worlds_config_enabled", false);
-    }
+    public boolean isWorldsConfigEnabled() { return config.getBoolean("worlds_config_enabled", false); }
 
-    /**
-     * Checks if the world of the block held by {@code inventory}
-     * is excluded from any block protection functionality.
-     *
-     * @param holder The inventory we want to use. If it is not a known
-     *               exception, we try to cast it to {@link BlockInventoryHolder}.
-     * @return True, if the world is excluded or the {@code holder} was
-     * unable to be cast to {@link BlockInventoryHolder} and we do not
-     * know how to extract the World information from it.
-     * This is done to prevent this plugin to, for example, interact
-     * with other plugins' inventories.
-     * @since 0.4.5
-     */
     public boolean isWorldExcluded(InventoryHolder holder) {
         try {
             if (holder instanceof DoubleChest) {
@@ -371,339 +243,172 @@ public final class DefaultConfig extends BlockProtConfig {
                 return isWorldExcluded(world);
             }
             return isWorldExcluded(((BlockInventoryHolder) holder).getBlock().getWorld());
-        } catch (ClassCastException e) {
-            return true;
-        }
+        } catch (ClassCastException e) { return true; }
     }
 
-    /**
-     * Whether the lock on place setting should be enabled by default.
-     *
-     * @return Boolean for the default value of lock on place.
-     * @since 0.4.11
-     */
     public boolean lockOnPlaceByDefault() {
-        if (!this.config.contains("lock_on_place_by_default")) return true;
-        return this.config.getBoolean("lock_on_place_by_default");
+        return !config.contains("lock_on_place_by_default") || config.getBoolean("lock_on_place_by_default");
     }
 
-    /**
-     * Whether the public should be a friend by default.
-     *
-     * @return Boolean for the default value of public is friend.
-     * @since 1.1.15
-     */
     public boolean publicIsFriendByDefault() {
-        if (!this.config.contains("public_is_friend_by_default")) return false;
-        return this.config.getBoolean("public_is_friend_by_default");
+        return config.contains("public_is_friend_by_default") && config.getBoolean("public_is_friend_by_default");
     }
 
-    /**
-     * 
-     * @since 1.0.0
-     */
-    @Nullable
-    public String getTranslationFallbackString() {
-        if (!this.config.contains("fallback_string")) return "";
-        return this.config.getString("fallback_string");
+    @Nullable public String getTranslationFallbackString() {
+        return !config.contains("fallback_string") ? "" : config.getString("fallback_string");
     }
 
-    /**
-     * Gets the maximum amount of blocks a player is allowed to
-     * lock globally.
-     * @return The value or if no limit is set, null.
-     * @since 1.0.3
-     */
-    @Nullable
-    public Integer getMaxLockedBlockCount() {
-        if (!this.config.contains("player_max_locked_block_count"))
-            return null;
-        int val = this.config.getInt("player_max_locked_block_count");
+    @Nullable public Integer getMaxLockedBlockCount() {
+        if (!config.contains("player_max_locked_block_count")) return null;
+        int val = config.getInt("player_max_locked_block_count");
         return val > 0 ? val : null;
     }
 
-    /**
-     * JavaPlugin#reloadConfig sets the default values to the config inside
-     * the JAR, which are never edited by the player. We don't want this
-     * for the lists.
-     * 
-     * @since 1.0.0
-     */
     public void removeBlockDefaults() {
-        Configuration defaults = this.config.getDefaults();
+        Configuration defaults = config.getDefaults();
         if (defaults != null) {
             defaults.set("lockable_tile_entities", null);
             defaults.set("lockable_shulker_boxes", null);
             defaults.set("lockable_blocks", null);
             defaults.set("lockable_doors", null);
-            this.config.setDefaults(defaults);
+            config.setDefaults(defaults);
         }
     }
 
     public long getLockHintCooldown() {
-        if (!config.contains("lock_hint_cooldown_in_seconds")) {
-            return 10;
-        }
-        return config.getLong("lock_hint_cooldown_in_seconds");
+        return config.contains("lock_hint_cooldown_in_seconds") ? config.getLong("lock_hint_cooldown_in_seconds") : 10;
     }
 
-    /**
-     * Enables optional SP26 modules that are safe to activate without external
-     * credentials. MySQL and cleanup jobs remain controlled by their own keys.
-     */
-    public boolean shouldEnableAllOptionalFeatures() {
-        return config.getBoolean("optional_features_enable_all", false);
-    }
+    public boolean shouldEnableAllOptionalFeatures() { return config.getBoolean("optional_features_enable_all", false); }
+    public boolean isLocalizedCommandAliasesEnabled() { return config.getBoolean("localized_command_aliases", true); }
+    public boolean isMysqlEnabled() { return config.contains("mysql.enabled") && config.getBoolean("mysql.enabled"); }
 
-    /**
-     * Enables translated aliases for subcommands while keeping the canonical
-     * English command names available for documentation and scripts.
-     */
-    public boolean isLocalizedCommandAliasesEnabled() {
-        return config.getBoolean("localized_command_aliases", true);
-    }
-
-    public boolean isMysqlEnabled() {
-        if (!config.contains("mysql.enabled")) return false;
-        return config.getBoolean("mysql.enabled");
-    }
-
-    @NotNull
-    public String getMysqlJdbcUrl() {
+    @NotNull public String getMysqlJdbcUrl() {
         String configured = config.getString("mysql.jdbc_url", "");
         if (configured != null && !configured.isBlank()) return configured;
-
-        String host = config.getString("mysql.host", "127.0.0.1");
-        int port = config.getInt("mysql.port", 3306);
-        String database = config.getString("mysql.database", "blockprot");
-        return "jdbc:mysql://" + host + ":" + port + "/" + database
+        return "jdbc:mysql://" + config.getString("mysql.host","127.0.0.1") + ":"
+            + config.getInt("mysql.port", 3306) + "/" + config.getString("mysql.database","blockprot")
             + "?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=utf8";
     }
 
-    @NotNull
-    public String getMysqlUsername() {
-        return config.getString("mysql.username", "blockprot");
-    }
-
-    @NotNull
-    public String getMysqlPassword() {
-        return config.getString("mysql.password", "");
-    }
-
-    public int getMysqlPoolSize() {
-        return Math.max(1, config.getInt("mysql.pool.maximum_pool_size", 10));
-    }
-
-    public int getMysqlMinimumIdle() {
-        return Math.max(0, config.getInt("mysql.pool.minimum_idle", 2));
-    }
-
-    public long getMysqlConnectionTimeoutMillis() {
-        return Math.max(1000L, config.getLong("mysql.pool.connection_timeout_ms", 10000L));
-    }
+    @NotNull public String getMysqlUsername() { return config.getString("mysql.username","blockprot"); }
+    @NotNull public String getMysqlPassword() { return config.getString("mysql.password",""); }
+    public int getMysqlPoolSize()             { return Math.max(1, config.getInt("mysql.pool.maximum_pool_size", 10)); }
+    public int getMysqlMinimumIdle()          { return Math.max(0, config.getInt("mysql.pool.minimum_idle", 2)); }
+    public long getMysqlConnectionTimeoutMillis() { return Math.max(1000L, config.getLong("mysql.pool.connection_timeout_ms", 10000L)); }
 
     public boolean shouldProtectLockedBlocksFromExplosions() {
-        if (!config.contains("protect_locked_blocks_from_explosions")) return true;
-        return config.getBoolean("protect_locked_blocks_from_explosions");
+        return !config.contains("protect_locked_blocks_from_explosions") || config.getBoolean("protect_locked_blocks_from_explosions");
     }
-
     public boolean shouldBlockProtectedBlockPistonMovement() {
-        if (!config.contains("block_protected_block_piston_movement")) return true;
-        return config.getBoolean("block_protected_block_piston_movement");
+        return !config.contains("block_protected_block_piston_movement") || config.getBoolean("block_protected_block_piston_movement");
     }
-
     public boolean isWorldEditPasteAutolockEnabled() {
         return shouldEnableAllOptionalFeatures() || config.getBoolean("worldedit_paste_autolock.enabled", false);
     }
+    public int    getWorldEditPasteAutolockRadius()       { return Math.max(1, config.getInt("worldedit_paste_autolock.radius", 24)); }
+    public int    getWorldEditPasteAutolockMaxBlocks()    { return Math.max(1, config.getInt("worldedit_paste_autolock.max_blocks_per_paste", 5000)); }
+    public long   getWorldEditPasteAutolockDelayTicks()   { return Math.max(1L, config.getLong("worldedit_paste_autolock.delay_ticks", 20L)); }
 
-    public int getWorldEditPasteAutolockRadius() {
-        return Math.max(1, config.getInt("worldedit_paste_autolock.radius", 24));
+    @NotNull public List<String> getBedrockUsernamePrefixes() {
+        return config.contains("bedrock_username_prefixes") ? config.getStringList("bedrock_username_prefixes") : List.of(".", "*", "_");
     }
 
-    public int getWorldEditPasteAutolockMaxBlocks() {
-        return Math.max(1, config.getInt("worldedit_paste_autolock.max_blocks_per_paste", 5000));
-    }
-
-    public long getWorldEditPasteAutolockDelayTicks() {
-        return Math.max(1L, config.getLong("worldedit_paste_autolock.delay_ticks", 20L));
-    }
-
-    @NotNull
-    public List<String> getBedrockUsernamePrefixes() {
-        if (!config.contains("bedrock_username_prefixes")) {
-            return List.of(".", "*", "_");
-        }
-        return config.getStringList("bedrock_username_prefixes");
-    }
-
-    /**
-     * Gets the minimum percentage friend names have to match by the levenshtein distance.
-     * @since 1.1.6
-     */
     public double getFriendSearchSimilarityPercentage() {
-        if (!config.contains("friend_search_similarity")) {
-            return 0.5;
-        }
-        return config.getDouble("friend_search_similarity");
+        return config.contains("friend_search_similarity") ? config.getDouble("friend_search_similarity") : 0.5;
     }
 
-    /**
-     * Returns if the friend functionality is fully disabled. This will
-     * no longer allow players to give other players access to their blocks, and
-     * current settings are ignored until re-activated.
-     * @since 1.1.16
-     */
     public boolean isFriendFunctionalityDisabled() {
-        if (!config.contains("disable_friend_functionality")) {
-            return false;
-        }
-        return config.getBoolean("disable_friend_functionality");
+        return config.contains("disable_friend_functionality") && config.getBoolean("disable_friend_functionality");
+    }
+
+    public boolean shouldClearProtectionOnShulkerBreak()  { return config.getBoolean("clear_protection_on_shulker_break", false); }
+    public boolean shouldAllowBreakProtectedBlocks()       { return config.getBoolean("allow_break_protected_blocks", false); }
+    public boolean shouldRespectSpawnProtection()          { return !config.contains("respect_spawn_protection") || config.getBoolean("respect_spawn_protection"); }
+    public boolean isLockEffectEnabled()                   { return !config.contains("block_lock_effects") || config.getBoolean("block_lock_effects"); }
+    public boolean isLockSoundEnabled()                    { return !config.contains("block_lock_sounds") || config.getBoolean("block_lock_sounds"); }
+
+    public String getConsolePrefixColor() {
+        String r = config.getString("console.prefix_color");
+        return (r == null || r.isBlank()) ? "§x§8§0§4§0§0§0" : r;
+    }
+    public String getConsoleInfoColor() {
+        String r = config.getString("console.info_color");
+        return (r == null || r.isBlank()) ? "§x§D§2§B§4§8§C" : r;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // PET PROTECTION — new in SP26-ZV
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Master switch for the entire pet protection system.
+     * Config key: {@code pet_protection.enabled}  (default: {@code true})
+     *
+     * @since SP26-ZV
+     */
+    public boolean isPetProtectionEnabled() {
+        return config.getBoolean("pet_protection.enabled", true);
     }
 
     /**
-     * Whether the given {@code type} is either a lockable block or a lockable tile entity.
+     * When true, newly tamed pets are automatically protected by their owner
+     * without the player needing to open the pet settings menu.
+     * Config key: {@code pet_protection.auto_protect_on_tame}  (default: {@code true})
      *
-     * <p> Keep in mind, that only tile entities are lockable through this plugin after Spigot 1.16_R3.
-     *
-     * <p> To add to this, this merely checks the material from the config. This means that a server author
-     * might accidentally add a material which is not a block or tile entity.
-     *
-     * @param type The type to check for.
-     * @return True, if {@code type} is lockable.
-     * @since 0.3.3
+     * @since SP26-ZV
      */
-    public boolean isLockable(Material type) {
-        return isLockableBlock(type) || isLockableTileEntity(type);
+    public boolean isPetAutoProtectOnTame() {
+        return config.getBoolean("pet_protection.auto_protect_on_tame", true);
     }
 
-    // Uses a world-specific lockable list when optional worlds.yml support is enabled.
-    public boolean isLockable(@NotNull Material type, @NotNull org.bukkit.World world) {
+    /**
+     * The item the player must hold in their main hand to open the pet settings menu
+     * by right-clicking a tamed animal they own.
+     * Config key: {@code pet_protection.menu_item}  (default: {@code STICK})
+     *
+     * @since SP26-ZV
+     */
+    @NotNull
+    public Material getPetMenuItem() {
+        String raw = config.getString("pet_protection.menu_item", "STICK");
+        Material m = Material.matchMaterial(raw == null ? "STICK" : raw);
+        return m == null ? Material.STICK : m;
+    }
+
+    /**
+     * The chat message sent to a player who tries to interact with a protected pet
+     * they do not own.
+     * Config key: {@code pet_protection.denied_message}
+     *
+     * @since SP26-ZV
+     */
+    @NotNull
+    public String getPetDeniedMessage() {
+        String msg = config.getString("pet_protection.denied_message",
+            "§c[BlockProt] §rNo tienes permiso para interactuar con esta mascota.");
+        return msg == null ? "§c[BlockProt] §rNo tienes permiso para interactuar con esta mascota." : msg;
+    }
+
+    // ── Block type checks ─────────────────────────────────────────────────────
+
+    public boolean isLockable(Material type) { return isLockableBlock(type) || isLockableTileEntity(type); }
+
+    public boolean isLockable(@NotNull Material type, @NotNull World world) {
         WorldsConfig wc = BlockProt.getWorldsConfig();
-        if (isWorldsConfigEnabled() && wc != null && wc.hasWorldConfig(world)) {
-            return wc.isLockable(world, type);
-        }
+        if (isWorldsConfigEnabled() && wc != null && wc.hasWorldConfig(world)) return wc.isLockable(world, type);
         return isLockable(type);
     }
 
-    public boolean isLockableShulkerBox(@NotNull Material type, @NotNull org.bukkit.World world) {
+    public boolean isLockableShulkerBox(@NotNull Material type, @NotNull World world) {
         WorldsConfig wc = BlockProt.getWorldsConfig();
-        if (isWorldsConfigEnabled() && wc != null && wc.hasWorldConfig(world)) {
-            return wc.isLockableShulkerBox(world, type);
-        }
+        if (isWorldsConfigEnabled() && wc != null && wc.hasWorldConfig(world)) return wc.isLockableShulkerBox(world, type);
         return isLockableShulkerBox(type);
     }
 
-    /**
-     * Whether the given {@code type} is a lockable block. Be aware, this only
-     * works after Spigot 1.16_R3 and the config might have some invalid values.
-     *
-     * @param type The material to check for.
-     * @return True, if {@code type} is a lockable block.
-     * @see #isLockable(Material)
-     * @since 0.3.3
-     */
-    public boolean isLockableBlock(Material type) {
-        return lockableBlocks.contains(type);
-    }
-
-    /**
-     * Whether the given {@code type} is a lockable tile entity. Be aware,
-     * the config might have some invalid values.
-     *
-     * @param type The material to check for.
-     * @return True, if {@code type} is a lockable tile entity.
-     * @see #isLockable(Material)
-     * @since 0.3.3
-     */
-    public boolean isLockableTileEntity(Material type) {
-        return lockableTileEntities.contains(type) || shulkerBoxes.contains(type);
-    }
-
-    public boolean isLockableDoor(Material type) {
-        return lockableDoors.contains(type);
-    }
-
-    public boolean isLockableShulkerBox(Material type) {
-        return shulkerBoxes.contains(type);
-    }
-
-    public boolean isLockableInventory(InventoryType type) {
-        return lockableInventories.contains(type);
-    }
-
-    /**
-     * When true, shulker boxes broken by their owner drop without protection NBT,
-     * so the recipient can open and re-lock the box as their own.
-     */
-    public boolean shouldClearProtectionOnShulkerBreak() {
-        return config.getBoolean("clear_protection_on_shulker_break", false);
-    }
-
-    /**
-     * When true, any player may break a protected block regardless of ownership.
-     * Intended for servers that delegate break-resistance to a separate reinforcement plugin.
-     */
-    public boolean shouldAllowBreakProtectedBlocks() {
-        return config.getBoolean("allow_break_protected_blocks", false);
-    }
-
-    /**
-     * Whether BlockProt should deny locking blocks inside the server's spawn-protection
-     * radius (defined by {@code spawn-radius} in {@code server.properties}).
-     * Ops and players with the admin permission always bypass this check.
-     * Defaults to {@code true}.
-     *
-     * @since SP26 (issue #303)
-     */
-    public boolean shouldRespectSpawnProtection() {
-        if (!config.contains("respect_spawn_protection")) return true;
-        return config.getBoolean("respect_spawn_protection");
-    }
-
-    /**
-     * Whether to play a particle ring around a block when it is locked or unlocked.
-     * Lock produces green dust particles; unlock produces red dust particles.
-     * Defaults to {@code true}.
-     *
-     * @since SP26
-     */
-    public boolean isLockEffectEnabled() {
-        if (!config.contains("block_lock_effects")) return true;
-        return config.getBoolean("block_lock_effects");
-    }
-
-    /**
-     * Whether sound should play for lock/unlock and setting-toggle effects.
-     * Defaults to {@code true}.
-     *
-     * @since SP26
-     */
-    public boolean isLockSoundEnabled() {
-        if (!config.contains("block_lock_sounds")) return true;
-        return config.getBoolean("block_lock_sounds");
-    }
-
-    /**
-     * The color code used for the [BlockProt] console prefix.
-     * Supports legacy Minecraft color codes like §6 or hex codes like §x§R§R§G§G§B§B.
-     */
-    public String getConsolePrefixColor() {
-        String result = config.getString("console.prefix_color");
-        if (result == null || result.isBlank()) {
-            return "§x§8§0§4§0§0§0";
-        }
-        return result;
-    }
-
-    /**
-     * The color code used for informational BlockProt console lines.
-     * Supports legacy Minecraft color codes like §e or hex codes like §x§R§R§G§G§B§B.
-     */
-    public String getConsoleInfoColor() {
-        String result = config.getString("console.info_color");
-        if (result == null || result.isBlank()) {
-            return "§x§D§2§B§4§8§C";
-        }
-        return result;
-    }
+    public boolean isLockableBlock(Material type)       { return lockableBlocks.contains(type); }
+    public boolean isLockableTileEntity(Material type)  { return lockableTileEntities.contains(type) || shulkerBoxes.contains(type); }
+    public boolean isLockableDoor(Material type)        { return lockableDoors.contains(type); }
+    public boolean isLockableShulkerBox(Material type)  { return shulkerBoxes.contains(type); }
+    public boolean isLockableInventory(InventoryType t) { return lockableInventories.contains(t); }
 }
