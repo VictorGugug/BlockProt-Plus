@@ -18,6 +18,7 @@
 
 package de.sean.blockprot.bukkit;
 
+import de.sean.blockprot.bukkit.config.DefaultConfig;
 import org.bukkit.Bukkit;
 import org.jetbrains.annotations.NotNull;
 
@@ -30,8 +31,8 @@ import org.jetbrains.annotations.NotNull;
  *
  * <p>Color palette used by BlockProt-Plus:
  * <ul>
- *   <li>§6 Gold/amber  — startup phase banners and integration lines</li>
- *   <li>§e Yellow      — informational messages</li>
+ *   <li>Custom brown  — plugin prefix ([BlockProt])</li>
+ *   <li>Light brown   — informational messages</li>
  *   <li>§c Red         — warnings / errors</li>
  *   <li>§7 Gray        — secondary / detail text</li>
  *   <li>§a Green       — success / up-to-date</li>
@@ -40,7 +41,7 @@ import org.jetbrains.annotations.NotNull;
  */
 public final class BlockProtConsole {
 
-    private static final String PREFIX = "§6[BlockProt]§r ";
+    // Console output is plain text (no color codes).
 
     private BlockProtConsole() {}
 
@@ -48,29 +49,33 @@ public final class BlockProtConsole {
     // Public API
     // ─────────────────────────────────────────────────────────────────────────
 
-    /** Prints a gold-prefixed informational line to the console. */
+    /** Prints an informational line to the console. */
     public static void info(@NotNull String message) {
-        send(PREFIX + "§e" + message + "§r");
+        send(getPrefix() + message);
     }
 
-    /** Prints a gold-prefixed success line (green text). */
+    /** Prints a success line to the console. */
     public static void success(@NotNull String message) {
-        send(PREFIX + "§a" + message + "§r");
+        send(getPrefix() + message);
     }
 
-    /** Prints a gold-prefixed warning line (red text). */
+    /** Prints a warning line to the console. */
     public static void warn(@NotNull String message) {
-        send(PREFIX + "§c" + message + "§r");
+        send(getPrefix() + message);
+    }
+
+    private static String getPrefix() {
+        return "[BlockProt] ";
     }
 
     /**
-     * Prints the "integration registered" line in amber/brown tones.
-     * Example output: §6[BlockProt]§r §6Integration: §eclaimchunk §7registered
+     * Prints the "integration registered" line in brown tones.
+     * Example output: [BlockProt] Integration: claimchunk registered
      *
      * @param integrationName The plugin id (e.g. "claimchunk").
      */
     public static void integration(@NotNull String integrationName) {
-        send(PREFIX + "§6Integration: §e" + integrationName + " §7registered§r");
+        send(getPrefix() + "Integration: " + integrationName + " registered");
     }
 
     /**
@@ -79,7 +84,7 @@ public final class BlockProtConsole {
      * @param integrationName The plugin id.
      */
     public static void integrationEnabled(@NotNull String integrationName) {
-        send(PREFIX + "§6Integration enabled: §e" + integrationName + "§r");
+        send(getPrefix() + "Integration enabled: " + integrationName);
     }
 
     /**
@@ -88,7 +93,7 @@ public final class BlockProtConsole {
      * @param message The text to display.
      */
     public static void banner(@NotNull String message) {
-        send("§6" + message + "§r");
+        send(message);
     }
 
     // ─────────────────────────────────────────────────────────────────────────

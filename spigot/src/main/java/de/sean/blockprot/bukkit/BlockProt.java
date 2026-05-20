@@ -197,9 +197,20 @@ public final class BlockProt extends JavaPlugin {
 
         new BlockProtAPI(this); // Init the API.
         BlockProtLogger.init(this.getDataFolder()); // Init session logger.
-        BlockProtLogger.log("Plugin version: " + this.getDescription().getVersion());
+        String version = this.getDescription().getVersion();
+        BlockProtLogger.log("Plugin version: " + version);
         BlockProtLogger.log("Server: " + Bukkit.getVersion());
         BlockProtLogger.log("Runtime: " + VersionCompat.getDiagnosticString());
+
+        // Print a concise ASCII banner to console (plain text, no colors) similar to SkinRestorer
+        try {
+            String banner = "+=================+\n"
+                + "|    BlockProt    |\n"
+                + "|                 |\n"
+                + "| Version: " + version + " |\n"
+                + "+=================+";
+            this.getLogger().info(banner);
+        } catch (Exception ignored) {}
         if (VersionCompat.is26Family()) {
             BlockProtLogger.log("Detected 26.x year-based version scheme.");
         }
@@ -298,7 +309,7 @@ public final class BlockProt extends JavaPlugin {
     public void reloadConfigAndTranslations() {
         this.mergeMissingConfigKeys();
         this.reloadConfig();
-        defaultConfig = new DefaultConfig(this.getConfig());
+        defaultConfig = new DefaultConfig(this.getConfig(), this.getDataFolder());
 
         Translator.resetTranslations();
         Translator.DEFAULT_FALLBACK = defaultConfig.getTranslationFallbackString();
@@ -452,7 +463,6 @@ public final class BlockProt extends JavaPlugin {
 
         YamlConfiguration jarConfig = YamlConfiguration.loadConfiguration(new BufferedReader(new InputStreamReader(jarStream)));
         YamlConfiguration diskConfig = YamlConfiguration.loadConfiguration(diskFile);
-
         int added = 0;
         for (String key : jarConfig.getKeys(true)) {
             if (jarConfig.isConfigurationSection(key)) continue;

@@ -10,6 +10,10 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -78,10 +82,62 @@ public final class BackupTask implements Runnable {
         pruneOldBackups(backupDir);
 
         String timestamp = DATE_FMT.format(new Date());
-        File   zipFile   = new File(backupDir, timestamp + ".zip");
+        String version = "unknown";
+        try {
+            version = BlockProt.getInstance().getDescription().getVersion();
+        } catch (Exception ignored) {}
+
+        boolean latest = false;
+        String latestTag = "";
+        // Quick GitHub check (best-effort) to determine whether this is the latest release.
+        try {
+            HttpClient client = HttpClient.newBuilder().connectTimeout(java.time.Duration.ofSeconds(3)).build();
+            HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://api.github.com/repos/VictorGugug/BlockProt-Plus/releases/latest"))
+                .header("User-Agent", "BlockProt-BackupTask")
+                .header("Accept", "application/vnd.github+json")
+                .timeout(java.time.Duration.ofSeconds(3))
+                .GET()
+                .build();
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() == 200) {
+                String body = response.body();
+                int idx = body.indexOf("\"tag_name\"");
+                if (idx >= 0) {
+                    int colon = body.indexOf(':', idx);
+                    int quote1 = body.indexOf('"', colon+1);
+                    int quote2 = body.indexOf('"', quote1+1);
+                    if (quote1 >= 0 && quote2 > quote1) {
+                        latestTag = body.substring(quote1+1, quote2);
+                        String cmpLatest = latestTag.startsWith("v") || latestTag.startsWith("V") ? latestTag.substring(1) : latestTag;
+                        latest = cmpLatest.equals(version);
+                    }
+                }
+            }
+        } catch (Throwable ignored) {
+            // best-effort; do not fail backup on network issues
+        }
+
+        String suffix = "";
+        if (version != null && !version.isBlank()) {
+            suffix = "_v" + version.replaceAll("\\s+", "_");
+        }
+        if (latest) suffix += "_latest";
+
+        File   zipFile   = new File(backupDir, timestamp + suffix + ".zip");
 
         try (ZipOutputStream zos = new ZipOutputStream(new FileOutputStream(zipFile))) {
             addDirectory(dataFolder, dataFolder.getName(), zos, backupDir);
+
+            // include a small metadata file inside the zip with version and release info
+            StringBuilder meta = new StringBuilder();
+            meta.append("plugin: BlockProt\n");
+            meta.append("version: ").append(version).append("\n");
+            meta.append("is_latest_release: ").append(latest).append("\n");
+            if (latestTag != null && !latestTag.isBlank()) meta.append("latest_tag: ").append(latestTag).append("\n");
+            zos.putNextEntry(new ZipEntry("release_info.txt"));
+            zos.write(meta.toString().getBytes());
+            zos.closeEntry();
 
             // ── Console notice ────────────────────────────────────────────────
             BlockProtLogger.log("backup", "Pre-existing data detected. Backup created at "

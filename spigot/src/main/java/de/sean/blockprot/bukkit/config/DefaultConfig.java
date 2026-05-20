@@ -19,18 +19,28 @@
 package de.sean.blockprot.bukkit.config;
 
 import de.sean.blockprot.bukkit.BlockProt;
+import de.sean.blockprot.bukkit.BlockProtLogger;
 import de.tr7zw.changeme.nbtapi.utils.MinecraftVersion;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.DoubleChest;
 import org.bukkit.configuration.Configuration;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.inventory.BlockInventoryHolder;
 import org.bukkit.inventory.InventoryHolder;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -87,6 +97,9 @@ public final class DefaultConfig extends BlockProtConfig {
     ));
 
     private final List<String> excludedWorlds;
+    private final File dataFolder;
+    private YamlConfiguration blocksConfig = null;
+    private static final DateTimeFormatter BACKUP_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss");
 
     /**
      * Create a new default configuration from given {@code config}.
@@ -95,10 +108,93 @@ public final class DefaultConfig extends BlockProtConfig {
      * @since 0.3.3
      */
     public DefaultConfig(@NotNull final FileConfiguration config) {
+        this(config, null);
+    }
+
+    /**
+     * New constructor that accepts the plugin data folder so external files can be loaded.
+     */
+    public DefaultConfig(@NotNull final FileConfiguration config, final File dataFolder) {
         super(config);
+        this.dataFolder = dataFolder;
 
         this.excludedWorlds = config.getStringList("excluded_worlds");
         this.removeBlockDefaults();
+
+        // If an external blocks file is configured, try to load or create it.
+        if (dataFolder != null) {
+            // Place blocks.yml directly inside the plugin data folder by default
+            String blocksFilePath = config.getString("blocks_file", "blocks.yml");
+            File blocksFile = new File(dataFolder, blocksFilePath);
+            try {
+                if (blocksFile.exists()) {
+                    this.blocksConfig = YamlConfiguration.loadConfiguration(blocksFile);
+                } else {
+                    // Ensure parent exists (should be plugin data folder). Do not create nested folders by default.
+                    File parent = blocksFile.getParentFile();
+                    if (parent != null && !parent.exists()) parent.mkdirs();
+
+                    // Create a single timestamped backup of the original config.yml before migrating
+                    try {
+                        File backupsDir = new File(dataFolder, "backups");
+                        if (!backupsDir.exists()) backupsDir.mkdirs();
+                        File source = new File(dataFolder, "config.yml");
+                        if (source.exists()) {
+                            String name = "config-backup-" + LocalDateTime.now().format(BACKUP_FMT) + ".yml";
+                            Path target = new File(backupsDir, name).toPath();
+                            Files.copy(source.toPath(), target, StandardCopyOption.COPY_ATTRIBUTES);
+                            BlockProtLogger.log("config-migration", "Created backup: " + target.toString());
+                        }
+                    } catch (IOException ioe) {
+                        // non-fatal
+                        BlockProtLogger.warn("Failed to create config backup: " + ioe.getMessage());
+                    }
+
+                    // Extract block lists from the main config into the blocks file
+                    YamlConfiguration bc = new YamlConfiguration();
+                    List<?> tEntities = config.getList("lockable_tile_entities");
+                    if (tEntities != null) bc.set("lockable_tile_entities", tEntities);
+                    List<?> shulkers = config.getList("lockable_shulker_boxes");
+                    if (shulkers != null) bc.set("lockable_shulker_boxes", shulkers);
+                    List<?> blocks = config.getList("lockable_blocks");
+                    if (blocks != null) bc.set("lockable_blocks", blocks);
+                    List<?> doors = config.getList("lockable_doors");
+                    if (doors != null) bc.set("lockable_doors", doors);
+
+                    try {
+                        bc.save(blocksFile);
+                        this.blocksConfig = bc;
+
+                        // Remove the block lists from the main config and persist the change.
+                        try {
+                            config.set("lockable_tile_entities", null);
+                            config.set("lockable_shulker_boxes", null);
+                            config.set("lockable_blocks", null);
+                            config.set("lockable_doors", null);
+
+                            File cfgFile = new File(dataFolder, "config.yml");
+                            if (config instanceof YamlConfiguration) {
+                                ((YamlConfiguration) config).save(cfgFile);
+                            } else if (BlockProt.getInstance() != null) {
+                                // Fallback to plugin saveConfig if available
+                                BlockProt.getInstance().saveConfig();
+                            }
+                        } catch (IOException ioe) {
+                            BlockProtLogger.warn("Failed to save modified config.yml: " + ioe.getMessage());
+                        }
+
+                        BlockProtLogger.log("config-migration", "Extracted block lists to " + blocksFile.getPath());
+                    } catch (IOException ioe) {
+                        BlockProtLogger.warn("Failed to write blocks file: " + ioe.getMessage());
+                    }
+                }
+            } catch (Exception ex) {
+                // fail-safe: ignore and continue using the main config
+                BlockProtLogger.warn("blocks file handling failed: " + ex.getMessage());
+                this.blocksConfig = null;
+            }
+        }
+
         this.loadBlocksFromConfig();
     }
 
@@ -111,7 +207,12 @@ public final class DefaultConfig extends BlockProtConfig {
 
     private <T extends Enum<?>> void loadBlockListFromConfig(
             @NotNull String key, @NotNull final ArrayList<T> list, @NotNull final T[] enumValues, Function<T, Boolean> validateCallback) {
-        List<?> configList = config.getList(key);
+        List<?> configList = null;
+        // Prefer the external blocks config when present
+        if (this.blocksConfig != null && this.blocksConfig.contains(key)) {
+            configList = this.blocksConfig.getList(key);
+        }
+        if (configList == null) configList = config.getList(key);
         if (configList == null) return;
         final var stringList = configList
             .stream()
@@ -580,5 +681,29 @@ public final class DefaultConfig extends BlockProtConfig {
     public boolean isLockSoundEnabled() {
         if (!config.contains("block_lock_sounds")) return true;
         return config.getBoolean("block_lock_sounds");
+    }
+
+    /**
+     * The color code used for the [BlockProt] console prefix.
+     * Supports legacy Minecraft color codes like §6 or hex codes like §x§R§R§G§G§B§B.
+     */
+    public String getConsolePrefixColor() {
+        String result = config.getString("console.prefix_color");
+        if (result == null || result.isBlank()) {
+            return "§x§8§0§4§0§0§0";
+        }
+        return result;
+    }
+
+    /**
+     * The color code used for informational BlockProt console lines.
+     * Supports legacy Minecraft color codes like §e or hex codes like §x§R§R§G§G§B§B.
+     */
+    public String getConsoleInfoColor() {
+        String result = config.getString("console.info_color");
+        if (result == null || result.isBlank()) {
+            return "§x§D§2§B§4§8§C";
+        }
+        return result;
     }
 }

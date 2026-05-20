@@ -112,6 +112,15 @@ used as an optional index for fast lookups, auditing, and cross-server global tr
 - `/bp reload` always triggers a forced backup first.
 - Config file watcher also backs up before each auto-reload.
 
+Additional backup details
+- Backups now include the entire plugin data folder (configs, lang files, DBs, stats, etc.),
+  not just `config.yml`. Each ZIP contains a small `release_info.txt` file with metadata
+  (`plugin`, `version`, `is_latest_release`, `latest_tag`) to make audits and restores easier.
+- Backup filenames include the plugin version suffix when available, for example:
+  `2026-05-19_18-47_v1.2.9-dev_latest.zip`.
+- The GitHub Releases API is checked on a best-effort basis to mark whether the running
+  build matches the latest published release; network failures do not prevent backups.
+
 ### 7. Inactivity Cleanup *(optional)*
 
 - `inactivity_cleanup_days` in `config.yml` (default `-1` = disabled).
@@ -167,6 +176,14 @@ used as an optional index for fast lookups, auditing, and cross-server global tr
 - Any key missing from disk is added with the default value; existing keys are never touched.
 - If `worlds.yml` cannot be parsed, it is replaced with the bundled default and a timestamped
   broken-file copy is kept so the admin can recover their settings.
+
+Blocks moved to `blocks.yml`
+- When the plugin detects existing data on first startup it may extract the block lists from
+  `config.yml` into a standalone `blocks.yml` file placed in the plugin data folder. When this
+  migration runs the block lists (`lockable_tile_entities`, `lockable_shulker_boxes`,
+  `lockable_blocks`, `lockable_doors`) are removed from `config.yml` and the modified
+  `config.yml` is persisted. From that point on the server operator can edit lockable lists
+  directly in `blocks.yml` and they will take precedence over bundled defaults.
 
 ### 15. ClaimChunk Integration
 
@@ -233,7 +250,15 @@ used as an optional index for fast lookups, auditing, and cross-server global tr
 - **Piston setting toggle** → brown ↔ gray transition ring.
 - All effects respect `block_lock_effects: true/false` in `config.yml` (default: true).
 
-### 24. Shulker Box — Shift+Right-Click Places Without Protection
+### 24. Configurable Console Colors & Sound Toggle
+
+- New `console.prefix_color` and `console.info_color` keys were added to `config.yml`.
+- Values support legacy Minecraft color codes like `§6` and hex-style codes like `§x§R§R§G§G§B§B`.
+- `console.prefix_color` controls the `[BlockProt]` console prefix color.
+- `console.info_color` controls the color used for informational startup and status messages.
+- `block_lock_sounds: true/false` was added so sound effects can be disabled while keeping particle effects enabled.
+
+### 25. Shulker Box — Shift+Right-Click Places Without Protection
 
 - Placing a shulker box while **sneaking** (Shift+right-click) skips the lock-on-place step.
 - The shulker is placed without any owner, so the recipient can open and lock it as their own.

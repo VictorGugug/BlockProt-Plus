@@ -1,4 +1,19 @@
 # BlockProt Config
+#
+# The default configuration is grouped into logical sections so server admins
+# can find the right options faster.
+#
+# Sections:
+#   - General settings
+#   - Player and protection defaults
+#   - Optional feature presets
+#   - MySQL / storage
+#   - Safety and protection behavior
+#   - Effects and console
+#   - Integration settings
+#   - Block definitions
+
+# === General Settings ===
 
 # Load a language file from the plugins/BlockProt/ directory.
 # You can create your own language files and edit existing ones.
@@ -77,14 +92,16 @@ disable_friend_functionality: false
 # to work, so scripts and documentation remain stable.
 localized_command_aliases: true
 
-# Optional SP26 feature preset.
-# Disabled by default. When true, BlockProt enables safe optional modules that
-# do not require external credentials. It does NOT enable MySQL or inactivity
-# cleanup because those need administrator-specific setup.
+# === Optional Feature Presets ===
+
+# When true, enables optional SP26 features that do not require external credentials.
+# This does not automatically enable MySQL or inactivity cleanup.
 optional_features_enable_all: false
 
-# Optional MySQL/MariaDB index. NBT remains the source of truth for block
-# protection. SQL is only used for fast audits and global trust lookup.
+# === MySQL / Storage ===
+
+# Optional MySQL/MariaDB index configuration. NBT remains the source of truth.
+# SQL is only used for fast audits, global trust lookup, and indexing.
 mysql:
   enabled: false
   host: "127.0.0.1"
@@ -99,33 +116,38 @@ mysql:
     minimum_idle: 2
     connection_timeout_ms: 10000
 
-# Keep locked NBT blocks out of TNT/Wither explosion block lists.
+# === Safety & Protection Behavior ===
+
+# Prevent TNT/Wither explosions from destroying locked NBT blocks.
 protect_locked_blocks_from_explosions: true
 
-# Absolute immovable protection for locked NBT blocks.
+# Prevent pistons from moving locked NBT blocks.
 block_protected_block_piston_movement: true
 
-# When true, breaking a shulker box you own drops it WITHOUT the protection NBT,
-# so the next player who places it will not inherit the lock.
+# When true, breaking your own shulker drops it without protection NBT.
 clear_protection_on_shulker_break: false
 
-# When true, ANY player can break a protected block regardless of ownership.
-# Intended for servers that use a separate reinforcement plugin for break protection.
+# When true, any player can break protected blocks regardless of ownership.
 allow_break_protected_blocks: false
 
-# When true, BlockProt prevents players from locking blocks inside the server's
-# spawn-protection radius (defined by spawn-radius in server.properties).
-# Ops and players with the blockprot.admin permission always bypass this check.
-# Set to false to allow locking inside the spawn area.
+# When true, players cannot lock blocks inside the server's spawn-protection radius.
+# Ops and blockprot.admin bypass this restriction.
 respect_spawn_protection: true
 
-# When true, a ring of colored dust particles plays around a block when it is
-# locked (green) or unlocked (red). Set to false to disable visual feedback.
+# === Effects & Console ===
+
+# Enable colored lock/unlock particle effects.
 block_lock_effects: true
 
-# When true, sound plays for lock/unlock and setting-toggle effects.
-# Set to false to keep particles enabled but mute those effect sounds.
+# Enable sound effects for lock/unlock and setting toggle events.
+# Set to false to keep particles enabled but mute sounds.
 block_lock_sounds: true
+
+# Console color customization.
+# Supports legacy codes like §6 or hex style like §x§R§R§G§G§B§B.
+console:
+  prefix_color: "§x§8§0§4§0§0§0"
+  info_color: "§x§D§2§B§4§8§C"
 
 # WorldEdit/FAWE paste watcher. Disabled by default.
 # When enabled, BlockProt watches //paste commands and performs a bounded scan
