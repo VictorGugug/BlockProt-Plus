@@ -61,8 +61,19 @@ public final class AuditLogger {
     private int writesSincePrune = 0;
 
     public AuditLogger(@NotNull File dataFolder) throws SQLException {
-        File db = new File(dataFolder, DB_NAME);
-        jdbcUrl = "jdbc:sqlite:" + db.getAbsolutePath();
+        File mysqlDir = new File(dataFolder, "mysql");
+        if (!mysqlDir.exists()) mysqlDir.mkdirs();
+
+        // Migra el archivo viejo de la raiz a mysql/ si todavia existe ahi
+        File oldDb = new File(dataFolder, DB_NAME);
+        File newDb = new File(mysqlDir, DB_NAME);
+        if (oldDb.exists() && !newDb.exists()) {
+            oldDb.renameTo(newDb);
+        } else if (oldDb.exists()) {
+            oldDb.delete();
+        }
+
+        jdbcUrl = "jdbc:sqlite:" + newDb.getAbsolutePath();
 
         for (int i = 0; i < pool.length; i++) {
             pool[i] = openConnection();

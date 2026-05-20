@@ -7,13 +7,11 @@
 # │   2. Player & Protection Defaults                               │
 # │   3. Safety & Protection Behavior                               │
 # │   4. Pet Protection (SP26-ZV)                                   │
-# │   5. Effects & Console                                          │
+# │   5. Effects                                                    │
 # │   6. Optional Features                                          │
-# │   7. MySQL / Storage                                            │
 # │                                                                 │
-# │  Block definitions (lockable_tile_entities, lockable_blocks,    │
-# │  lockable_shulker_boxes, lockable_doors) live in blocks.yml,   │
-# │  which is generated on first start.                             │
+# │  MySQL / Storage  →  mysql/mysql.yml                            │
+# │  Block definitions  →  blocks.yml  (generated on first start)   │
 # └─────────────────────────────────────────────────────────────────┘
 
 # ════════════════════════════════════════════════════════════════════
@@ -36,7 +34,7 @@ notify_op_of_updates: false
 localized_command_aliases: true
 
 # Worlds where BlockProt is entirely disabled.
-excluded_worlds: [ ]
+excluded_worlds: []
 
 # Enable per-world configuration from worlds.yml.
 worlds_config_enabled: false
@@ -106,39 +104,31 @@ respect_spawn_protection: true
 # similarly to how blocks are protected.
 # Use /bp reload to apply changes — no restart required.
 #
-# ┌─ Functions provided by this system ─────────────────────────────┐
-# │  auto_protect_on_tame  — enable protection when a pet is tamed  │
+# ┌─ Functions ─────────────────────────────────────────────────────┐
+# │  auto_protect_on_tame  — protect pet automatically on tame      │
 # │  no_damage             — block other players from damaging pet   │
 # │  no_interact           — block right-click (feed, name, etc.)   │
 # │  no_leash              — block others from leashing the pet      │
 # │  no_pickup             — block parrot shoulder-pickup by others  │
-# │  denied_message        — message shown when access is denied     │
-# │  menu_item             — item used to open pet settings GUI      │
 # └─────────────────────────────────────────────────────────────────┘
-#
-# Note: players with blockprot.admin or blockprot.bypass always
-#       bypass pet protection regardless of these settings.
+# Message shown on denial: messages.pet_denied in the lang file.
+# Players with blockprot.admin or blockprot.bypass always bypass.
 
 pet_protection:
 
-  # Master switch. false = entire system disabled.
+  # Master switch — false disables the entire system.
   enabled: false
 
   # Automatically protect a pet the moment it is tamed.
-  # The owner can still fine-tune individual toggles via the settings menu.
   auto_protect_on_tame: true
 
-  # Item the player must hold (main hand) to open the pet settings menu
-  # by right-clicking a pet they own.
+  # Item held in main hand to open the pet settings menu.
   # Must be a valid Bukkit Material name.
   menu_item: STICK
 
-  # Message sent to a player who tries to interact with a pet they do not own.
-  # Defined in the lang file under: messages.pet_denied
-
 
 # ════════════════════════════════════════════════════════════════════
-# ──────────────── 5. EFFECTS & CONSOLE ─────────────────────────────
+# ─────────────────────── 5. EFFECTS ────────────────────────────────
 # ════════════════════════════════════════════════════════════════════
 
 # Play particle effects when a block is locked/unlocked.
@@ -146,13 +136,6 @@ block_lock_effects: true
 
 # Play sounds when a block is locked/unlocked.
 block_lock_sounds: true
-
-console:
-  # Hex colour for the [BlockProt] prefix in console output.
-  prefix_color: "§x§8§0§4§0§0§0"
-
-  # Hex colour for informational messages in console output.
-  info_color: "§x§D§2§B§4§8§C"
 
 
 # ════════════════════════════════════════════════════════════════════
@@ -162,58 +145,9 @@ console:
 # Enable ALL optional features at once regardless of their individual settings.
 optional_features_enable_all: false
 
-# ── WorldEdit Auto-Lock ──────────────────────────────────────────
 # Automatically lock blocks placed via a WorldEdit paste operation.
-
 worldedit_paste_autolock:
-  # Enable the WorldEdit paste auto-lock feature.
   enabled: false
-
-  # Radius (in blocks) around the paste origin to scan for new blocks.
   radius: 24
-
-  # Maximum number of blocks that will be auto-locked per paste event.
   max_blocks_per_paste: 5000
-
-  # Delay in server ticks before the scan runs after the paste.
   delay_ticks: 20
-
-
-# ════════════════════════════════════════════════════════════════════
-# ──────────────── 7. MYSQL / STORAGE ───────────────────────────────
-# ════════════════════════════════════════════════════════════════════
-#
-# When disabled, BlockProt uses NBT/PDC stored on the blocks themselves.
-# Enable MySQL to use a shared relational database instead.
-
-mysql:
-  # Switch to MySQL as the storage backend.
-  enabled: false
-
-  # Database host address.
-  host: "127.0.0.1"
-
-  # Database port.
-  port: 3306
-
-  # Database name.
-  database: "blockprot"
-
-  # Database user.
-  username: "blockprot"
-
-  # Database password.
-  password: ""
-
-  # Optional: full JDBC URL. When set, host/port/database above are ignored.
-  jdbc_url: ""
-
-  pool:
-    # Maximum number of connections in the HikariCP pool.
-    maximum_pool_size: 10
-
-    # Minimum number of idle connections kept alive.
-    minimum_idle: 2
-
-    # Time in milliseconds before a connection attempt times out.
-    connection_timeout_ms: 10000

@@ -25,6 +25,7 @@ import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.DoubleChest;
 import org.bukkit.configuration.Configuration;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.event.inventory.InventoryType;
@@ -77,6 +78,7 @@ public final class DefaultConfig extends BlockProtConfig {
     private final List<String> excludedWorlds;
     private final File dataFolder;
     private YamlConfiguration blocksConfig = null;
+    private YamlConfiguration mysqlConfig  = null;
     private static final DateTimeFormatter BACKUP_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss");
 
     public DefaultConfig(@NotNull final FileConfiguration config) {
@@ -148,6 +150,16 @@ public final class DefaultConfig extends BlockProtConfig {
             }
         }
         this.loadBlocksFromConfig();
+
+        // ── MySQL config ──────────────────────────────────────────────────────
+        if (dataFolder != null) {
+            File mysqlFile = new File(dataFolder, "mysql/mysql.yml");
+            if (mysqlFile.exists()) {
+                this.mysqlConfig = YamlConfiguration.loadConfiguration(mysqlFile);
+            }
+            // If not present, saveResource("mysql/mysql.yml") is called by BlockProt.onEnable()
+            // before DefaultConfig is constructed, so it will exist on next load.
+        }
     }
 
     // ── Block lists ───────────────────────────────────────────────────────────
@@ -281,21 +293,37 @@ public final class DefaultConfig extends BlockProtConfig {
 
     public boolean shouldEnableAllOptionalFeatures() { return config.getBoolean("optional_features_enable_all", false); }
     public boolean isLocalizedCommandAliasesEnabled() { return config.getBoolean("localized_command_aliases", true); }
-    public boolean isMysqlEnabled() { return config.contains("mysql.enabled") && config.getBoolean("mysql.enabled"); }
+    public boolean isMysqlEnabled() { return mysqlConfig != null && mysqlConfig.contains("mysql.enabled") && mysqlConfig.getBoolean("mysql.enabled"); }
 
     @NotNull public String getMysqlJdbcUrl() {
-        String configured = config.getString("mysql.jdbc_url", "");
+        ConfigurationSection src = mysqlConfig != null ? mysqlConfig : config;
+        String configured = src.getString("mysql.jdbc_url", "");
         if (configured != null && !configured.isBlank()) return configured;
-        return "jdbc:mysql://" + config.getString("mysql.host","127.0.0.1") + ":"
-            + config.getInt("mysql.port", 3306) + "/" + config.getString("mysql.database","blockprot")
+        return "jdbc:mysql://" + src.getString("mysql.host","127.0.0.1") + ":"
+            + src.getInt("mysql.port", 3306) + "/" + src.getString("mysql.database","blockprot")
             + "?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=utf8";
     }
 
-    @NotNull public String getMysqlUsername() { return config.getString("mysql.username","blockprot"); }
-    @NotNull public String getMysqlPassword() { return config.getString("mysql.password",""); }
-    public int getMysqlPoolSize()             { return Math.max(1, config.getInt("mysql.pool.maximum_pool_size", 10)); }
-    public int getMysqlMinimumIdle()          { return Math.max(0, config.getInt("mysql.pool.minimum_idle", 2)); }
-    public long getMysqlConnectionTimeoutMillis() { return Math.max(1000L, config.getLong("mysql.pool.connection_timeout_ms", 10000L)); }
+    @NotNull public String getMysqlUsername() {
+        ConfigurationSection src = mysqlConfig != null ? mysqlConfig : config;
+        return src.getString("mysql.username","blockprot");
+    }
+    @NotNull public String getMysqlPassword() {
+        ConfigurationSection src = mysqlConfig != null ? mysqlConfig : config;
+        return src.getString("mysql.password","");
+    }
+    public int getMysqlPoolSize() {
+        ConfigurationSection src = mysqlConfig != null ? mysqlConfig : config;
+        return Math.max(1, src.getInt("mysql.pool.maximum_pool_size", 10));
+    }
+    public int getMysqlMinimumIdle() {
+        ConfigurationSection src = mysqlConfig != null ? mysqlConfig : config;
+        return Math.max(0, src.getInt("mysql.pool.minimum_idle", 2));
+    }
+    public long getMysqlConnectionTimeoutMillis() {
+        ConfigurationSection src = mysqlConfig != null ? mysqlConfig : config;
+        return Math.max(1000L, src.getLong("mysql.pool.connection_timeout_ms", 10000L));
+    }
 
     public boolean shouldProtectLockedBlocksFromExplosions() {
         return !config.contains("protect_locked_blocks_from_explosions") || config.getBoolean("protect_locked_blocks_from_explosions");
@@ -328,14 +356,8 @@ public final class DefaultConfig extends BlockProtConfig {
     public boolean isLockEffectEnabled()                   { return !config.contains("block_lock_effects") || config.getBoolean("block_lock_effects"); }
     public boolean isLockSoundEnabled()                    { return !config.contains("block_lock_sounds") || config.getBoolean("block_lock_sounds"); }
 
-    public String getConsolePrefixColor() {
-        String r = config.getString("console.prefix_color");
-        return (r == null || r.isBlank()) ? "§x§8§0§4§0§0§0" : r;
-    }
-    public String getConsoleInfoColor() {
-        String r = config.getString("console.info_color");
-        return (r == null || r.isBlank()) ? "§x§D§2§B§4§8§C" : r;
-    }
+    public String getConsolePrefixColor() { return "§x§8§0§4§0§0§0"; }
+    public String getConsoleInfoColor()   { return "§x§D§2§B§4§8§C"; }
 
     // ─────────────────────────────────────────────────────────────────────────
     // PET PROTECTION — new in SP26-ZV
@@ -385,9 +407,7 @@ public final class DefaultConfig extends BlockProtConfig {
      */
     @NotNull
     public String getPetDeniedMessage() {
-        String msg = config.getString("pet_protection.denied_message",
-            "§c[BlockProt] §rNo tienes permiso para interactuar con esta mascota.");
-        return msg == null ? "§c[BlockProt] §rNo tienes permiso para interactuar con esta mascota." : msg;
+        return de.sean.blockprot.bukkit.Translator.get(de.sean.blockprot.bukkit.TranslationKey.MESSAGES__PET_DENIED);
     }
 
     // ── Block type checks ─────────────────────────────────────────────────────

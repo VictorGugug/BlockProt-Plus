@@ -1,6 +1,6 @@
 <div align="center">
 
-# BlockProt — Plus
+# BlockProt — SP26-ZV
 
 [![CI](https://img.shields.io/github/actions/workflow/status/VictorGugug/BlockProt-Plus/ci.yml?branch=main&style=flat-square&label=CI)](https://github.com/VictorGugug/BlockProt-Plus/actions)
 [![Release](https://img.shields.io/github/v/release/VictorGugug/BlockProt-Plus?style=flat-square&color=brightgreen&label=Release)](https://github.com/VictorGugug/BlockProt-Plus/releases)
@@ -10,7 +10,7 @@
 
 **Fork created and maintained by [Zar](https://github.com/VictorGugug)**
 
-*Java 25 · Paper 26.x · MySQL index · per-world config · access audit · auto-backup*
+*Java 25 · Paper 26.x · MySQL index · per-world config · access audit · pet protection · auto-backup*
 
 </div>
 
@@ -19,10 +19,6 @@
 > Block protection plugin for Paper/Spigot servers.
 > Players lock chests, furnaces, and other blocks through a modern GUI — no commands to memorize.
 > This fork extends the original NBT core with production-grade features for large or long-running servers.
-
-> **This README is the authoritative feature reference.**
-> Modrinth, Hangar, and SpigotMC pages contain a summary and link here for full detail.
-> This is the only file that needs updating when new features are added.
 
 ![Main menu](https://raw.githubusercontent.com/VictorGugug/BlockProt-Plus/main/images/main_menu.png)
 ![Friend settings](https://raw.githubusercontent.com/VictorGugug/BlockProt-Plus/main/images/friend_settings.png)
@@ -36,12 +32,11 @@
 ### Pre-built JAR
 
 Download the latest JAR from [Releases](https://github.com/VictorGugug/BlockProt-Plus/releases)
-and drop it in your `plugins/` folder. Requires **Java 25** and Paper/Spigot 1.21+.
+and drop it in your `plugins/` folder. Requires **Java 25** and **Paper/Spigot 1.21+**.
 
 ### Build from source
 
 ```bash
-# Requires JDK 25
 git clone https://github.com/VictorGugug/BlockProt-Plus.git
 cd BlockProt-Plus
 ./gradlew :blockprot-spigot:shadowJar
@@ -55,285 +50,204 @@ cd BlockProt-Plus
 
 ---
 
-## Features added vs. upstream
+## File layout
 
-All additions are **disabled by default** in `config.yml`. The upstream NBT protection core
-works exactly as in the original — nothing changes unless you opt in.
+After the first startup, the plugin data folder looks like this:
 
-### 1. Java 25 / Paper 26.x Compatibility
+```
+plugins/BlockProt/
+├── config.yml          ← Main configuration (clean, sectioned, no legacy keys)
+├── blocks.yml          ← Lockable block lists (generated/migrated on first start)
+├── worlds.yml          ← Per-world overrides (optional)
+├── mysql/
+│   ├── mysql.yml           ← MySQL/Storage configuration
+│   ├── blockprot_audit.sqlite  ← SQLite access audit log
+│   └── blockprot_audit.sqlite-wal / -shm
+├── lang/
+│   └── translations_*.yml
+├── logs/
+│   └── session-YYYY-MM-DD.log
+└── backups/
+    └── *.zip
+```
+
+**`blocks.yml`** is generated automatically on first start. If your old `config.yml` already
+had `lockable_tile_entities` / `lockable_blocks` / etc., those values are migrated into
+`blocks.yml` and removed from `config.yml` automatically, preserving your configuration.
+
+**`mysql/mysql.yml`** holds all database settings. The audit SQLite file lives there too so
+all database-related files are in one place. If the old `blockprot_audit.sqlite` exists in the
+plugin root, it is moved to `mysql/` automatically on the next startup.
+
+**`config.yml`** is rewritten on every startup using the bundled template as a base, with your
+existing values applied on top. This keeps the file clean, sectioned, and free of legacy or
+obsolete keys (`mysql.*`, `console.*`, `lockable_*`) regardless of what was there before.
+
+---
+
+## Features
+
+### Core block protection (upstream)
+
+- Sneak + right-click any lockable block to open the protection GUI.
+- Add friends with individual **Read / Write / Manager** permission levels.
+- Redstone, hopper, and piston protection toggles per block.
+- Copy / paste protection settings between blocks.
+- Block name display and inspect-contents shortcut.
+- Per-player default friend list applied automatically to new locks.
+
+---
+
+### SP26-ZV additions
+
+All additions are **disabled by default** unless noted. The upstream NBT core is unchanged.
+
+#### 1. Java 25 / Paper 26.x Compatibility
 
 - Compiles and runs on Java 25 (class file `69.0`).
-- Detects both the classic `1.x` and the new year-based `26.x` version scheme at runtime.
+- Detects both `1.x` and year-based `26.x` version schemes at runtime.
 - Validates Java version, Paper availability, and typed inventory view support on startup.
-- Logs a one-line diagnostic to console and the session log file.
 
-### 2. Persistent Session Logging
+#### 2. Persistent Session Logging
 
-- Creates one log file per server session under `plugins/BlockProt/logs/`.
-- Every line is timestamped. Logs plugin version, server version, and compatibility check results.
-- Logs `PASS`, `FAIL`, or `WARN` for each startup check.
-- Does not spam the console; detailed information stays in the log file.
+- One log file per server session under `plugins/BlockProt/logs/`.
+- Every line is timestamped. Logs plugin version, server version, and compatibility results.
+- Detailed information stays in the log; console stays clean.
 
-### 3. Hybrid MySQL / NBT Backend *(optional)*
+#### 3. Hybrid MySQL / NBT Backend *(optional)*
 
-NBT remains the source of truth for per-block ownership and friend lists. MySQL/MariaDB is
-used as an optional index for fast lookups, auditing, and cross-server global trust.
+NBT remains the source of truth. MySQL/MariaDB is an optional index for fast lookups and auditing.
 
-- Connection pool via HikariCP (shaded to avoid conflicts).
-- MySQL Connector/J bundled inside the shadow JAR.
+- Connection pool via HikariCP (shaded).
 - Tables: `blockprot_block_index`, `blockprot_global_trust`.
-- All SQL operations are asynchronous.
-- In-memory cache for global trust, loaded at startup.
-- Disabled by default (`mysql.enabled: false`).
+- All SQL is asynchronous with an in-memory trust cache.
+- Configuration: `mysql/mysql.yml` → `mysql.enabled: false`.
 
-### 4. Master Friend List & `/bp friends addall`
+#### 4. Separate Block Definitions (`blocks.yml`)
+
+- Lockable block lists live in `blocks.yml`, not `config.yml`.
+- Generated on first start with sensible defaults.
+- Old lists in `config.yml` are migrated automatically and removed.
+- Edit `blocks.yml` and run `/bp reload` — no restart needed.
+
+#### 5. Master Friend List & `/bp friends addall`
 
 - `/bp friends` — opens the global default-friends GUI.
-- `/bp friends addall <player>` — adds the target player to every block the executor owns
-  and to their global default-friend list. Resolves offline players via Mojang API.
-- Spanish aliases available when `localized_command_aliases: true`.
-- Reports how many blocks were updated via an action bar message.
+- `/bp friends addall <player>` — adds a player to every block you own at once.
+- Resolves offline players via Mojang API.
 
-### 5. SQLite Access Audit Log
+#### 6. SQLite Access Audit Log
 
 ![Audit log screenshot](https://raw.githubusercontent.com/VictorGugug/BlockProt-Plus/main/images/audit-log.png)
 
-- Database: `plugins/BlockProt/blockprot_audit.sqlite`.
-- Records `ACCESS_DENIED` and `ACCESS_GRANTED` events with player UUID, name, location, and timestamp.
-- All writes are asynchronous (`CompletableFuture`).
-- Automatic pruning when the table exceeds 50 000 entries.
-- In-game GUI (`AuditInventory`) groups events by player, shows player heads, and lets you click a player head to view their full action history.
+- Stored at `mysql/blockprot_audit.sqlite`.
+- Records `ACCESS_DENIED` / `ACCESS_GRANTED` / `OPENED` / `ITEM_TAKEN` / `ITEM_PLACED`.
+- All writes asynchronous; automatic pruning at 50 000 entries.
+- In-game GUI groups events by player with heads, timestamps, and coordinates.
+- Old file at plugin root is migrated to `mysql/` automatically.
 
-### 6. Automatic Backup & Safe Migration
+#### 7. Automatic Backup
 
-- On startup, detects pre-existing plugin data and creates a ZIP backup under
-  `plugins/BlockProt/backups/` before any migration step runs.
-- Rotates backups; keeps a maximum of 10 ZIP files.
-- `/bp reload` always triggers a forced backup first.
-- Config file watcher also backs up before each auto-reload.
+- ZIP backup under `plugins/BlockProt/backups/` before any migration.
+- Backup filenames include version and timestamp.
+- `/bp reload` triggers a backup first.
 
-Additional backup details
-- Backups now include the entire plugin data folder (configs, lang files, DBs, stats, etc.),
-  not just `config.yml`. Each ZIP contains a small `release_info.txt` file with metadata
-  (`plugin`, `version`, `is_latest_release`, `latest_tag`) to make audits and restores easier.
-- Backup filenames include the plugin version suffix when available, for example:
-  `2026-05-19_18-47_v1.2.9-dev_latest.zip`.
-- The GitHub Releases API is checked on a best-effort basis to mark whether the running
-  build matches the latest published release; network failures do not prevent backups.
+#### 8. Inactivity Cleanup *(optional)*
 
-### 7. Inactivity Cleanup *(optional)*
+- `inactivity_cleanup_days: -1` (disabled) in `config.yml`.
+- Removes protections from blocks owned by long-inactive players on startup.
 
-- `inactivity_cleanup_days` in `config.yml` (default `-1` = disabled).
-- When enabled, runs once at startup and removes protections from blocks owned by players who
-  have not logged in for the configured number of days.
-- Notifies online admins with a summary message.
+#### 9. Per-World Configuration (`worlds.yml`)
 
-### 8. Per-World Configuration (`worlds.yml`)
+- Each world can override lockable block lists and enable/disable protection entirely.
+- Missing worlds added automatically; broken file replaced with a backup kept.
 
-- Each world can have its own lists of lockable tile entities, blocks, shulker boxes, and doors.
-- `enabled: false` disables all block protection in that world.
-- Worlds not listed fall back to `config.yml` globals.
-- Missing worlds are added automatically on startup (non-destructive).
-- A broken `worlds.yml` is replaced with the bundled default; a timestamped backup is kept.
+#### 10. Config File Watcher
 
-### 9. Config File Watcher
+- Watches `config.yml`, `worlds.yml`, `blocks.yml`, `mysql/mysql.yml`, and `lang/*.yml`.
+- Auto-reloads on change, debounced 2 s.
 
-- Monitors `config.yml`, `worlds.yml`, and all `lang/*.yml` files for changes.
-- Automatically reloads the plugin configuration when a change is detected.
-- Debounced (2 s) to avoid duplicate reloads while an editor is still writing.
+#### 11. Security Options
 
-### 10. Hardened Security Options
-
-| Config key | Default | Description |
+| Key | Default | Description |
 |---|---|---|
-| `protect_locked_blocks_from_explosions` | `true` | Prevents explosions from destroying NBT-protected blocks |
-| `block_protected_block_piston_movement` | `true` | Prevents pistons from pushing or pulling NBT-protected blocks |
-| `allow_break_protected_blocks` | `false` | Any player can break a protected block (for reinforcement-plugin servers) |
-| `respect_spawn_protection` | `true` | Denies locking inside the server's spawn-protection radius; ops always bypass |
-| `clear_protection_on_shulker_break` | `false` | Breaking your own shulker drops it without protection NBT so the recipient can re-lock it |
+| `protect_locked_blocks_from_explosions` | `true` | Explosions cannot destroy locked blocks |
+| `block_protected_block_piston_movement` | `true` | Pistons cannot move locked blocks |
+| `allow_break_protected_blocks` | `false` | Any player can break (for reinforcement servers) |
+| `respect_spawn_protection` | `true` | No locking inside spawn-protection radius |
+| `clear_protection_on_shulker_break` | `false` | Shulker drops without lock NBT |
 
-### 11. `/bp help` Command
+#### 12. WorldEdit / FAWE Paste Auto-Lock *(optional)*
 
-- `/bp help` (also `/bp ayuda`) lists all available subcommands with a short description.
+- Auto-locks unprotected blocks near a `//paste` origin.
+- Applies your default-friend list to each new lock.
+- `worldedit_paste_autolock.enabled: false` by default.
 
-### 12. WorldEdit / FAWE Paste Auto-Lock *(optional)*
+#### 13. Floodgate / Geyser Bedrock Support
 
-- Watches for `//paste` commands and after a configurable delay scans a bounded radius,
-  automatically locking any unprotected lockable block near the paste origin.
-- Applies the player's existing default-friend list to each newly locked block.
-- Capped at `max_blocks_per_paste` to prevent server lag.
-- Disabled by default (`worldedit_paste_autolock.enabled: false`).
+- Configurable `bedrock_username_prefixes` for Bedrock player name resolution.
 
-### 13. Floodgate / Geyser Bedrock Support
+#### 14. Self-Repair: Config & Lang Key Merging
 
-- Resolves friend names with configurable Bedrock username prefixes so Bedrock players
-  (connected via Floodgate/Geyser) can be added as friends without guessing the prefix.
-- Configured via `bedrock_username_prefixes` in `config.yml`.
+- Missing keys added from JAR defaults on every startup and `/bp reload`.
+- `config.yml` is rewritten from the clean template with your values preserved.
+- Obsolete keys (`mysql.*`, `console.*`, `lockable_*`) removed automatically.
 
-### 14. Automatic Config & Lang Key Merging — Self-Repair
+#### 15. Colored Particle Effects & Sounds
 
-- On every startup and `/bp reload`, the plugin compares disk files against the JAR bundle.
-- Any key missing from disk is added with the default value; existing keys are never touched.
-- If `worlds.yml` cannot be parsed, it is replaced with the bundled default and a timestamped
-  broken-file copy is kept so the admin can recover their settings.
+- Lock → green dust ring + sound. Unlock → red dust ring + sound.
+- Redstone / hopper / piston toggles → color-transition rings.
+- `block_lock_effects` and `block_lock_sounds` toggles in `config.yml`.
 
-Blocks moved to `blocks.yml`
-- When the plugin detects existing data on first startup it may extract the block lists from
-  `config.yml` into a standalone `blocks.yml` file placed in the plugin data folder. When this
-  migration runs the block lists (`lockable_tile_entities`, `lockable_shulker_boxes`,
-  `lockable_blocks`, `lockable_doors`) are removed from `config.yml` and the modified
-  `config.yml` is persisted. From that point on the server operator can edit lockable lists
-  directly in `blocks.yml` and they will take precedence over bundled defaults.
+#### 16. Skin Resolution for Offline-Mode Servers
 
-### 15. ClaimChunk Integration
+- Async Mojang fallback for cracked/offline servers.
+- SkinRestorer takes priority when installed.
 
-- Prevents players from locking blocks inside chunks they do not own.
-- Optional `restrict_access_to_chunk_owner`: only the chunk owner can access unprotected
-  containers inside their claimed chunk.
-- Friend filtering: only the chunk owner is offered as a friend candidate inside a claim.
-- Activates automatically when ClaimChunk is present on the server.
+#### 17. Pet Protection *(SP26-ZV, default: disabled)*
 
-### 16. `BlockProtLockEvent` & `BlockProtUnlockEvent`
+Protects tamed animals (wolves, cats, parrots, horses, llamas …) using the same ownership
+model as blocks. Data stored in `PersistentDataContainer`.
 
-- Two new cancellable Bukkit events fired before any lock or unlock operation.
-- `Cause` enum: `MANUAL`, `LOCK_ON_PLACE`, `CLAIM_AUTO_LOCK`, `WORLDEDIT_PASTE`, `API`.
-- Useful for economy plugins, quest systems, region managers, and custom audit tools.
+| Toggle | Description |
+|---|---|
+| `enabled` | Master switch (default **false**) |
+| `auto_protect_on_tame` | Protect automatically when tamed |
+| `no_damage` | Block other players from damaging the pet |
+| `no_interact` | Block right-click (feeding, naming, sitting) |
+| `no_leash` | Block leash/unleash by others |
+| `no_pickup` | Block parrot shoulder-pickup by others |
 
-### 17. Shulker Box Protection Improvements
+- Right-click your pet while holding the configured `menu_item` (default: Stick) to open the settings GUI.
+- Owner, `blockprot.admin`, and `blockprot.bypass` always bypass.
+- Denial message comes from the lang file (`messages.pet_denied`).
+- Hot-reloadable via `/bp reload`.
 
-- Bug fix for upstream issue #344: `NbtApiException` console spam when a shulker is placed
-  or broken while its `TileEntity` is not yet initialised. Both `onBlockPlace` and
-  `onShulkerBoxBreak` now guard with an `instanceof TileState` check before any NBT access.
-- `clear_protection_on_shulker_break: true` drops the shulker without lock NBT so the
-  recipient can open and re-lock it as their own.
+#### 18. Update Checker
 
-### 18. Spawn Protection Respect
+- Queries GitHub Releases API once per session asynchronously.
+- Console warning + optional op join message when outdated.
+- `/bp update` re-runs the check manually.
 
-- Upstream issue #303: players cannot lock blocks inside the server's spawn-protection radius.
-- Controlled by `respect_spawn_protection: true` in `config.yml`.
-- Ops and `blockprot.admin` always bypass.
+#### 19. `BlockProtLockEvent` & `BlockProtUnlockEvent`
 
-### 19. Allow Breaking Protected Blocks
+- Cancellable Bukkit events with a `Cause` enum (`MANUAL`, `LOCK_ON_PLACE`, `WORLDEDIT_PASTE`, …).
 
-- Upstream issue #324: `allow_break_protected_blocks: false` in `config.yml`.
-- When enabled, any player can break a protected block regardless of ownership.
-- Intended for servers using a separate reinforcement plugin for break resistance.
+#### 20. Admin Teleport from Statistics
 
-### 20. Update Checker — GitHub Releases
-
-- Queries the **GitHub Releases API** at `https://api.github.com/repos/VictorGugug/BlockProt-Plus/releases/latest`
-  on every server start (asynchronous, one call per session).
-- On startup, logs a warning to console if a newer version is published.
-- When an op joins and `notify_op_of_updates: true` is set, they receive a clickable in-game
-  message that opens `https://github.com/VictorGugug/BlockProt-Plus/releases`.
-- `/bp update` (op-only) re-runs the check and messages all online players with the result.
-- The result is cached for the entire session — the API is never called more than once per start.
-- Network errors and API rate limits are silently ignored; the plugin starts normally regardless.
-
-### 30. Pet Protection (SP26-ZV)
-
-Protects tamed animals (wolves, cats, parrots, horses, llamas, etc.) with the same ownership
-model used for blocks. Data is stored in each entity's `PersistentDataContainer`.
-
-| Toggle | Default | Description |
-|---|---|---|
-| `enabled` | `true` | Master switch for the entire system |
-| `auto_protect_on_tame` | `true` | Protect automatically when a pet is tamed |
-| `no_damage` | `true` | Block other players from damaging the pet |
-| `no_interact` | `false` | Block right-click (feeding, naming, sitting) |
-| `no_leash` | `true` | Block other players from leashing/unleashing |
-| `no_pickup` | `false` | Block parrot shoulder-pickup by others |
-
-- Owner, players with `blockprot.admin`, and players with `blockprot.bypass` always bypass.
-- **Settings GUI** — right-click your tamed pet while holding a **stick** (or the item
-  configured via `pet_protection.menu_item`) to open a GUI with individual toggles,
-  plus *Enable All* / *Disable All* buttons.
-- **Death notification** — the online owner receives a chat message when their protected
-  pet dies, including the pet's name if one was set.
-- **Hot-reloadable** — all settings are read at event time; `/bp reload` applies changes
-  without restarting the server.
-- Configured under `pet_protection:` in `config.yml`.
-
-### 21. Cached Profile Service
-
-- `CachedProfileService` wraps Mojang profile lookups (name → UUID and skin) with an
-  in-memory cache.
-- Eliminates repeated HTTP calls during a single session when the same player is resolved
-  multiple times (e.g. from `FriendsAddAllCommand` or friend search).
-- Thread-safe; results expire after a configurable TTL.
-
-### 22. Auto-Publish to Modrinth & Hangar
-
-- `.github/workflows/publish.yml` builds the shadow JAR and publishes it to **Modrinth** and
-  **Hangar** automatically when a GitHub Release is published.
-- Release channel (`release` / `beta` / `alpha`) is inferred from the version suffix.
-
-### 23. Colored Particle Effects on Lock / Unlock / Settings Toggle
-
-- **Lock** → green dust-particle ring around the block + chest-locked sound.
-- **Unlock** → red dust-particle ring + sound.
-- **Double chests** are handled correctly: both halves receive the particle ring simultaneously.
-- **Redstone setting toggle** → red ↔ white `DUST_COLOR_TRANSITION` ring + lever click sound.
-- **Hopper setting toggle** → light-gray ↔ dark-gray transition ring.
-- **Piston setting toggle** → brown ↔ gray transition ring.
-- All effects respect `block_lock_effects: true/false` in `config.yml` (default: true).
-
-### 24. Configurable Sound Toggle
-
-- `block_lock_sounds: true/false` can be set so sound effects are disabled while keeping particle effects enabled.
-
-### 25. Shulker Box — Shift+Right-Click Places Without Protection
-
-- Placing a shulker box while **sneaking** (Shift+right-click) skips the lock-on-place step.
-- The shulker is placed without any owner, so the recipient can open and lock it as their own.
-- Normal placement still auto-locks as configured.
-- Configurable via the existing `lock_on_place_by_default` flow; no extra config key needed.
-
-### 26. Skin Resolution for Cracked / Offline-Mode Servers
-
-`SkinCache` provides an async Mojang-API fallback for offline servers where UUIDs
-are name-derived and don't correspond to Mojang profiles:
-
-1. On first GUI open for a player, a plain (no-texture) head is shown immediately.
-2. In the background, BlockProt queries `api.mojang.com` to resolve the real Mojang UUID
-   from the username, then fetches the skin texture from the session server.
-3. On the next GUI open the skinned head is returned from cache.
-4. **SkinRestorer** (if installed) always takes priority over the Mojang fallback.
-5. Fetch failures (network errors, rate limits, unknown names) are silently skipped;
-   the plain head continues to be shown without any console errors.
-
-### 27. Admin Teleport from Statistics Inventory
-
-- In the **Statistics → Your Blocks** list, players with `blockprot.admin` permission
-  can **click any block entry** to teleport directly to that block.
-- The inventory closes after teleporting.
-- Players without the admin permission see no change on click.
-
-### 28. Console Messages
-
-- The startup ASCII banner is printed once via the standard plugin logger during `onEnable`.
-- Post-startup notifications (integrations, audit logger, config reload) go through `BlockProtConsole`, which prefixes every line with `[BlockProt]` as plain text.
-- No color codes are applied; output is consistent across Paper and Spigot terminals.
-
-### 29. Per-Player Sections in the Access Audit Log
-
-- The audit GUI overview now shows **one head per unique player** with a clear label:
-  `§cX §fname` (access denied) or `§aOK §fname` (access granted).
-- Lore shows the last event timestamp, total event count, and world/coordinates.
-- Clicking a player head opens their **full personal history** (all events in order).
-- The detail view shows individual event timestamps and actions.
-- Navigation arrows are consistent across both views.
+- Admins (`blockprot.admin`) can click any block entry in **Stats → Your Blocks** to teleport to it.
 
 ---
 
 ## Commands
 
 | Command | Description |
+|---|---|
 | `/bp help` | List all subcommands |
 | `/bp settings` | Open player settings GUI |
 | `/bp friends` | Open global friend list GUI |
 | `/bp friends addall <player>` | Add player to every block you own |
-| `/bp stats` | View your protection statistics |
+| `/bp stats` | View protection statistics |
 | `/bp about` | Plugin info and version |
 | `/bp reload` | Reload config (backup runs first) |
 | `/bp integrations` | Show active integrations |
@@ -353,8 +267,8 @@ Alias: `/blockprot`. Spanish aliases available when `localized_command_aliases: 
 | `blockprot.admin` | Unlock and edit blocks owned by others | false |
 | `blockprot.bypass` | Bypass all protection | false |
 | `blockprot.lockmax` | Remove per-player block lock limit | false |
-| `blockprot.locklimit.<N>` | Set per-player lock limit (e.g. `.50`) | false |
-| `blockprot.debug` | Execute debug commands | false |
+| `blockprot.locklimit.<N>` | Per-player lock limit override | false |
+| `blockprot.debug` | Developer diagnostics | false |
 
 ---
 
@@ -367,8 +281,8 @@ Alias: `/blockprot`. Spanish aliases available when `localized_command_aliases: 
 | **PlaceholderAPI** | Exposes stats and protection status as placeholders |
 | **Lands** | Supports Lands claim permission checks |
 | **ClaimChunk** | Prevents locking in chunks you don't own |
-| **Floodgate / Geyser** | Resolves Bedrock usernames with configurable prefixes |
-| **WorldEdit / FAWE** | Optional paste auto-lock for `//paste` |
+| **Floodgate / Geyser** | Resolves Bedrock usernames |
+| **WorldEdit / FAWE** | Optional paste auto-lock |
 
 ---
 
@@ -376,7 +290,7 @@ Alias: `/blockprot`. Spanish aliases available when `localized_command_aliases: 
 
 | | |
 |---|---|
-| **Minecraft** | 1.21, 1.21.1, 1.21.4, 26.1.x (latest Paper builds) |
+| **Minecraft** | 1.21, 1.21.1, 1.21.4, 26.1.x |
 | **Server** | Paper, Spigot |
 | **Java** | 25+ required |
 | **MySQL** | MySQL 8+, MariaDB 10.5+ (optional) |
@@ -384,37 +298,60 @@ Alias: `/blockprot`. Spanish aliases available when `localized_command_aliases: 
 
 ---
 
-## Configuration Reference
+## Configuration reference
+
+### `config.yml`
 
 ```yaml
-# ── Core ──────────────────────────────────────────────────────────────────
-worlds_config_enabled: false
+# ── 1. General ───────────────────────────────────────────────────────────────
+language_file: translations_en.yml
+fallback_string: "Unknown translation"
+replace_translations: true
+notify_op_of_updates: false
 localized_command_aliases: true
+excluded_worlds: []
+worlds_config_enabled: false
+bedrock_username_prefixes: [".", "*", "_"]
+inactivity_cleanup_days: -1   # -1 = disabled
+
+# ── 2. Player & Protection Defaults ──────────────────────────────────────────
 lock_on_place_by_default: true
 public_is_friend_by_default: false
 player_max_locked_block_count: -1
 lock_hint_cooldown_in_seconds: 10
 friend_search_similarity: 0.5
 disable_friend_functionality: false
-notify_op_of_updates: false
 redstone_disallowed_by_default: false
 
-# ── Security hardening ────────────────────────────────────────────────────
+# ── 3. Safety & Protection Behavior ──────────────────────────────────────────
 protect_locked_blocks_from_explosions: true
 block_protected_block_piston_movement: true
+clear_protection_on_shulker_break: false
 allow_break_protected_blocks: false
 respect_spawn_protection: true
-clear_protection_on_shulker_break: false
 
-# ── Particle effects ─────────────────────────────────────────────────────
-# true = colored dust rings on lock/unlock and redstone/hopper/piston toggles
+# ── 4. Pet Protection (SP26-ZV) ───────────────────────────────────────────────
+pet_protection:
+  enabled: false
+  auto_protect_on_tame: true
+  menu_item: STICK
+
+# ── 5. Effects ────────────────────────────────────────────────────────────────
 block_lock_effects: true
-
-# When true, sound plays for lock/unlock and setting-toggle effects.
-# Set to false to keep particles enabled but mute those sounds.
 block_lock_sounds: true
 
-# ── Optional MySQL index ──────────────────────────────────────────────────
+# ── 6. Optional Features ──────────────────────────────────────────────────────
+optional_features_enable_all: false
+worldedit_paste_autolock:
+  enabled: false
+  radius: 24
+  max_blocks_per_paste: 5000
+  delay_ticks: 20
+```
+
+### `mysql/mysql.yml`
+
+```yaml
 mysql:
   enabled: false
   host: "127.0.0.1"
@@ -422,128 +359,51 @@ mysql:
   database: "blockprot"
   username: "blockprot"
   password: ""
-  jdbc_url: ""           # Overrides host/port/database when set
+  jdbc_url: ""   # overrides host/port/database when set
   pool:
     maximum_pool_size: 10
     minimum_idle: 2
     connection_timeout_ms: 10000
+```
 
-# ── WorldEdit paste auto-lock ─────────────────────────────────────────────
-worldedit_paste_autolock:
-  enabled: false
-  radius: 24
-  max_blocks_per_paste: 5000
-  delay_ticks: 20
+### `blocks.yml`
 
-# ── Floodgate / Geyser ───────────────────────────────────────────────────
-bedrock_username_prefixes: [".", "*", "_"]
-
-# ── Inactivity cleanup ────────────────────────────────────────────────────
-inactivity_cleanup_days: -1   # -1 = disabled
-
-# ── Optional feature preset ───────────────────────────────────────────────
-optional_features_enable_all: false
-
-# ── Pet protection (SP26-ZV) ──────────────────────────────────────────────
-pet_protection:
-  enabled: true                # master switch
-  auto_protect_on_tame: true   # protect on tame; owner can adjust toggles via GUI
-  menu_item: STICK             # held item that opens the pet settings GUI
-  denied_message: "§c[BlockProt] §rYou don't have permission to interact with this pet."
-  # Per-pet toggles are stored on the entity itself (PersistentDataContainer)
-  # and can be changed individually through the in-game settings GUI.
+```yaml
+lockable_tile_entities: [CHEST, TRAPPED_CHEST, FURNACE, ...]
+lockable_shulker_boxes: [SHULKER_BOX, WHITE_SHULKER_BOX, ...]
+lockable_blocks: [ANVIL, OAK_FENCE_GATE, OAK_TRAPDOOR, ...]
+lockable_doors: [OAK_DOOR, IRON_DOOR, COPPER_DOOR, ...]
 ```
 
 ---
 
-## New files added vs. upstream
-
-| File | Description |
-|------|-------------|
-| `BlockProtLogger.java` | Persistent session log writer |
-| `CachedProfileService.java` | In-memory cache for Mojang profile lookups |
-| `VersionCompat.java` | Runtime version detection (1.x and 26.x) |
-| `VersionValidator.java` | Startup compatibility checks |
-| `audit/AuditLogger.java` | SQLite access audit log |
-| `commands/FriendsAddAllCommand.java` | `/bp friends addall` |
-| `commands/HelpCommand.java` | `/bp help` |
-| `config/WorldsConfig.java` | Per-world lockable-block configuration |
-| `events/BlockProtLockEvent.java` | Cancellable lock event with cause |
-| `events/BlockProtUnlockEvent.java` | Cancellable unlock event with cause |
-| `integrations/ClaimChunkIntegration.java` | ClaimChunk support |
-| `inventories/AuditInventory.java` | In-game audit log viewer |
-| `inventories/ChatInput.java` | Chat-based player input helper |
-| `inventories/AnvilInput.java` | Anvil GUI input fallback |
-| `listeners/WorldEditPasteListener.java` | WorldEdit/FAWE paste auto-lock |
-| `storage/HybridDatabase.java` | MySQL/MariaDB index with HikariCP |
-| `tasks/BackupTask.java` | Pre-operation ZIP backup |
-| `tasks/ConfigFileWatcher.java` | Auto-reload on config file change |
-| `tasks/InactivityCleanupTask.java` | Remove protections of inactive players |
-| `util/PlayerNameResolver.java` | Offline player UUID resolution via Mojang API |
-| `util/SkinCache.java` | Async Mojang skin fetcher for offline/cracked servers |
-| `util/TemporaryActionBar.java` | Repeating action bar message utility |
-| `BlockProtConsole.java` | Plain-text console message helper; post-startup notifications only |
-| `pets/PetNBTHandler.java` | Reads and writes pet protection data via PersistentDataContainer |
-| `listeners/PetProtectionListener.java` | Enforces pet protection on damage, interact, leash, and parrot pickup events |
-| `listeners/PetMenuOpenListener.java` | Opens the pet settings GUI on right-click with the configured item |
-| `inventories/PetSettingsInventory.java` | GUI with per-toggle switches for each pet protection option |
-
----
-
-## Dependencies added by BlockProt Plus
-
-| Library | Version | Notes |
-|---------|---------|-------|
-| HikariCP | 7.0.2 | Shaded to `de.sean.blockprot.bukkit.shaded.hikari` |
-| MySQL Connector/J | 9.7.0 | Bundled in shadow JAR |
-| slf4j-api | runtime | Required by HikariCP |
-
----
-
-## Developing addons
-
-The fork exposes the same `BlockProtAPI` as the upstream plugin:
-
-```java
-BlockNBTHandler handler = BlockProtAPI.getInstance().getBlockHandler(block);
-PlayerSettingsHandler playerHandler = BlockProtAPI.getInstance().getPlayerSettings(player);
-```
-
-Internal classes (`HybridDatabase`, `AuditLogger`, `WorldsConfig`, `CachedProfileService`, etc.)
-are not part of the public API.
-
----
-
-## Build verification
+## Build
 
 ```powershell
-.\gradlew.bat :blockprot-spigot:compileJava
 .\gradlew.bat :blockprot-spigot:shadowJar
-.\gradlew.bat :blockprot-spigot:build
+.\gradlew.bat :blockprot-spigot:shadowJar -PversionSuffix=SNAPSHOT-1
 ```
 
-Output JAR: `spigot/build/libs/BlockProt-VERSION.jar`
+Output: `spigot/build/libs/BlockProt-VERSION.jar`
 
-| `blockProtVersion` | `versionSuffix` | Output JAR |
+| `blockProtVersion` | `versionSuffix` | Output |
 |---|---|---|
-| `1.2.9` | *(blank)* | `BlockProt-1.2.9.jar` |
-| `1.2.9` | `SNAPSHOT` | `BlockProt-1.2.9-SNAPSHOT.jar` |
-| `1.2.9` | `beta.1` | `BlockProt-1.2.9-beta.1.jar` |
-| `1.2.9` | `fix.1` | `BlockProt-1.2.9-fix.1.jar` |
+| `1.3.0` | *(blank)* | `BlockProt-1.3.0.jar` |
+| `1.3.0` | `SNAPSHOT-1` | `BlockProt-1.3.0-SNAPSHOT-1.jar` |
+| `1.3.0` | `beta.1` | `BlockProt-1.3.0-beta.1.jar` |
+| `1.3.0` | `rc.1` | `BlockProt-1.3.0-rc.1.jar` |
 
 ---
 
 ## Translating
 
-Language files are in `spigot/src/main/resources/lang/`. Contributions welcome.
-
-All message values support Minecraft legacy color and formatting codes (`§a`, `§b`, `§l`, etc.).
+Language files in `spigot/src/main/resources/lang/`. All message values support legacy color codes (`§a`, `§l`, etc.). Contributions welcome.
 
 ---
 
 ## Contact / Support
 
-This fork is created and maintained by **Zar**.
+Maintained by **Zar**.
 [Open an issue](https://github.com/VictorGugug/BlockProt-Plus/issues) for bugs or questions.
 
 ---

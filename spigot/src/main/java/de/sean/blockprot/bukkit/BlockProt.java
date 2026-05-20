@@ -47,9 +47,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.*;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 import java.util.Objects;
 
 /**
@@ -136,7 +134,10 @@ public final class BlockProt extends JavaPlugin {
         }
 
         StatHandler.enable();
+        this.cleanLegacyConfigKeys();
         this.saveDefaultConfig();
+        this.saveResource("blocks.yml", false);
+        this.saveResource("mysql/mysql.yml", false);
         this.reloadConfigAndTranslations();
         VersionValidator.validateStartup();
 
@@ -317,6 +318,7 @@ public final class BlockProt extends JavaPlugin {
         int added = 0;
         for (String key : jarConfig.getKeys(true)) {
             if (jarConfig.isConfigurationSection(key)) continue;
+            if (EXTERNAL_CONFIG_KEYS.contains(key)) continue;
             if (!diskConfig.contains(key)) {
                 diskConfig.set(key, jarConfig.get(key));
                 added++;
@@ -336,6 +338,51 @@ public final class BlockProt extends JavaPlugin {
         }
     }
 
+    /**
+     * Reescribe el config.yml en disco usando el template del jar como base,
+     * preservando todos los valores que el usuario ya tiene configurados.
+     * Esto garantiza que el formato, comentarios y secciones siempre estén limpios.
+     * También elimina claves obsoletas (mysql, console, lockable_*) si existen.
+     */
+    private void cleanLegacyConfigKeys() {
+        File diskFile = new File(this.getDataFolder(), "config.yml");
+        if (!diskFile.exists()) return;
+
+        // Lee los valores actuales del usuario
+        YamlConfiguration userValues = YamlConfiguration.loadConfiguration(diskFile);
+
+        // Lee el template limpio del jar
+        InputStream jarStream = this.getResource("config.yml");
+        if (jarStream == null) return;
+        YamlConfiguration template = YamlConfiguration.loadConfiguration(
+            new BufferedReader(new InputStreamReader(jarStream)));
+
+        // Aplica los valores del usuario sobre el template (solo claves que existen en el template)
+        for (String key : template.getKeys(true)) {
+            if (template.isConfigurationSection(key)) continue;
+            if (userValues.contains(key)) {
+                template.set(key, userValues.get(key));
+            }
+        }
+
+        // Guarda el template con valores del usuario → formato limpio garantizado
+        try {
+            template.save(diskFile);
+            BlockProtLogger.log("config-clean", "Rewrote config.yml with clean format, preserving user values.");
+        } catch (IOException e) {
+            BlockProtLogger.warn("Failed to rewrite config.yml: " + e.getMessage());
+        }
+    }
+
+    /** Keys managed by separate files — never merged back into config.yml. */
+    private static final Set<String> EXTERNAL_CONFIG_KEYS = Set.of(
+        "lockable_tile_entities", "lockable_shulker_boxes", "lockable_blocks", "lockable_doors",
+        "mysql.enabled", "mysql.host", "mysql.port", "mysql.database",
+        "mysql.username", "mysql.password", "mysql.jdbc_url",
+        "mysql.pool.maximum_pool_size", "mysql.pool.minimum_idle", "mysql.pool.connection_timeout_ms",
+        "console.prefix_color", "console.info_color"
+    );
+
     private void mergeMissingConfigKeys() {
         File diskFile = new File(this.getDataFolder(), "config.yml");
         if (!diskFile.exists()) return;
@@ -347,6 +394,7 @@ public final class BlockProt extends JavaPlugin {
         int added = 0;
         for (String key : jarConfig.getKeys(true)) {
             if (jarConfig.isConfigurationSection(key)) continue;
+            if (EXTERNAL_CONFIG_KEYS.contains(key)) continue;
             if (!diskConfig.contains(key)) {
                 diskConfig.set(key, jarConfig.get(key));
                 added++;
