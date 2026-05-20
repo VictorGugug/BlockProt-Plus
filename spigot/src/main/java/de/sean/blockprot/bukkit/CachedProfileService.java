@@ -104,8 +104,11 @@ public class CachedProfileService implements ProfileService, ProfileCache {
             for (final var uuid : uuids) {
                 try {
                     final var profile = this.resolver.findByUuid(uuid);
-                    put(profile);
-                    profiles.add(profile);
+                    // Guard: resolver may return null for offline/unknown UUIDs.
+                    if (profile != null) {
+                        put(profile);
+                        profiles.add(profile);
+                    }
                 } catch (Exception e) {
                     return ImmutableList.copyOf(profiles);
                 }
@@ -122,12 +125,19 @@ public class CachedProfileService implements ProfileService, ProfileCache {
         }
 
         if (!lookup.isEmpty()) {
-            final var profiles = new ArrayList<>(map.values());
+            // Start with the profiles we already have in cache (filter nulls defensively).
+            final var profiles = new ArrayList<Profile>();
+            for (final var p : map.values()) {
+                if (p != null) profiles.add(p);
+            }
             for (final var uuid : lookup) {
                 try {
                     final var profile = this.resolver.findByUuid(uuid);
-                    put(profile);
-                    profiles.add(profile);
+                    // Guard: resolver may return null for offline/unknown UUIDs.
+                    if (profile != null) {
+                        put(profile);
+                        profiles.add(profile);
+                    }
                 } catch (Exception e) {
                     return ImmutableList.copyOf(profiles);
                 }
@@ -135,7 +145,10 @@ public class CachedProfileService implements ProfileService, ProfileCache {
             return ImmutableList.copyOf(profiles);
         }
 
-        return map.values().asList();
+        // All UUIDs were in cache — filter nulls before returning.
+        return map.values().stream()
+            .filter(Objects::nonNull)
+            .collect(ImmutableList.toImmutableList());
     }
 
     @Override

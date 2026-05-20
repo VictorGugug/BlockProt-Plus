@@ -48,8 +48,9 @@ dependencies {
     compileOnly("io.papermc.paper:paper-api:1.21-R0.1-SNAPSHOT")
     compileOnly("org.apache.commons:commons-lang3:3.13.0")
 
-    // bStats
-    api("org.bstats:bstats-bukkit:3.0.2")
+    // bStats — updated 3.0.2 → 3.1.0 (NBT-API 2.15.6+ uses 3.2.1 internally;
+    // bumping our own declaration avoids a duplicate-class warning at shade time)
+    api("org.bstats:bstats-bukkit:3.1.0")
 
     // Dependencies
     implementation("de.tr7zw:item-nbt-api:$nbtApiVersion")

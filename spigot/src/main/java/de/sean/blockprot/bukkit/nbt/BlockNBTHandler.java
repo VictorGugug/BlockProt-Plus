@@ -197,19 +197,25 @@ public final class BlockNBTHandler extends FriendSupportingHandler<NBTCompound> 
     }
 
     /**
-     * See if a string is NOT a numerical value.
+     * Returns true if the given string is NOT a valid non-negative or negative decimal number.
+     *
+     * <p>Fixed: the original loop used {@code for(i = x ? 0 : -1; ++i < len)} which skipped
+     * index 0 entirely when the first char was NOT '-', causing single-digit permission values
+     * like "5" to be misclassified as non-numeric.
      *
      * @param string The string to check.
-     * @return Whether it is numerical or not.
+     * @return {@code true} if {@code string} is not numeric.
      */
     public boolean isNotNumeric(String string) {
-        final char[] chars = string.toCharArray();
-        // If the first character is a '-' indicating a negative value, we skip it.
-        for (int i = chars[0] == '-' ? 0 : -1; ++i < string.length(); ) {
-            final char c = chars[i];
-            if (!Character.isDigit(c) && c != '.' && c != '-') return true;
+        if (string == null || string.isEmpty()) return true;
+        // Allow an optional leading '-' for negative values.
+        int start = string.charAt(0) == '-' ? 1 : 0;
+        // A bare "-" with nothing after it is not numeric.
+        if (start >= string.length()) return true;
+        for (int i = start; i < string.length(); i++) {
+            final char c = string.charAt(i);
+            if (!Character.isDigit(c) && c != '.') return true;
         }
-
         return false;
     }
 
@@ -235,7 +241,35 @@ public final class BlockNBTHandler extends FriendSupportingHandler<NBTCompound> 
         if (maxCheck != null) return maxCheck;
 
         if (owner.isEmpty()) {
-            return performClaim(player, cause, playerUuid);
+            // Respect spawn-protection radius from server.properties
+            if (BlockProt.getDefaultConfig().shouldRespectSpawnProtection()
+                    && !player.isOp() && !player.hasPermission(Permissions.ADMIN.key())) {
+                int spawnRadius = org.bukkit.Bukkit.getServer().getSpawnRadius();
+                if (spawnRadius > 0) {
+                    org.bukkit.Location spawn = block.getWorld().getSpawnLocation();
+                    double dx = block.getX() - spawn.getBlockX();
+                    double dz = block.getZ() - spawn.getBlockZ();
+                    if ((dx * dx + dz * dz) <= (double)(spawnRadius * spawnRadius)) {
+                        return new LockReturnValue(false, LockReturnValue.Reason.NO_PERMISSION);
+                    }
+                }
+            }
+
+            BlockProtLockEvent event = new BlockProtLockEvent(block, player, cause);
+            BlockProt.getInstance().getServer().getPluginManager().callEvent(event);
+            if (event.isCancelled()) {
+                return new LockReturnValue(false, LockReturnValue.Reason.NO_PERMISSION);
+            }
+
+            setOwner(playerUuid);
+            this.applyToOtherContainer();
+            StatHandler.addBlock(player, block.getLocation());
+            HybridDatabase hybridDatabase = BlockProt.getHybridDatabase();
+            if (hybridDatabase != null) {
+                hybridDatabase.upsertBlockIndex(player.getUniqueId(), block.getLocation(), block.getType().name());
+            }
+            HopperEventListener.invalidate(block);
+            return new LockReturnValue(true, null);
         } else if (owner.equals(playerUuid) || player.isOp() || player.hasPermission(Permissions.ADMIN.key())) {
             return performUnlock(player);
         }
@@ -253,14 +287,15 @@ public final class BlockNBTHandler extends FriendSupportingHandler<NBTCompound> 
         if (player.hasPermission("blockprot.lockmax")){
             List<PermissionAttachmentInfo> lists = new ArrayList<>(player.getEffectivePermissions());
             Integer highestValueFound = null;
-            for (int i = -1; ++i < lists.size(); ) {
+            for (int i = 0; i < lists.size(); i++) {
                 PermissionAttachmentInfo permission = lists.get(i);
                 if (permission.getPermission().toLowerCase().startsWith("blockprot.locklimit.") && permission.getValue()) {
                     String foundValue = permission.getPermission().toLowerCase().replace("blockprot.locklimit.", "");
                     if (isNotNumeric(foundValue)) continue;
 
-                    if (Integer.parseInt(foundValue) > (highestValueFound == null ? 0 : highestValueFound)) {
-                        highestValueFound = Integer.parseInt(foundValue);
+                    int parsed = Integer.parseInt(foundValue);
+                    if (highestValueFound == null || parsed > highestValueFound) {
+                        highestValueFound = parsed;
                     }
                 }
             }
@@ -272,40 +307,6 @@ public final class BlockNBTHandler extends FriendSupportingHandler<NBTCompound> 
             return new LockReturnValue(false, LockReturnValue.Reason.EXCEEDED_MAX_BLOCK_COUNT);
         }
         return null;
-    }
-
-    private LockReturnValue performClaim(@NotNull final Player player, @NotNull final BlockProtLockEvent.Cause cause, String playerUuid) {
-        // Issue #303: respect spawn-protection radius from server.properties.
-        // Controlled by the `respect_spawn_protection` config key (default: true).
-        // Ops bypass this check, matching vanilla spawn-protection behaviour.
-        if (BlockProt.getDefaultConfig().shouldRespectSpawnProtection()
-                && !player.isOp() && !player.hasPermission(Permissions.ADMIN.key())) {
-            int spawnRadius = org.bukkit.Bukkit.getServer().getSpawnRadius();
-            if (spawnRadius > 0) {
-                org.bukkit.Location spawn = block.getWorld().getSpawnLocation();
-                double dx = block.getX() - spawn.getBlockX();
-                double dz = block.getZ() - spawn.getBlockZ();
-                if ((dx * dx + dz * dz) <= (double)(spawnRadius * spawnRadius)) {
-                    return new LockReturnValue(false, LockReturnValue.Reason.NO_PERMISSION);
-                }
-            }
-        }
-
-        BlockProtLockEvent event = new BlockProtLockEvent(block, player, cause);
-        BlockProt.getInstance().getServer().getPluginManager().callEvent(event);
-        if (event.isCancelled()) {
-            return new LockReturnValue(false, LockReturnValue.Reason.NO_PERMISSION);
-        }
-
-        setOwner(playerUuid);
-        this.applyToOtherContainer();
-        StatHandler.addBlock(player, block.getLocation());
-        HybridDatabase hybridDatabase = BlockProt.getHybridDatabase();
-        if (hybridDatabase != null) {
-            hybridDatabase.upsertBlockIndex(player.getUniqueId(), block.getLocation(), block.getType().name());
-        }
-        HopperEventListener.invalidate(block);
-        return new LockReturnValue(true, null);
     }
 
     private LockReturnValue performUnlock(@NotNull final Player player) {

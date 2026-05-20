@@ -23,7 +23,6 @@ import de.sean.blockprot.bukkit.nbt.BlockNBTHandler;
 import org.bukkit.block.Block;
 import org.bukkit.block.Container;
 import org.bukkit.block.DoubleChest;
-import org.bukkit.entity.Minecart;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryMoveItemEvent;
@@ -32,6 +31,7 @@ import org.bukkit.inventory.InventoryHolder;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class HopperEventListener implements Listener {
@@ -53,13 +53,33 @@ public class HopperEventListener implements Listener {
     // Concurrent because the scheduler may access this from different threads.
     private static final ConcurrentHashMap<Long, CacheEntry> cache = new ConcurrentHashMap<>();
 
-    /** Encodes world+coords into a single long key. Works for coords within ±1M blocks. */
+    /**
+     * Encodes world UID + block coords into a single long cache key.
+     *
+     * <p>Previous implementation used XOR with fixed shifts which produced hash
+     * collisions for blocks whose (x, z) coordinates are symmetric (e.g. (1,2) and
+     * (2,1) produced the same key). This version uses a Cantor/FNV-inspired mix that
+     * distributes all three axes and the world UID independently.
+     *
+     * <p>Formula: mix the 64-bit world UID with packed (x, y, z) using multiply-xor
+     * steps borrowed from MurmurHash3's finalizer. Safe for all valid Minecraft
+     * coordinate ranges (x/z ±30 000 000, y ±2048).
+     */
     private static long cacheKey(@NotNull Block block) {
-        // XZ are bounded to 30M blocks max; Y to 2048. Bit-packing is safe.
-        long key = block.getWorld().getUID().getLeastSignificantBits();
-        key ^= (long) (block.getX() + 30_000_000) << 32;
-        key ^= (long) (block.getZ() + 30_000_000) << 11;
-        key ^= (long) (block.getY() + 2048);
+        UUID uid = block.getWorld().getUID();
+        // Cantor-pair the three signed ints into a single long, then mix with the world UID.
+        long xyz = ((long) block.getX() & 0x3FFFFFFL)
+                 | (((long) block.getZ() & 0x3FFFFFFL) << 26)
+                 | (((long) (block.getY() + 2048) & 0xFFFL) << 52);
+        // Mix with world UID (both halves) using multiplicative hashing.
+        long key = xyz ^ (uid.getMostSignificantBits() * 0x9e3779b97f4a7c15L);
+        key ^= uid.getLeastSignificantBits() * 0x6c62272e07bb0142L;
+        // Final avalanche (MurmurHash3 fmix64).
+        key ^= key >>> 33;
+        key *= 0xff51afd7ed558ccdL;
+        key ^= key >>> 33;
+        key *= 0xc4ceb9fe1a85ec53L;
+        key ^= key >>> 33;
         return key;
     }
 

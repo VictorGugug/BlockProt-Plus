@@ -14,9 +14,7 @@ import java.util.List;
 /**
  * Displays the live BlockProt command list using the active language file.
  *
- * <p>Archived claims commands are kept under {@code _claims_removed} and are
- * intentionally excluded from this help screen until that module is restored
- * and registered again.</p>
+ * <p>The claims system has been removed from this version.</p>
  *
  * @since SP26
  */

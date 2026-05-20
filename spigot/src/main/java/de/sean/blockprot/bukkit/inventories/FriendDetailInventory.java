@@ -21,7 +21,6 @@ package de.sean.blockprot.bukkit.inventories;
 import de.sean.blockprot.bukkit.BlockProt;
 import de.sean.blockprot.bukkit.TranslationKey;
 import de.sean.blockprot.bukkit.Translator;
-import de.sean.blockprot.bukkit.nbt.BlockAccessFlag;
 import de.sean.blockprot.bukkit.nbt.FriendHandler;
 import de.sean.blockprot.bukkit.nbt.FriendSupportingHandler;
 import de.sean.blockprot.nbt.FriendModifyAction;
@@ -44,16 +43,6 @@ import java.util.Optional;
  * The detail inventory for managing a single friend and their permission.
  */
 public final class FriendDetailInventory extends BlockProtInventory {
-    @NotNull
-    private static final List<EnumSet<BlockAccessFlag>> accessFlagCombinations =
-        Arrays.asList(
-            EnumSet.of(BlockAccessFlag.READ),
-            EnumSet.of(BlockAccessFlag.READ, BlockAccessFlag.WRITE),
-            EnumSet.of(BlockAccessFlag.READ, BlockAccessFlag.WRITE, BlockAccessFlag.MANAGER));
-
-    @Nullable
-    private EnumSet<BlockAccessFlag> curFlags = EnumSet.noneOf(BlockAccessFlag.class);
-
     @Nullable
     private FriendHandler playerHandler = null;
 
@@ -86,23 +75,7 @@ public final class FriendDetailInventory extends BlockProtInventory {
                 closeAndOpen(player, new FriendManageInventory().fill(player));
             }
             case ENDER_EYE -> {
-                if (playerHandler == null || curFlags == null) break;
-                int curIndex = 0;
-                for (; curIndex < accessFlagCombinations.size(); curIndex++) {
-                    if (curFlags.equals(accessFlagCombinations.get(curIndex))) break;
-                }
-
-                if (curIndex + 1 >= accessFlagCombinations.size()) curIndex = 0;
-                else curIndex += 1;
-                curFlags = accessFlagCombinations.get(curIndex);
-
-                assert curFlags != null;
-                setItemStack(
-                    2,
-                    Material.ENDER_EYE,
-                    BlockAccessFlag.toBaseString(),
-                    BlockAccessFlag.accumulateAccessFlagLore(curFlags)
-                );
+                // Feature removed
             }
             case PLAYER_HEAD -> {
                 // Don't do anything.
@@ -114,8 +87,7 @@ public final class FriendDetailInventory extends BlockProtInventory {
 
     @Override
     public void onClose(@NotNull InventoryCloseEvent event, @NotNull InventoryState state) {
-        if (this.playerHandler != null && curFlags != null)
-            this.playerHandler.setAccessFlags(curFlags);
+        // Access flags feature removed
     }
 
     @Nullable
@@ -156,16 +128,6 @@ public final class FriendDetailInventory extends BlockProtInventory {
             return null;
         }
         playerHandler = friendHandler.get();
-
-        /* Read the current access flags */
-        curFlags = playerHandler.getAccessFlags();
-
-        setItemStack(
-            2,
-            Material.ENDER_EYE,
-            BlockAccessFlag.toBaseString(),
-            BlockAccessFlag.accumulateAccessFlagLore(curFlags)
-        );
 
         setBackButton();
 

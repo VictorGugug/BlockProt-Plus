@@ -67,71 +67,71 @@ public final class FriendHandler extends NBTHandler<NBTCompound> {
      * Read the access flags of this block as a bitset.
      *
      * @return A bitset of all access flags of this block.
-     * @see #getAccessFlags()
+     * @deprecated Access flags feature has been removed
      * @since 0.4.7
      */
+    @Deprecated
     private int getAccessFlagsBitset() {
-        if (!container.hasKey(ACCESS_FLAGS_ATTRIBUTE)) return BlockAccessFlag.READ.getFlag() | BlockAccessFlag.WRITE.getFlag();
-        else return container.getInteger(ACCESS_FLAGS_ATTRIBUTE);
+        return 0;
     }
 
     /**
      * Sets the access flag bitset for this block.
      *
      * @param flagsBitset The new bitset.
+     * @deprecated Access flags feature has been removed
      * @since 0.4.7
      */
+    @Deprecated
     private void setAccessFlagsBitset(final int flagsBitset) {
-        container.setInteger(ACCESS_FLAGS_ATTRIBUTE, flagsBitset);
+        // Access flags feature removed
     }
 
     /**
      * Read the access flags of this block.
      *
      * @return A {@link EnumSet} of all flags for this block.
+     * @deprecated Access flags feature has been removed
      * @since 0.3.0
      */
     @NotNull
+    @Deprecated
     public EnumSet<BlockAccessFlag> getAccessFlags() {
-        // We don't just use #getAccessFlagsBitset, as it would have a minor overhead due to
-        // using the BlockAccessFlag#parseFlags method.
-        if (!container.hasKey(ACCESS_FLAGS_ATTRIBUTE)) return EnumSet.of(BlockAccessFlag.READ, BlockAccessFlag.WRITE);
-        else return BlockAccessFlag.parseFlags(container.getInteger(ACCESS_FLAGS_ATTRIBUTE));
+        return EnumSet.noneOf(BlockAccessFlag.class);
     }
 
     /**
-     * Sets the access flags for this block. ORs all flags together to one integer, then
-     * writes all of them to ACCESS_FLAGS_ATTRIBUTE.
+     * Sets the access flags for this block.
      *
-     * @param flags The new flags to use. These get converted to integers.
+     * @param flags The new flags to use.
+     * @deprecated Access flags feature has been removed
      * @since 0.3.0
      */
+    @Deprecated
     public void setAccessFlags(@NotNull final EnumSet<BlockAccessFlag> flags) {
-        setAccessFlagsBitset(flags.stream().mapToInt(BlockAccessFlag::getFlag).sum());
+        // Access flags feature removed
     }
 
     /**
-     * Checks if this player can read the contents of the parents
-     * block.
+     * Checks if this player can read the contents of the parent block.
+     * Access control has been removed.
      *
-     * @return True, if the player is allowed to see the container's
-     * contents.
+     * @return Always true - access flags have been removed
      * @since 0.3.0
      */
     public boolean canRead() {
-        return getAccessFlags().contains(BlockAccessFlag.READ);
+        return true;
     }
 
     /**
-     * Checks if this player can write the contents of the parents
-     * block. This means that the player should be allowed to
-     * take and add items at their will.
+     * Checks if this player can write to the parent block.
+     * Access control has been removed.
      *
-     * @return True, if the player has write access to this block.
+     * @return Always true - access flags have been removed
      * @since 0.3.0
      */
     public boolean canWrite() {
-        return getAccessFlags().contains(BlockAccessFlag.WRITE);
+        return true;
     }
 
     /**
@@ -155,8 +155,6 @@ public final class FriendHandler extends NBTHandler<NBTCompound> {
      */
     @Override
     public void mergeHandler(@NotNull NBTHandler<?> handler) {
-        if (handler instanceof FriendHandler) {
-            this.setAccessFlagsBitset(((FriendHandler) handler).getAccessFlagsBitset());
-        }
+        // Access flags feature removed
     }
 }

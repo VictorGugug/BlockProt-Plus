@@ -119,54 +119,6 @@ worlds:
   scan_start: 'Welten werden gescannt... ({count} geladen)'
   scan_world_added: "Welt '{world}' zu worlds.yml hinzugefügt mit standardmäßig aktiviertem Schutz."
   scan_complete: 'Welten-Scan abgeschlossen: {count} Welt(en) erkannt, {added} zu worlds.yml hinzugefügt.'
-claims:
-  wand_pos_a: §bEcke A gesetzt bei §f({x}, {y}, {z})§b. Jetzt Rechtsklick auf Ecke B.
-  wand_pos_b: §bEcke B gesetzt bei §f({x}, {y}, {z})§b. Gib einen Namen im Chat ein, um den Claim zu erstellen.
-  created: '§aClaim §6{name} §aerstellt! Region: §f{x1},{y1},{z1} §a→ §f{x2},{y2},{z2} §7(Welt: {world}).'
-  deleted: §aClaim §6{name} §agelöscht.
-  no_claim_here: §cAn deiner Position gibt es keinen Claim.
-  overlap: §cDieses Gebiet überschneidet sich mit dem Claim eines anderen Spielers.
-  no_permission: §cDu hast keine Berechtigung, diesen Claim zu ändern.
-  list_header: '§6Deine aktiven Claims:'
-  name_prompt: '§eTippe einen Namen für deinen Claim in den Chat. §7(Tippe §c{cancel}§7 zum Abbrechen):'
-  name_cancel_word: abbrechen
-  name_cancelled: §cClaim-Erstellung abgebrochen.
-  name_too_long: §cName zu lang. Maximum {max} Zeichen.
-  name_invalid: §cUngültiger Name. Nur Buchstaben, Zahlen, Leerzeichen, Unterstriche oder Bindestriche.
-  wand_removed: §7Claim-Wand entfernt.
-  timeout: §cZeit abgelaufen. Bitte benutze den Zauberstab erneut.
-  flags:
-    title: Gebiets-Optionen
-    fire: Feuerausbreitung
-    tnt: TNT / Explosionen
-    redstone: Redstone (durch andere)
-    pvp: PvP
-    flow: Wasser- und Lava-Fluss
-    leaf_decay: Blätterzerfall
-    mob_spawning: Mob-Spawning
-    chest: Containerzugang (Nicht-Mitglieder)
-    door: Tür-/Falltürnutzung (Nicht-Mitglieder)
-    lever_button: Hebel & Knopf (Nicht-Mitglieder)
-    use_bucket: Eimernutzung (Nicht-Mitglieder)
-    pet_spawning: Haustier zähmen (Nicht-Mitglieder)
-    pet_riding: Haustier reiten (Nicht-Mitglieder)
-    pet_moving: Tiere führen (Nicht-Mitglieder)
-    invincible: Unverwundbare Zone (kein Schaden)
-    deny_enderpearl: Enderperlen-Eintritt erlauben
-  welcome_set: §aWillkommensnachricht für Gebiet §6{name}§a gesetzt.
-  welcome_cleared: §7Willkommensnachricht für Gebiet §6{name}§7 gelöscht.
-  welcome_prompt: '§eWillkommensnachricht im Chat eingeben (unterstützt §r&§e Farbcodes). §7§c{cancel}§7 zum Abbrechen:'
-  delete_confirm_title: §cLöschung bestätigen
-  delete_yes: §c§lGebiet löschen
-  delete_cancel: §a§lGebiet behalten
-  hub:
-    title: Gebiets-Verwaltung
-    info: §6Gebiets-Info
-    flags: §6Optionen
-    delete: §cGebiet löschen
-    wand: §eZauberstab holen
-    my_claims: §eMeine Gebiete
-    welcome: §eWillkommensnachricht
 integrations:
   lands:
     protect_containers_flag_name: Kontainer schützen (BlockProt)
