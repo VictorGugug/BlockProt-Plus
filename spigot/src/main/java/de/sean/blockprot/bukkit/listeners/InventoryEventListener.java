@@ -22,6 +22,7 @@ import de.sean.blockprot.bukkit.BlockProt;
 import de.sean.blockprot.bukkit.Permissions;
 import de.sean.blockprot.bukkit.TranslationKey;
 import de.sean.blockprot.bukkit.Translator;
+import de.sean.blockprot.bukkit.audit.AuditLogger;
 import de.sean.blockprot.bukkit.events.BlockAccessEvent;
 import de.sean.blockprot.bukkit.inventories.BlockProtInventory;
 import de.sean.blockprot.bukkit.inventories.InventoryState;
@@ -37,6 +38,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.inventory.InventoryAction;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
@@ -45,9 +47,23 @@ import org.bukkit.inventory.BlockInventoryHolder;
 import org.bukkit.inventory.InventoryHolder;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.EnumSet;
 import java.util.Optional;
+import java.util.Set;
 
 public class InventoryEventListener implements Listener {
+
+    // InventoryActions that represent a player taking items out of a container.
+    private static final Set<InventoryAction> TAKE_ACTIONS = EnumSet.of(
+        InventoryAction.PICKUP_ALL, InventoryAction.PICKUP_HALF,
+        InventoryAction.PICKUP_ONE, InventoryAction.PICKUP_SOME,
+        InventoryAction.DROP_ALL_SLOT, InventoryAction.DROP_ONE_SLOT
+    );
+    // InventoryActions that represent a player placing items into a container.
+    private static final Set<InventoryAction> PLACE_ACTIONS = EnumSet.of(
+        InventoryAction.PLACE_ALL, InventoryAction.PLACE_ONE, InventoryAction.PLACE_SOME
+    );
+
     @EventHandler
     public void onInventoryClick(@NotNull InventoryClickEvent event) {
         final Player player = (Player) event.getWhoClicked();
@@ -75,10 +91,6 @@ public class InventoryEventListener implements Listener {
                 if (event.getInventory().getHolder() == null) return;
                 BlockInventoryHolder blockHolder = (BlockInventoryHolder) event.getInventory().getHolder();
                 if (BlockProt.getDefaultConfig().isLockable(blockHolder.getBlock().getType())) {
-                    // Ok, we have a lockable block, check if they can write anything to this.
-                    // TODO: Implement a Cache for this lookup, it seems to be quite expensive.
-                    //       We should probably use a MultiMap, or implement our own Key that
-                    //       can use multiple key objects, a Block and Player in this case.
                     BlockNBTHandler handler = new BlockNBTHandler(blockHolder.getBlock());
                     String playerUuid = player.getUniqueId().toString();
 
@@ -97,12 +109,13 @@ public class InventoryEventListener implements Listener {
                             player.closeInventory();
                             event.setCancelled(true);
                         }
+                    } else if (handler.isProtected()) {
+                        // Owner interacting with their own block — log item action.
+                        logItemAction(player, blockHolder.getBlock(), event.getAction());
                     }
                 }
             } catch (ClassCastException e) {
                 // It's not a block, and it's therefore also not lockable.
-                // This is probably some other custom inventory from another
-                // plugin, or possibly some entity inventory, e.g. villagers.
             }
         }
     }
@@ -187,6 +200,17 @@ public class InventoryEventListener implements Listener {
                             && !(handler.canAccess(player.getUniqueId().toString()) || player.hasPermission(Permissions.BYPASS.key()))) {
                         event.setCancelled(true);
                         sendMessage(player, Translator.get(TranslationKey.MESSAGES__NO_PERMISSION));
+                        // Log denied access.
+                        AuditLogger audit = BlockProt.getAuditLogger();
+                        if (audit != null && handler.isProtected()) {
+                            audit.log(player.getUniqueId(), player.getName(), block.getLocation(), AuditLogger.Action.ACCESS_DENIED);
+                        }
+                    } else if (handler.isProtected()) {
+                        // Log successful open.
+                        AuditLogger audit = BlockProt.getAuditLogger();
+                        if (audit != null) {
+                            audit.log(player.getUniqueId(), player.getName(), block.getLocation(), AuditLogger.Action.OPENED);
+                        }
                     }
                 }
             }
@@ -196,5 +220,19 @@ public class InventoryEventListener implements Listener {
     private void sendMessage(@NotNull HumanEntity player, @NotNull String text) {
         if (!(player instanceof Player p)) return;
         p.sendActionBar(LegacyComponentSerializer.legacySection().deserialize(text));
+    }
+
+    /**
+     * Logs an item interaction (take or place) against the audit log when the action
+     * targets the block's own inventory (top slot range), not the player's hotbar.
+     */
+    private void logItemAction(@NotNull Player player, @NotNull Block block, @NotNull InventoryAction action) {
+        AuditLogger audit = BlockProt.getAuditLogger();
+        if (audit == null) return;
+        if (TAKE_ACTIONS.contains(action)) {
+            audit.log(player.getUniqueId(), player.getName(), block.getLocation(), AuditLogger.Action.ITEM_TAKEN);
+        } else if (PLACE_ACTIONS.contains(action)) {
+            audit.log(player.getUniqueId(), player.getName(), block.getLocation(), AuditLogger.Action.ITEM_PLACED);
+        }
     }
 }

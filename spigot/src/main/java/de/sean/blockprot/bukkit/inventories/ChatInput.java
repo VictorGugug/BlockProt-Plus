@@ -20,7 +20,6 @@ package de.sean.blockprot.bukkit.inventories;
 
 import de.sean.blockprot.bukkit.TranslationKey;
 import de.sean.blockprot.bukkit.Translator;
-import de.sean.blockprot.bukkit.VersionCompat;
 import io.papermc.paper.event.player.AsyncChatEvent;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
@@ -34,35 +33,21 @@ import org.bukkit.plugin.Plugin;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.List;
 import java.util.UUID;
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
 
 /**
  * Chat-based text input. Closes the player's inventory, shows a prompt in chat,
- * provides tab-completion for online player names (when available), and calls
- * onConfirm on the main thread. Typing the cancel word aborts silently.
+ * and calls onConfirm on the main thread. Typing the cancel word aborts silently.
+ * The input session expires automatically after 15 seconds.
  *
- * <p>Tab-completion uses {@code com.destroystokyo.paper.event.server.AsyncTabCompleteEvent}
- * when available (Paper 1.21.x). On Paper 26.x+ that class was removed; tab-completion
- * is silently skipped and the rest of ChatInput still works normally.
+ * <p>Tab-completion via {@code AsyncTabCompleteEvent} is not supported on Paper 26.x
+ * (the class was removed). The prompt works normally without it.
  *
  * <p>Requires Paper. On plain Spigot servers the anvil-based fallback
  * ({@link AnvilInput}) is used instead.
  */
 public final class ChatInput implements Listener {
-
-    /** True if the legacy AsyncTabCompleteEvent class is available at runtime. */
-    private static final boolean HAS_LEGACY_TAB_COMPLETE;
-    static {
-        boolean found = false;
-        try {
-            Class.forName("com.destroystokyo.paper.event.server.AsyncTabCompleteEvent");
-            found = true;
-        } catch (ClassNotFoundException ignored) {}
-        HAS_LEGACY_TAB_COMPLETE = found;
-    }
 
     private final UUID playerUuid;
     private final Plugin plugin;
@@ -85,9 +70,16 @@ public final class ChatInput implements Listener {
 
         String prompt = Translator.get(TranslationKey.MESSAGES__CHAT_INPUT_PROMPT)
             .replace("{cancel}", cancelWord);
+        // Send prompt only in action bar to avoid chat spam.
         var component = LegacyComponentSerializer.legacySection().deserialize(prompt);
-        player.sendMessage(component);
         player.sendActionBar(component);
+
+        // Schedule expiry after 15 seconds (300 ticks).
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            if (!consumed) {
+                unregister();
+            }
+        }, 300L);
     }
 
     public static void open(
@@ -118,34 +110,6 @@ public final class ChatInput implements Listener {
         Bukkit.getScheduler().runTask(plugin, () -> {
             if (onConfirm != null) onConfirm.accept(text);
         });
-    }
-
-    /**
-     * Tab-complete handler — only registered/active if the legacy class exists.
-     * On Paper 26.x this method never fires because the event class is absent,
-     * so no ClassNotFoundException is thrown at runtime.
-     */
-    @EventHandler(priority = EventPriority.NORMAL)
-    public void onTabComplete(org.bukkit.event.Cancellable event) {
-        if (!HAS_LEGACY_TAB_COMPLETE) return;
-        try {
-            var tabEvent = (com.destroystokyo.paper.event.server.AsyncTabCompleteEvent) event;
-            if (!(tabEvent.getSender() instanceof Player player)) return;
-            if (!player.getUniqueId().equals(playerUuid)) return;
-            if (tabEvent.isCommand()) return;
-
-            final String buffer = tabEvent.getBuffer();
-            final List<String> names = Bukkit.getOnlinePlayers().stream()
-                .map(Player::getName)
-                .filter(name -> name.toLowerCase().startsWith(buffer.toLowerCase()))
-                .sorted()
-                .collect(Collectors.toList());
-
-            if (!names.isEmpty()) {
-                tabEvent.setCompletions(names);
-                tabEvent.setHandled(true);
-            }
-        } catch (ClassCastException ignored) {}
     }
 
     private void unregister() {

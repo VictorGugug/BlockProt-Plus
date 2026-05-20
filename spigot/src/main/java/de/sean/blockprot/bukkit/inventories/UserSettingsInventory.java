@@ -22,6 +22,7 @@ import de.sean.blockprot.bukkit.BlockProt;
 import de.sean.blockprot.bukkit.TranslationKey;
 import de.sean.blockprot.bukkit.Translator;
 import de.sean.blockprot.bukkit.nbt.PlayerSettingsHandler;
+import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryClickEvent;
@@ -77,10 +78,36 @@ public class UserSettingsInventory extends BlockProtInventory {
             lockOnPlace
         );
         if (!BlockProt.getDefaultConfig().isFriendFunctionalityDisabled()) {
+            // Slot 1: skull genérico primero, luego async actualiza con skin real
             setItemStack(
                 1,
                 Material.PLAYER_HEAD,
-                TranslationKey.INVENTORIES__FRIENDS__MANAGE
+                Translator.get(TranslationKey.INVENTORIES__FRIENDS__MANAGE)
+            );
+            Bukkit.getScheduler().runTaskAsynchronously(
+                BlockProt.getInstance(),
+                () -> {
+                    try {
+                        var profile = BlockProtInventory.createPlayerProfile(
+                            player.getUniqueId(), player.getName());
+                        Bukkit.getScheduler().runTask(BlockProt.getInstance(), () -> {
+                            setPlayerSkull(1, profile);
+                            // Restaurar el nombre del item después de poner el skull
+                            var stack = inventory.getItem(1);
+                            if (stack != null) {
+                                var meta = stack.getItemMeta();
+                                if (meta != null) {
+                                    meta.setDisplayName(Translator.get(TranslationKey.INVENTORIES__FRIENDS__MANAGE));
+                                    stack.setItemMeta(meta);
+                                    inventory.setItem(1, stack);
+                                }
+                            }
+                        });
+                    } catch (Exception e) {
+                        BlockProt.getInstance().getLogger().warning(
+                            "Failed to load player skull for UserSettings: " + e.getMessage());
+                    }
+                }
             );
         }
         setBackButton();

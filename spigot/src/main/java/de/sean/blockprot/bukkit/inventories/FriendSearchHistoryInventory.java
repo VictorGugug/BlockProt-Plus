@@ -102,8 +102,8 @@ public class FriendSearchHistoryInventory extends BlockProtInventory {
                     int i = 0;
                     while (i < Math.min(profiles.size(), maxSkulls)) {
                         final var profile = profiles.get(i);
-
-                        setPlayerSkull(i, Bukkit.getServer().createPlayerProfile(profile.getUniqueId(), profile.getName()));
+                        final String pName = profile.getName() != null ? profile.getName() : profile.getUniqueId().toString();
+                        setPlayerSkull(i, BlockProtInventory.createPlayerProfile(profile.getUniqueId(), pName));
                         i++;
                     }
                 } catch (Exception e) {

@@ -21,6 +21,7 @@ package de.sean.blockprot.bukkit.tasks;
 import com.google.gson.Gson;
 import com.google.gson.annotations.SerializedName;
 import de.sean.blockprot.bukkit.BlockProt;
+import de.sean.blockprot.bukkit.BlockProtLogger;
 import de.sean.blockprot.util.SemanticVersion;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;
@@ -127,21 +128,20 @@ public final class UpdateChecker implements Runnable {
     }
 
     private void sendMessage(SemanticVersion currentVersion, SemanticVersion latestVersion) {
-        String message;
-        boolean isOutdated = false;
-
-        if (latestVersion.compareTo(currentVersion) > 0) {
-            isOutdated = true;
-            message = description.getName() + " v" + currentVersion
-                + " detected, but v" + latestVersion + " is available.";
-        } else if (latestVersion.compareTo(currentVersion) < 0) {
-            message = description.getName() + " is running v" + currentVersion
-                + " (newer than the latest public release v" + latestVersion + ")";
-        } else {
-            message = description.getName() + " is up to date (v" + currentVersion + ")";
-        }
+        boolean isOutdated = latestVersion.compareTo(currentVersion) > 0;
 
         if (this.recipients != null && !this.recipients.isEmpty()) {
+            // In-game notification for ops on join.
+            String message;
+            if (isOutdated) {
+                message = description.getName() + " v" + currentVersion
+                    + " detected, but v" + latestVersion + " is available.";
+            } else if (latestVersion.compareTo(currentVersion) < 0) {
+                message = description.getName() + " is running v" + currentVersion
+                    + " (newer than latest release v" + latestVersion + ")";
+            } else {
+                message = description.getName() + " is up to date (v" + currentVersion + ")";
+            }
             var comp = Component.text(message);
             if (isOutdated) {
                 comp = comp.color(NamedTextColor.YELLOW)
@@ -153,10 +153,16 @@ public final class UpdateChecker implements Runnable {
                 player.sendMessage(comp);
             }
         } else {
+            // Startup console check: only print if outdated; log silently otherwise.
             if (isOutdated) {
-                BlockProt.getInstance().getLogger().warning(message);
+                BlockProt.getInstance().getLogger().warning(
+                    description.getName() + " v" + currentVersion
+                        + " — update available: v" + latestVersion
+                        + " | " + RELEASE_URL);
             } else {
-                BlockProt.getInstance().getLogger().info(message);
+                // Silent: log to session file only, no console noise.
+                BlockProtLogger.log("update-checker",
+                    description.getName() + " is up to date (v" + currentVersion + ")");
             }
         }
     }

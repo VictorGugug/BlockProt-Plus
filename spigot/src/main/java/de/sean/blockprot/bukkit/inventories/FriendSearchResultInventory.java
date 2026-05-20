@@ -204,7 +204,8 @@ public class FriendSearchResultInventory extends BlockProtInventory {
 
                 state.friendResultCache.add(profile.getUniqueId());
 
-                setPlayerSkull(playersIndex, Bukkit.getServer().createPlayerProfile(profile.getUniqueId(), profile.getName()));
+                final String pName = profile.getName() != null ? profile.getName() : profile.getUniqueId().toString();
+                setPlayerSkull(playersIndex, BlockProtInventory.createPlayerProfile(profile.getUniqueId(), pName));
                 ++playersIndex;
             }
 

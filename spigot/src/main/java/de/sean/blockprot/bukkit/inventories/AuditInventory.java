@@ -198,15 +198,13 @@ public final class AuditInventory extends BlockProtInventory {
                     List<AuditEntry> group = groupedEntries.get(entry.playerUuid());
                     int total = group == null ? 1 : group.size();
                     AuditEntry latest = group == null ? entry : group.get(0);
-                    String actionLabel = latest.action() == AuditLogger.Action.ACCESS_DENIED ? "§cX" : "§aOK";
-                    displayName = actionLabel + " §f" + (latest.playerName() != null ? latest.playerName() : latest.playerUuid());
-                    lore.add("§7" + DATE_FMT.format(new Date(latest.timestamp())) + " · " + total + " action(s)");
+                    displayName = actionIcon(latest.action()) + " §f" + (latest.playerName() != null ? latest.playerName() : latest.playerUuid());
+                    lore.add("§7" + DATE_FMT.format(new Date(latest.timestamp())) + " · " + total + " acción(es)");
                     lore.add("§8" + latest.world() + " " + latest.x() + "," + latest.y() + "," + latest.z());
-                    lore.add("§7Click to view this player's full history.");
+                    lore.add("§7Click para ver historial completo.");
                 } else {
-                    String actionLabel = entry.action() == AuditLogger.Action.ACCESS_DENIED ? "§cX" : "§aOK";
-                    displayName = actionLabel + " §f" + (entry.playerName() != null ? entry.playerName() : entry.playerUuid());
-                    lore.add("§7" + DATE_FMT.format(new Date(entry.timestamp())));
+                    displayName = actionIcon(entry.action()) + " §f" + (entry.playerName() != null ? entry.playerName() : entry.playerUuid());
+                    lore.add("§7" + DATE_FMT.format(new Date(entry.timestamp())) + " — §r" + actionLabel(entry.action()));
                     lore.add("§8" + entry.world() + " " + entry.x() + "," + entry.y() + "," + entry.z());
                 }
 
@@ -230,5 +228,27 @@ public final class AuditInventory extends BlockProtInventory {
 
         setBackButton(53);
         return inventory;
+    }
+
+    /** Returns a coloured prefix symbol for each audit action type. */
+    private static String actionIcon(@NotNull AuditLogger.Action action) {
+        return switch (action) {
+            case ACCESS_DENIED -> "§cX";
+            case OPENED        -> "§aO";
+            case ITEM_TAKEN    -> "§e-";
+            case ITEM_PLACED   -> "§2+";
+            default            -> "§aOK";
+        };
+    }
+
+    /** Returns a human-readable Spanish label for each audit action type. */
+    private static String actionLabel(@NotNull AuditLogger.Action action) {
+        return switch (action) {
+            case ACCESS_DENIED -> "§cAcceso denegado";
+            case OPENED        -> "§aAbrió";
+            case ITEM_TAKEN    -> "§eSacó item(s)";
+            case ITEM_PLACED   -> "§2Puso item(s)";
+            default            -> "§7Acceso";
+        };
     }
 }

@@ -133,7 +133,7 @@ public final class FriendManageInventory extends BlockProtInventory {
                     },
                     FriendSupportingHandler::addEveryoneAsFriend
                 );
-                fill(player); // Essentially rebuilds the inventory.
+                closeAndOpen(player, fill(player)); // Recarga y reabre el inventario con la lista actualizada
             }
             default -> closeAndOpen(player, null); // Unexpected, exit the inventory.
         }
@@ -219,7 +219,8 @@ public final class FriendManageInventory extends BlockProtInventory {
                         final var index = Iterables.indexOf(state.friendResultCache, f -> f.equals(profile.getUniqueId()));
 
                         if (!profile.getUniqueId().equals(FriendSupportingHandler.publicUuid)) {
-                            setPlayerSkull(index, Bukkit.getServer().createPlayerProfile(profile.getUniqueId(), profile.getName()));
+                            final String pName = profile.getName() != null ? profile.getName() : profile.getUniqueId().toString();
+                            setPlayerSkull(index, BlockProtInventory.createPlayerProfile(profile.getUniqueId(), pName));
                         }
                         i++;
                     }

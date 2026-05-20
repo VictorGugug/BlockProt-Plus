@@ -81,10 +81,45 @@ messages:
   friends_addall_usage: '§cUso: /blockprot friends addall <jogador>'
   inactivity_cleanup_done: '§e[BlockProt] Limpeza de inatividade: §f{count}§e bloco(s) liberado(s).'
   friends_list_title: §6Seus amigos
+  only_players: Apenas jogadores podem usar este comando.
+  reload_done: §aBlockProt foi recarregado com sucesso.
+  integrations_enabled: '§7Integrações ativas ({count}): {integrations}'
+console:
+  config_change_detected: Alteração de configuração detectada; recarregando...
+  config_reloaded: Configuração recarregada automaticamente.
+  filewatcher_error: 'Erro no monitoramento de arquivos: {error}'
+  audit_logger_started: Logger de auditoria iniciado.
+  audit_logger_failed: 'Não foi possível iniciar o logger de auditoria: {error}'
+  worldedit_listener_enabled: Listener de auto-proteção de colagem WorldEdit ativado.
+  claims_system_enabled: Sistema de áreas ativado.
+  claims_system_disabled: Sistema de áreas desativado (claims_enabled=false).
+  worlds_yml_syntax_error: 'worlds.yml tem um erro de sintaxe YAML; restaurando padrões: {error}'
+  worlds_yml_restored: worlds.yml restaurado a partir dos padrões internos.
+  worlds_yml_restore_failed: 'Não foi possível restaurar worlds.yml: {error}'
+  worlds_yml_save_failed: 'Não foi possível salvar worlds.yml: {error}'
+  backup_dir_failed: Não foi possível criar a pasta de backup. Backup ignorado.
+  backup_created: 'Dados BlockProt existentes encontrados; backup de segurança criado: backups/{file}'
+  backup_review_config: Revise config.yml antes de ativar funções SP26. Detalhes no log de sessão.
+  backup_failed: 'Falha no backup: {error}'
+  config_language_missing: 'O arquivo de idioma configurado não existe: {file}'
+  lang_keys_updated: '{file} atualizado com {count} chave(s) de tradução ausente(s).'
+  lang_keys_save_failed: 'Não foi possível salvar o arquivo de idioma mesclado {file}: {error}'
+  config_keys_updated: 'config.yml atualizado com {count} opção(ões) ausente(s). Revise-o antes de ativar funções SP26.'
+  config_keys_save_failed: 'Não foi possível salvar config.yml mesclado: {error}'
+  mysql_enabled: Índice MySQL híbrido ativado.
+  mysql_disabled: 'Índice MySQL híbrido desativado: {error}'
+  mysql_lookup_failed: 'Falha na consulta de confiança MySQL: {error}'
+  mysql_schema_failed: 'Falha na inicialização do esquema MySQL: {error}'
+  mysql_cache_load_failed: 'Falha no carregamento do cache de confiança MySQL: {error}'
+  mysql_operation_failed: 'Operação MySQL falhou: {error}'
+  translations_incomplete: 'Traduções: {total} chave(s) incompleta(s) em {file}; {fallback} usando inglês como fallback, {missing} ausente(s) em ambos os arquivos. Detalhes no log de sessão.'
+  java_too_old: 'Versão Java muito antiga: {version} (BlockProt SP26 requer Java 25+)'
+  not_paper: Servidor não é Paper. A busca de jogadores por chat está desativada e usará a GUI de bigorna. Paper é recomendado.
+  typed_views_fallback: Paper/Spigot 1.21.0-1.21.3 sem vistas de inventário tipadas. Serão usados fallbacks do AnvilInput.
 worlds:
-  scan_start: '[BlockProt] Verificando mundos... ({count} carregados)'
-  scan_world_added: '[BlockProt] Mundo ''{world}'' adicionado ao worlds.yml — proteção DESATIVADA por padrão. Ative manualmente.'
-  scan_complete: '[BlockProt] Verificação concluída. {added} novo(s) mundo(s) registrado(s).'
+  scan_start: 'Verificando mundos... ({count} carregados)'
+  scan_world_added: "Mundo '{world}' adicionado ao worlds.yml com proteção ativada."
+  scan_complete: 'Verificação concluída: {count} mundo(s) detectado(s), {added} adicionado(s) ao worlds.yml.'
 claims:
   wand_pos_a: §bCanto A definido em §f({x}, {y}, {z})§b. Agora clique com o botão direito no canto B.
   wand_pos_b: §bCanto B definido em §f({x}, {y}, {z})§b. Digite um nome no chat para criar a área.
@@ -107,32 +142,32 @@ claims:
     tnt: TNT / Explosões
     redstone: Redstone (por outros)
     pvp: PvP
-    flow: Water & Lava flow
-    leaf_decay: Leaf decay
-    mob_spawning: Mob spawning
-    chest: Container access (non-members)
-    door: Door / Trapdoor use (non-members)
-    lever_button: Lever & Button use (non-members)
-    use_bucket: Bucket use (non-members)
-    pet_spawning: Pet taming (non-members)
-    pet_riding: Pet riding (non-members)
-    pet_moving: Lead animals in (non-members)
-    invincible: Invincible zone (no damage)
-    deny_enderpearl: Allow ender pearl entry
-  welcome_set: §aWelcome message set for claim §6{name}§a.
-  welcome_cleared: §7Welcome message cleared for claim §6{name}§7.
-  welcome_prompt: '§eType the welcome message in chat (supports §r&§e colour codes). §7Type §c{cancel}§7 to abort:'
-  delete_confirm_title: §cConfirm deletion
-  delete_yes: §c§lDelete claim
-  delete_cancel: §a§lKeep claim
+    flow: Fluxo de água e lava
+    leaf_decay: Queda de folhas
+    mob_spawning: Spawn de mobs
+    chest: Acesso a contêineres (não-membros)
+    door: Uso de portas (não-membros)
+    lever_button: Alavancas & botões (não-membros)
+    use_bucket: Uso de baldes (não-membros)
+    pet_spawning: Domar animais (não-membros)
+    pet_riding: Montar animais (não-membros)
+    pet_moving: Conduzir animais (não-membros)
+    invincible: Zona invencível (sem dano)
+    deny_enderpearl: Permitir entrada com pérola do Ender
+  welcome_set: §aMensagem de boas-vindas definida para a área §6{name}§a.
+  welcome_cleared: §7Mensagem de boas-vindas removida da área §6{name}§7.
+  welcome_prompt: '§eDigite a mensagem de boas-vindas no chat (suporta códigos de cor &). §7§c{cancel}§7 para cancelar:'
+  delete_confirm_title: §cConfirmar exclusão
+  delete_yes: §c§lExcluir área
+  delete_cancel: §a§lManter área
   hub:
-    title: Claim Management
-    info: §6Claim Info
-    flags: §6Flags
-    delete: §cDelete Claim
-    wand: §eGet Wand
-    my_claims: §eMy Claims
-    welcome: §eWelcome Message
+    title: Gestão de área
+    info: §6Info da área
+    flags: §6Opções
+    delete: §cExcluir área
+    wand: §eObtener varinha
+    my_claims: §eMinhas áreas
+    welcome: §eMensagem de boas-vindas
 integrations:
   lands:
     protect_containers_flag_name: Proteger contêineres (BlockProt)
@@ -142,3 +177,17 @@ integrations:
 help:
   header: §6=== Ajuda BlockProt ===
   footer: §6==================
+  block_protection_title: §6Proteção de blocos
+  block_protection_settings: '§7  /bp §f- Abre suas configurações pessoais de proteção.'
+  friends_title: §6Amigos
+  friends_gui: '§7  /bp friends §f- Abre o menu de amigos padrão.'
+  friends_addall: '§7  /bp friends addall <jogador> §f- Adiciona um amigo a todos os seus blocos.'
+  other_title: §6Outros
+  settings: '§7  /bp settings §f- Configurações pessoais.'
+  stats: '§7  /bp stats §f- Ver estatísticas de blocos.'
+  about: '§7  /bp about §f- Informações do plugin e do fork.'
+  integrations: '§7  /bp integrations §f- Listar integrações ativas. (admin)'
+  update: '§7  /bp update §f- Verificar atualizações. (admin)'
+  reload: '§7  /bp reload §f- Recarregar a configuração. (admin)'
+  disable_hints: '§7  /bp disablehints §f- Desativar mensagens de dica.'
+  debug: '§7  /bp debug <run|placeDebugChest|placeDebugShulker|clearSearchHistory> §f- Diagnóstico do desenvolvedor.'

@@ -80,10 +80,45 @@ messages:
   friends_addall_usage: '§cИспользование: /blockprot friends addall <игрок>'
   inactivity_cleanup_done: '§e[BlockProt] Очистка неактивности: §f{count}§e блок(ов) освобождено.'
   friends_list_title: §6Ваши друзья
+  only_players: Эту команду могут использовать только игроки.
+  reload_done: §aBlockProt успешно перезагружен.
+  integrations_enabled: '§7Активные интеграции ({count}): {integrations}'
+console:
+  config_change_detected: Обнаружено изменение конфигурации; перезагрузка...
+  config_reloaded: Конфигурация автоматически перезагружена.
+  filewatcher_error: 'Ошибка мониторинга файлов: {error}'
+  audit_logger_started: Журнал аудита запущен.
+  audit_logger_failed: 'Не удалось запустить журнал аудита: {error}'
+  worldedit_listener_enabled: Слушатель автозащиты WorldEdit включён.
+  claims_system_enabled: Система участков включена.
+  claims_system_disabled: Система участков отключена (claims_enabled=false).
+  worlds_yml_syntax_error: 'worlds.yml содержит ошибку синтаксиса YAML; восстановление значений по умолчанию: {error}'
+  worlds_yml_restored: worlds.yml восстановлен из внутренних значений по умолчанию.
+  worlds_yml_restore_failed: 'Не удалось восстановить worlds.yml: {error}'
+  worlds_yml_save_failed: 'Не удалось сохранить worlds.yml: {error}'
+  backup_dir_failed: Не удалось создать папку резервных копий. Резервное копирование пропущено.
+  backup_created: 'Обнаружены существующие данные BlockProt; резервная копия создана: backups/{file}'
+  backup_review_config: Проверьте config.yml перед включением функций SP26. Подробности в журнале сеанса.
+  backup_failed: 'Сбой резервного копирования: {error}'
+  config_language_missing: 'Настроенный языковой файл не существует: {file}'
+  lang_keys_updated: '{file} обновлён с {count} отсутствующим(и) ключом(и) перевода.'
+  lang_keys_save_failed: 'Не удалось сохранить объединённый языковой файл {file}: {error}'
+  config_keys_updated: 'config.yml обновлён с {count} отсутствующим(и) параметром(ами). Проверьте перед включением функций SP26.'
+  config_keys_save_failed: 'Не удалось сохранить объединённый config.yml: {error}'
+  mysql_enabled: Гибридный MySQL-индекс включён.
+  mysql_disabled: 'Гибридный MySQL-индекс отключён: {error}'
+  mysql_lookup_failed: 'Сбой запроса MySQL: {error}'
+  mysql_schema_failed: 'Сбой инициализации схемы MySQL: {error}'
+  mysql_cache_load_failed: 'Сбой загрузки кэша MySQL: {error}'
+  mysql_operation_failed: 'Операция MySQL не удалась: {error}'
+  translations_incomplete: 'Переводы: {total} неполных ключей в {file}; {fallback} используют английский запасной вариант, {missing} отсутствуют в обоих. Подробности в журнале сеанса.'
+  java_too_old: 'Слишком старая версия Java: {version} (BlockProt SP26 требует Java 25+)'
+  not_paper: Сервер не является Paper. Поиск игроков через чат отключён, будет использоваться GUI наковальни. Рекомендуется Paper.
+  typed_views_fallback: Paper/Spigot 1.21.0-1.21.3 без типизированных видов инвентаря. Будут использоваться запасные AnvilInput.
 worlds:
-  scan_start: '[BlockProt] Сканирование миров... ({count} загружено)'
-  scan_world_added: '[BlockProt] Мир ''{world}'' добавлен в worlds.yml — защита ОТКЛЮЧЕНА по умолчанию. Включите вручную.'
-  scan_complete: '[BlockProt] Сканирование завершено. {added} новый(х) мир(ов) зарегистрировано.'
+  scan_start: 'Сканирование миров... ({count} загружено)'
+  scan_world_added: "Мир '{world}' добавлен в worlds.yml с включённой защитой."
+  scan_complete: 'Сканирование завершено: {count} мир(ов) обнаружено, {added} добавлено в worlds.yml.'
 claims:
   wand_pos_a: §bУгол A установлен в §f({x}, {y}, {z})§b. Теперь кликните правой кнопкой на угол B.
   wand_pos_b: §bУгол B установлен в §f({x}, {y}, {z})§b. Введите название в чат, чтобы создать участок.
@@ -104,34 +139,34 @@ claims:
     title: Настройки участка
     fire: Распространение огня
     tnt: TNT / Взрывы
-    redstone: Редстоун (другими игроками)
+    redstone: Редстоун (другими)
     pvp: PvP
-    flow: Water & Lava flow
-    leaf_decay: Leaf decay
-    mob_spawning: Mob spawning
-    chest: Container access (non-members)
-    door: Door / Trapdoor use (non-members)
-    lever_button: Lever & Button use (non-members)
-    use_bucket: Bucket use (non-members)
-    pet_spawning: Pet taming (non-members)
-    pet_riding: Pet riding (non-members)
-    pet_moving: Lead animals in (non-members)
-    invincible: Invincible zone (no damage)
-    deny_enderpearl: Allow ender pearl entry
-  welcome_set: §aWelcome message set for claim §6{name}§a.
-  welcome_cleared: §7Welcome message cleared for claim §6{name}§7.
-  welcome_prompt: '§eType the welcome message in chat (supports §r&§e colour codes). §7Type §c{cancel}§7 to abort:'
-  delete_confirm_title: §cConfirm deletion
-  delete_yes: §c§lDelete claim
-  delete_cancel: §a§lKeep claim
+    flow: Поток воды и лавы
+    leaf_decay: Опадение листьев
+    mob_spawning: Спавн мобов
+    chest: Доступ к хранилищам (не-члены)
+    door: Использование дверей (не-члены)
+    lever_button: Рычаги и кнопки (не-члены)
+    use_bucket: Использование ведёр (не-члены)
+    pet_spawning: Приручение (не-члены)
+    pet_riding: Верховая езда (не-члены)
+    pet_moving: Ведение животных (не-члены)
+    invincible: Неуязвимая зона (без урона)
+    deny_enderpearl: Разрешить вход через жемчужину андера
+  welcome_set: §aПриветственное сообщение для участка §6{name}§a установлено.
+  welcome_cleared: §7Приветственное сообщение для участка §6{name}§7 удалено.
+  welcome_prompt: '§eВведите приветственное сообщение в чат (поддерживает &-коды цветов). §7§c{cancel}§7 для отмены:'
+  delete_confirm_title: §cПодтверждение удаления
+  delete_yes: §c§lУдалить участок
+  delete_cancel: §a§lОставить участок
   hub:
-    title: Claim Management
-    info: §6Claim Info
-    flags: §6Flags
-    delete: §cDelete Claim
-    wand: §eGet Wand
-    my_claims: §eMy Claims
-    welcome: §eWelcome Message
+    title: Управление участком
+    info: §6Инфо участка
+    flags: §6Настройки
+    delete: §cУдалить участок
+    wand: §eПолучить жезл
+    my_claims: §eМои участки
+    welcome: §eПриветственное сообщение
 integrations:
   lands:
     protect_containers_flag_name: Запереть хранилища (BlockProt)
@@ -141,3 +176,17 @@ integrations:
 help:
   header: §6=== Помощь BlockProt ===
   footer: §6==================
+  block_protection_title: §6Защита блоков
+  block_protection_settings: '§7  /bp §f- Открывает личные настройки защиты.'
+  friends_title: §6Друзья
+  friends_gui: '§7  /bp friends §f- Открывает меню друзей по умолчанию.'
+  friends_addall: '§7  /bp friends addall <игрок> §f- Добавляет друга ко всем вашим блокам.'
+  other_title: §6Прочее
+  settings: '§7  /bp settings §f- Личные настройки.'
+  stats: '§7  /bp stats §f- Статистика блоков.'
+  about: '§7  /bp about §f- Инфо о плагине и форке.'
+  integrations: '§7  /bp integrations §f- Список активных интеграций. (админ)'
+  update: '§7  /bp update §f- Проверка обновлений. (админ)'
+  reload: '§7  /bp reload §f- Перезагрузка конфигурации. (админ)'
+  disable_hints: '§7  /bp disablehints §f- Отключить подсказки.'
+  debug: '§7  /bp debug <run|placeDebugChest|placeDebugShulker|clearSearchHistory> §f- Диагностика.'

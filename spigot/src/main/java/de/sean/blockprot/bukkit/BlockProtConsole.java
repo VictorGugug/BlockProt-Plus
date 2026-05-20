@@ -18,89 +18,124 @@
 
 package de.sean.blockprot.bukkit;
 
-import de.sean.blockprot.bukkit.config.DefaultConfig;
 import org.bukkit.Bukkit;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.logging.Logger;
 
 /**
- * Console helper that emits colored messages through the Bukkit console sender.
+ * Console helper that routes BlockProt messages through the Bukkit console sender.
  *
- * <p>Paper's Log4j2 console renderer honors legacy Minecraft color codes (§x).
- * Messages sent to {@code Bukkit.getConsoleSender()} are displayed with colors
- * in Paper 1.21+ and fall back gracefully to plain text on vanilla Spigot terminals.
- *
- * <p>Color palette used by BlockProt-Plus:
- * <ul>
- *   <li>Custom brown  — plugin prefix ([BlockProt])</li>
- *   <li>Light brown   — informational messages</li>
- *   <li>§c Red         — warnings / errors</li>
- *   <li>§7 Gray        — secondary / detail text</li>
- *   <li>§a Green       — success / up-to-date</li>
- *   <li>§r Reset       — return to default</li>
- * </ul>
+ * <p>During startup, messages are buffered via {@link #startupBuffer} and printed
+ * together inside the ASCII chest banner at the end of {@code onEnable}.
+ * After startup, all methods print immediately as plain text.
  */
 public final class BlockProtConsole {
 
-    // Console output is plain text (no color codes).
+    /**
+     * When non-null, startup messages are collected here instead of being
+     * printed immediately. Flushed and cleared by {@link #printStartupBanner}.
+     */
+    @Nullable
+    private static List<String> startupBuffer = null;
+
+    /**
+     * Plugin logger, set by {@link #beginStartup(java.util.logging.Logger)}.
+     * Used to print each banner line so every line gets the standard
+     * {@code [HH:MM:SS INFO]: [BlockProt] } prefix, exactly like SkinsRestorer.
+     */
+    @Nullable
+    private static Logger pluginLogger = null;
 
     private BlockProtConsole() {}
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Public API
-    // ─────────────────────────────────────────────────────────────────────────
+    // -------------------------------------------------------------------------
+    // Startup buffer control
+    // -------------------------------------------------------------------------
 
-    /** Prints an informational line to the console. */
-    public static void info(@NotNull String message) {
-        send(getPrefix() + message);
-    }
-
-    /** Prints a success line to the console. */
-    public static void success(@NotNull String message) {
-        send(getPrefix() + message);
-    }
-
-    /** Prints a warning line to the console. */
-    public static void warn(@NotNull String message) {
-        send(getPrefix() + message);
-    }
-
-    private static String getPrefix() {
-        return "[BlockProt] ";
+    /** Activates startup buffering. Call at the very start of {@code onEnable}. */
+    public static void beginStartup(@NotNull Logger logger) {
+        pluginLogger = logger;
+        startupBuffer = new ArrayList<>();
     }
 
     /**
-     * Prints the "integration registered" line in brown tones.
-     * Example output: [BlockProt] Integration: claimchunk registered
+     * Prints a simple startup summary, then clears the buffer so subsequent calls print immediately.
+     *
+     * @param version The plugin version string.
+     */
+    public static void printStartupBanner(@NotNull String version) {
+        List<String> lines = startupBuffer != null ? startupBuffer : new ArrayList<>();
+        startupBuffer = null; // exit buffering mode
+
+        log("BlockProt v" + version + " enabled.");
+        for (String line : lines) {
+            log(line);
+        }
+    }
+
+    /** Sends one banner line via the plugin logger. */
+    private static void log(@NotNull String line) {
+        if (pluginLogger != null) {
+            pluginLogger.info(line);
+        } else {
+            Bukkit.getConsoleSender().sendMessage(line);
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Public API
+    // -------------------------------------------------------------------------
+
+    /** Informational line — buffered during startup, immediate otherwise. */
+    public static void info(@NotNull String message) {
+        emit(message);
+    }
+
+    /** Success line — buffered during startup, immediate otherwise. */
+    public static void success(@NotNull String message) {
+        emit(message);
+    }
+
+    /** Warning line — always printed immediately (never buffered). */
+    public static void warn(@NotNull String message) {
+        Bukkit.getConsoleSender().sendMessage("[BlockProt] WARN: " + message);
+    }
+
+    /**
+     * "Integration registered" line — buffered during startup, immediate otherwise.
      *
      * @param integrationName The plugin id (e.g. "claimchunk").
      */
     public static void integration(@NotNull String integrationName) {
-        send(getPrefix() + "Integration: " + integrationName + " registered");
+        emit("Integration: " + integrationName + " registered");
     }
 
     /**
-     * Prints an "integration enabled" confirmation.
+     * "Integration enabled" confirmation — buffered during startup, immediate otherwise.
      *
      * @param integrationName The plugin id.
      */
     public static void integrationEnabled(@NotNull String integrationName) {
-        send(getPrefix() + "Integration enabled: " + integrationName);
+        emit("Integration enabled: " + integrationName);
     }
+
+    // -------------------------------------------------------------------------
+    // Private helpers
+    // -------------------------------------------------------------------------
 
     /**
-     * Prints a generic banner line in amber (used for startup section headers).
-     *
-     * @param message The text to display.
+     * Buffers the message during startup; prints it immediately (with prefix) after.
      */
-    public static void banner(@NotNull String message) {
-        send(message);
+    private static void emit(@NotNull String message) {
+        if (startupBuffer != null) {
+            startupBuffer.add(message);
+        } else {
+            Bukkit.getConsoleSender().sendMessage("[BlockProt] " + message);
+        }
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Private
-    // ─────────────────────────────────────────────────────────────────────────
-
-    private static void send(@NotNull String message) {
-        Bukkit.getConsoleSender().sendMessage(message);
-    }
 }

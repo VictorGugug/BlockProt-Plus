@@ -250,13 +250,9 @@ Blocks moved to `blocks.yml`
 - **Piston setting toggle** → brown ↔ gray transition ring.
 - All effects respect `block_lock_effects: true/false` in `config.yml` (default: true).
 
-### 24. Configurable Console Colors & Sound Toggle
+### 24. Configurable Sound Toggle
 
-- New `console.prefix_color` and `console.info_color` keys were added to `config.yml`.
-- Values support legacy Minecraft color codes like `§6` and hex-style codes like `§x§R§R§G§G§B§B`.
-- `console.prefix_color` controls the `[BlockProt]` console prefix color.
-- `console.info_color` controls the color used for informational startup and status messages.
-- `block_lock_sounds: true/false` was added so sound effects can be disabled while keeping particle effects enabled.
+- `block_lock_sounds: true/false` can be set so sound effects are disabled while keeping particle effects enabled.
 
 ### 25. Shulker Box — Shift+Right-Click Places Without Protection
 
@@ -265,7 +261,7 @@ Blocks moved to `blocks.yml`
 - Normal placement still auto-locks as configured.
 - Configurable via the existing `lock_on_place_by_default` flow; no extra config key needed.
 
-### 25. Skin Resolution for Cracked / Offline-Mode Servers
+### 26. Skin Resolution for Cracked / Offline-Mode Servers
 
 `SkinCache` provides an async Mojang-API fallback for offline servers where UUIDs
 are name-derived and don't correspond to Mojang profiles:
@@ -278,22 +274,20 @@ are name-derived and don't correspond to Mojang profiles:
 5. Fetch failures (network errors, rate limits, unknown names) are silently skipped;
    the plain head continues to be shown without any console errors.
 
-### 26. Admin Teleport from Statistics Inventory
+### 27. Admin Teleport from Statistics Inventory
 
 - In the **Statistics → Your Blocks** list, players with `blockprot.admin` permission
   can **click any block entry** to teleport directly to that block.
 - The inventory closes after teleporting.
 - Players without the admin permission see no change on click.
 
-### 27. Amber Console Colors for BlockProt-Plus Messages
+### 28. Console Messages
 
-- Integration registration and enable messages print in **gold/amber** via `BlockProtConsole`.
-- Informational startup messages use §e yellow, success messages use §a green, warnings §c red.
-- Uses `Bukkit.getConsoleSender().sendMessage()` with legacy color codes — rendered natively
-  by Paper's Log4j2 console renderer on 1.21+ and falls back to plain text on Spigot.
-- Example: `§6[BlockProt]§r §6Integration enabled: §eclaimchunk§r`
+- The startup ASCII banner is printed once via the standard plugin logger during `onEnable`.
+- Post-startup notifications (integrations, audit logger, config reload) go through `BlockProtConsole`, which prefixes every line with `[BlockProt]` as plain text.
+- No color codes are applied; output is consistent across Paper and Spigot terminals.
 
-### 28. Per-Player Sections in the Access Audit Log
+### 29. Per-Player Sections in the Access Audit Log
 
 - The audit GUI overview now shows **one head per unique player** with a clear label:
   `§cX §fname` (access denied) or `§aOK §fname` (access granted).
@@ -451,7 +445,7 @@ optional_features_enable_all: false
 | `util/PlayerNameResolver.java` | Offline player UUID resolution via Mojang API |
 | `util/SkinCache.java` | Async Mojang skin fetcher for offline/cracked servers |
 | `util/TemporaryActionBar.java` | Repeating action bar message utility |
-| `BlockProtConsole.java` | Amber-colored console message helper |
+| `BlockProtConsole.java` | Plain-text console message helper; post-startup notifications only |
 
 ---
 

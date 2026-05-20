@@ -44,14 +44,12 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.profile.PlayerProfile;
+import org.bukkit.profile.PlayerTextures;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
 import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -487,51 +485,48 @@ public abstract class BlockProtInventory implements InventoryHolder {
 
     @Nullable
     private static PlayerProfile resolveSkinRestorerProfile(@NotNull final UUID uuid, @NotNull final String name) {
-        var plugin = Bukkit.getPluginManager().getPlugin("SkinRestorer");
-        if (plugin == null || !plugin.isEnabled()) {
-            return null;
-        }
+        var plugin = Bukkit.getPluginManager().getPlugin("SkinsRestorer");
+        if (plugin == null || !plugin.isEnabled()) return null;
 
         try {
-            Class<?> apiClass;
-            try {
-                apiClass = Class.forName("com.github.games647.skinrestorer.api.SkinRestorerAPI");
-            } catch (ClassNotFoundException ignored) {
-                apiClass = Class.forName("skinsrestorer.SkinRestorer");
+            // SkinsRestorer v15 public API.
+            Class<?> providerClass = Class.forName("net.skinsrestorer.api.SkinsRestorerProvider");
+            Object api = providerClass.getMethod("get").invoke(null);
+
+            // api.getPlayerStorage().getSkinForPlayer(uuid, name) -> Optional<SkinProperty>
+            Object playerStorage = api.getClass().getMethod("getPlayerStorage").invoke(api);
+            Object optional = playerStorage.getClass()
+                .getMethod("getSkinForPlayer", UUID.class, String.class)
+                .invoke(playerStorage, uuid, name);
+
+            // Unbox Optional
+            boolean present = (boolean) optional.getClass().getMethod("isPresent").invoke(optional);
+            if (!present) return null;
+            Object skinProperty = optional.getClass().getMethod("get").invoke(optional);
+
+            // SkinProperty.getValue() and SkinProperty.getSignature()
+            String value     = (String) skinProperty.getClass().getMethod("getValue").invoke(skinProperty);
+            String signature = (String) skinProperty.getClass().getMethod("getSignature").invoke(skinProperty);
+
+            // Build a Bukkit PlayerProfile from the raw texture property.
+            PlayerProfile profile = Bukkit.getServer().createPlayerProfile(uuid, name);
+            PlayerTextures textures = profile.getTextures();
+
+            // Decode the base64 value to extract the skin URL.
+            String decoded = new String(
+                java.util.Base64.getDecoder().decode(value),
+                java.nio.charset.StandardCharsets.UTF_8);
+            com.google.gson.JsonObject root = com.google.gson.JsonParser.parseString(decoded).getAsJsonObject();
+            if (root.has("textures") && root.getAsJsonObject("textures").has("SKIN")) {
+                String skinUrl = root.getAsJsonObject("textures")
+                    .getAsJsonObject("SKIN").get("url").getAsString();
+                textures.setSkin(java.net.URI.create(skinUrl).toURL());
+                profile.setTextures(textures);
             }
-
-            Method getApi = apiClass.getMethod("getApi");
-            Object api = Modifier.isStatic(getApi.getModifiers()) ? getApi.invoke(null) : getApi.invoke(plugin);
-            if (api == null) {
-                return null;
-            }
-
-            for (Method method : api.getClass().getMethods()) {
-                if (!method.getName().equals("getPlayerProfile") || method.getParameterCount() != 1) {
-                    continue;
-                }
-
-                Object result = null;
-                Class<?> paramType = method.getParameterTypes()[0];
-                if (UUID.class.equals(paramType)) {
-                    result = method.invoke(api, uuid);
-                } else if (String.class.equals(paramType)) {
-                    result = method.invoke(api, name);
-                } else if (org.bukkit.OfflinePlayer.class.equals(paramType)) {
-                    result = method.invoke(api, Bukkit.getOfflinePlayer(uuid));
-                }
-
-                if (result instanceof PlayerProfile profileResult) {
-                    return profileResult;
-                }
-                if (result instanceof Optional<?> optionalResult && optionalResult.isPresent()
-                    && optionalResult.get() instanceof PlayerProfile profileResult) {
-                    return profileResult;
-                }
-            }
-        } catch (ReflectiveOperationException ignored) {
+            return profile;
+        } catch (Exception ignored) {
+            // SkinsRestorer not installed, wrong version, or API changed — fall through.
         }
-
         return null;
     }
 

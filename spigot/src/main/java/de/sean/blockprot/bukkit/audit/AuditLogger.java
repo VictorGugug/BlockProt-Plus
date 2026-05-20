@@ -17,8 +17,11 @@ import java.util.concurrent.CompletableFuture;
 public final class AuditLogger {
 
     public enum Action {
-        ACCESS_DENIED,   // A player without permission attempted to open a protected block.
-        ACCESS_GRANTED   // A player with permission accessed a block (optional, disabled by default).
+        ACCESS_DENIED,  // A player without permission attempted to open a protected block.
+        ACCESS_GRANTED, // A player with permission accessed a block (generic, unused by default).
+        OPENED,         // A player opened (accessed the inventory of) a protected block.
+        ITEM_TAKEN,     // A player took an item from a protected block.
+        ITEM_PLACED     // A player placed an item into a protected block.
     }
 
     public record AuditEntry(

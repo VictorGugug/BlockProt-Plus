@@ -1,6 +1,7 @@
 package de.sean.blockprot.bukkit.tasks;
 
 import de.sean.blockprot.bukkit.BlockProt;
+import de.sean.blockprot.bukkit.BlockProtConsole;
 import de.sean.blockprot.bukkit.BlockProtLogger;
 import de.sean.blockprot.bukkit.TranslationKey;
 import de.sean.blockprot.bukkit.Translator;
@@ -142,11 +143,11 @@ public final class BackupTask implements Runnable {
             // ── Console notice ────────────────────────────────────────────────
             BlockProtLogger.log("backup", "Pre-existing data detected. Backup created at "
                 + zipFile.getAbsolutePath());
-            BlockProt.getInstance().getLogger().info(
+            BlockProtConsole.info(
                 Translator.get(TranslationKey.CONSOLE__BACKUP_CREATED)
                     .replace("{file}", zipFile.getName()));
             if (!forced) {
-                BlockProt.getInstance().getLogger().info(
+                BlockProtConsole.info(
                     Translator.get(TranslationKey.CONSOLE__BACKUP_REVIEW_CONFIG));
             }
         } catch (IOException e) {

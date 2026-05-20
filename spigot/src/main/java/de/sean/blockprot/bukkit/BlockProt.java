@@ -166,11 +166,8 @@ public final class BlockProt extends JavaPlugin {
             throw new RuntimeException("Failed to open SQLite connection to usercache database", e);
         }
 
-        try { registerIntegration(new WorldGuardIntegration());     } catch (NoClassDefFoundError ignored) {}
         try { registerIntegration(new TownyIntegration());          } catch (NoClassDefFoundError ignored) {}
         try { registerIntegration(new PlaceholderAPIIntegration()); } catch (NoClassDefFoundError ignored) {}
-        try { registerIntegration(new LandsPluginIntegration());    } catch (NoClassDefFoundError ignored) {}
-        try { registerIntegration(new ClaimChunkIntegration());     } catch (NoClassDefFoundError ignored) {}
         for (PluginIntegration integration : integrations) {
             try {
                 integration.load();
@@ -202,30 +199,31 @@ public final class BlockProt extends JavaPlugin {
         BlockProtLogger.log("Server: " + Bukkit.getVersion());
         BlockProtLogger.log("Runtime: " + VersionCompat.getDiagnosticString());
 
-        // Print a concise ASCII banner to console (plain text, no colors) similar to SkinRestorer
-        try {
-            String banner = "+=================+\n"
-                + "|    BlockProt    |\n"
-                + "|                 |\n"
-                + "| Version: " + version + " |\n"
-                + "+=================+";
-            this.getLogger().info(banner);
-        } catch (Exception ignored) {}
+        // Buffer all startup console messages; printed together in the chest banner below.
+        BlockProtConsole.beginStartup(this.getLogger());
         if (VersionCompat.is26Family()) {
             BlockProtLogger.log("Detected 26.x year-based version scheme.");
         }
-        
+
         StatHandler.enable();
         this.saveDefaultConfig();
+        this.reloadConfigAndTranslations();
+        // Run startup compatibility checks after translations are loaded.
+        VersionValidator.validateStartup();
+
+        // Backup and config merge run after translations so their messages resolve correctly.
         boolean hasUpgradeData = BackupTask.hasPriorData(this.getDataFolder());
         if (hasUpgradeData) {
             new BackupTask(this.getDataFolder()).run();
         }
         this.mergeMissingConfigKeys();
         this.saveResource("worlds.yml", false);
-        this.reloadConfigAndTranslations();
-        // Run startup compatibility checks after translations are loaded.
-        VersionValidator.validateStartup();
+        // Re-apply worlds config now that worlds.yml is guaranteed to exist.
+        if (defaultConfig.isWorldsConfigEnabled()) {
+            File worldsFile = new File(this.getDataFolder(), "worlds.yml");
+            YamlConfiguration worldsDisk = WorldsConfig.scanAndPopulate(worldsFile, this.getConfig(), this.getLogger());
+            worldsConfig = new WorldsConfig(worldsDisk);
+        }
 
         hybridDatabase = new HybridDatabase(this);
         hybridDatabase.start(defaultConfig);
@@ -253,6 +251,20 @@ public final class BlockProt extends JavaPlugin {
         metrics = new Metrics(this, pluginId);
         metrics.addCustomChart(new IntegrationBarChart());
 
+        /* Enable all integrations — collect into startup buffer */
+        for (PluginIntegration integration : integrations) {
+            try {
+                integration.enable();
+                if (integration.isEnabled()) {
+                    BlockProtConsole.integrationEnabled(integration.name);
+                    BlockProtLogger.log("integration", "Enabled plugin integration for plugin with id '" + integration.name + "'");
+                }
+            } catch (NoClassDefFoundError ignored) {}
+        }
+
+        // Flush all buffered startup messages inside the chest ASCII banner.
+        BlockProtConsole.printStartupBanner(version);
+
         /* Register Listeners */
         final PluginManager pm = getServer().getPluginManager();
         registerEvent(pm, new BlockEventListener(this));
@@ -272,17 +284,6 @@ public final class BlockProt extends JavaPlugin {
 
         Objects.requireNonNull(this.getCommand("blockprot"))
             .setExecutor(new BlockProtCommand());
-
-        /* Enable all integrations */
-        for (PluginIntegration integration : integrations) {
-            try {
-                integration.enable();
-                if (integration.isEnabled()) {
-                    BlockProtConsole.integrationEnabled(integration.name);
-                    BlockProtLogger.log("integration", "Enabled plugin integration for plugin with id '" + integration.name + "'");
-                }
-            } catch (NoClassDefFoundError ignored) {}
-        }
 
         super.onEnable();
     }
@@ -477,11 +478,11 @@ public final class BlockProt extends JavaPlugin {
 
         try {
             diskConfig.save(diskFile);
-            getLogger().info(Translator.get(TranslationKey.CONSOLE__CONFIG_KEYS_UPDATED)
+            BlockProtConsole.info(Translator.get(TranslationKey.CONSOLE__CONFIG_KEYS_UPDATED)
                 .replace("{count}", String.valueOf(added)));
             BlockProtLogger.log("config-merge", "config.yml merge completed; added " + added + " missing option(s).");
         } catch (IOException e) {
-            getLogger().warning(Translator.get(TranslationKey.CONSOLE__CONFIG_KEYS_SAVE_FAILED)
+            BlockProtConsole.warn(Translator.get(TranslationKey.CONSOLE__CONFIG_KEYS_SAVE_FAILED)
                 .replace("{error}", e.getMessage()));
             BlockProtLogger.log("config-merge", "Failed to save config.yml after merge: " + e.getMessage());
         }

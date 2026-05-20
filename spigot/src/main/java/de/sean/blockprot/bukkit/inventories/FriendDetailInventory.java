@@ -26,7 +26,6 @@ import de.sean.blockprot.bukkit.nbt.FriendHandler;
 import de.sean.blockprot.bukkit.nbt.FriendSupportingHandler;
 import de.sean.blockprot.nbt.FriendModifyAction;
 import de.tr7zw.changeme.nbtapi.NBTCompound;
-import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryClickEvent;
@@ -131,7 +130,8 @@ public final class FriendDetailInventory extends BlockProtInventory {
             try {
                 final var profile = BlockProt.getProfileService().findByUuid(uuid);
                 assert profile != null;
-                setPlayerSkull(0, Bukkit.getServer().createPlayerProfile(profile.getUniqueId(), profile.getName()));
+                final String pName = profile.getName() != null ? profile.getName() : uuid.toString();
+                setPlayerSkull(0, BlockProtInventory.createPlayerProfile(profile.getUniqueId(), pName));
             } catch (Exception e) {
                 BlockProt.getInstance().getLogger().warning("Failed to find PlayerProfile: " + uuid);
             }
