@@ -10,8 +10,10 @@
 # │   5. Effects & Console                                          │
 # │   6. Optional Features                                          │
 # │   7. MySQL / Storage                                            │
-# │   8. WorldEdit Auto-Lock                                        │
-# │   9. Block Definitions                                          │
+# │                                                                 │
+# │  Block definitions (lockable_tile_entities, lockable_blocks,    │
+# │  lockable_shulker_boxes, lockable_doors) live in blocks.yml,   │
+# │  which is generated on first start.                             │
 # └─────────────────────────────────────────────────────────────────┘
 
 # ════════════════════════════════════════════════════════════════════
@@ -120,7 +122,7 @@ respect_spawn_protection: true
 pet_protection:
 
   # Master switch. false = entire system disabled.
-  enabled: true
+  enabled: false
 
   # Automatically protect a pet the moment it is tamed.
   # The owner can still fine-tune individual toggles via the settings menu.
@@ -132,8 +134,7 @@ pet_protection:
   menu_item: STICK
 
   # Message sent to a player who tries to interact with a pet they do not own.
-  # Supports legacy colour codes (§).
-  denied_message: "§c[BlockProt] §rNo tienes permiso para interactuar con esta mascota."
+  # Defined in the lang file under: messages.pet_denied
 
 
 # ════════════════════════════════════════════════════════════════════
@@ -216,105 +217,3 @@ mysql:
 
     # Time in milliseconds before a connection attempt times out.
     connection_timeout_ms: 10000
-
-
-# ════════════════════════════════════════════════════════════════════
-# ──────────────── 8. BLOCK DEFINITIONS ─────────────────────────────
-# ════════════════════════════════════════════════════════════════════
-#
-# These lists define which blocks can be locked.
-# Edit blocks.yml (generated on first start) to add or remove entries
-# without touching this file.
-
-lockable_tile_entities:
-  - CHEST
-  - TRAPPED_CHEST
-  - FURNACE
-  - SMOKER
-  - BLAST_FURNACE
-  - HOPPER
-  - BARREL
-  - BREWING_STAND
-  - DISPENSER
-  - DROPPER
-  - LECTERN
-
-lockable_shulker_boxes:
-  - BLACK_SHULKER_BOX
-  - BLUE_SHULKER_BOX
-  - BROWN_SHULKER_BOX
-  - CYAN_SHULKER_BOX
-  - GRAY_SHULKER_BOX
-  - GREEN_SHULKER_BOX
-  - LIGHT_BLUE_SHULKER_BOX
-  - LIGHT_GRAY_SHULKER_BOX
-  - LIME_SHULKER_BOX
-  - MAGENTA_SHULKER_BOX
-  - ORANGE_SHULKER_BOX
-  - PINK_SHULKER_BOX
-  - PURPLE_SHULKER_BOX
-  - RED_SHULKER_BOX
-  - SHULKER_BOX
-  - WHITE_SHULKER_BOX
-  - YELLOW_SHULKER_BOX
-
-lockable_blocks:
-  - ANVIL
-  - CHIPPED_ANVIL
-  - DAMAGED_ANVIL
-  - ACACIA_FENCE_GATE
-  - ACACIA_TRAPDOOR
-  - BAMBOO_FENCE_GATE
-  - BAMBOO_TRAPDOOR
-  - BIRCH_FENCE_GATE
-  - BIRCH_TRAPDOOR
-  - CHERRY_FENCE_GATE
-  - CHERRY_TRAPDOOR
-  - CRIMSON_FENCE_GATE
-  - CRIMSON_TRAPDOOR
-  - DARK_OAK_FENCE_GATE
-  - DARK_OAK_TRAPDOOR
-  - JUNGLE_FENCE_GATE
-  - JUNGLE_TRAPDOOR
-  - MANGROVE_FENCE_GATE
-  - MANGROVE_TRAPDOOR
-  - OAK_FENCE_GATE
-  - OAK_TRAPDOOR
-  - PALE_OAK_FENCE_GATE
-  - PALE_OAK_TRAPDOOR
-  - SPRUCE_FENCE_GATE
-  - SPRUCE_TRAPDOOR
-  - WARPED_FENCE_GATE
-  - WARPED_TRAPDOOR
-  - IRON_TRAPDOOR
-  - COPPER_TRAPDOOR
-  - EXPOSED_COPPER_TRAPDOOR
-  - OXIDIZED_COPPER_TRAPDOOR
-  - WEATHERED_COPPER_TRAPDOOR
-  - WAXED_COPPER_TRAPDOOR
-  - WAXED_EXPOSED_COPPER_TRAPDOOR
-  - WAXED_OXIDIZED_COPPER_TRAPDOOR
-  - WAXED_WEATHERED_COPPER_TRAPDOOR
-
-lockable_doors:
-  - IRON_DOOR
-  - ACACIA_DOOR
-  - BAMBOO_DOOR
-  - BIRCH_DOOR
-  - CHERRY_DOOR
-  - CRIMSON_DOOR
-  - DARK_OAK_DOOR
-  - JUNGLE_DOOR
-  - MANGROVE_DOOR
-  - OAK_DOOR
-  - PALE_OAK_DOOR
-  - SPRUCE_DOOR
-  - WARPED_DOOR
-  - COPPER_DOOR
-  - EXPOSED_COPPER_DOOR
-  - OXIDIZED_COPPER_DOOR
-  - WEATHERED_COPPER_DOOR
-  - WAXED_COPPER_DOOR
-  - WAXED_EXPOSED_COPPER_DOOR
-  - WAXED_OXIDIZED_COPPER_DOOR
-  - WAXED_WEATHERED_COPPER_DOOR
