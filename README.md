@@ -221,10 +221,38 @@ Blocks moved to `blocks.yml`
 
 ### 20. Update Checker — GitHub Releases
 
-- Queries the **GitHub Releases API** for this fork instead of the upstream SpigotMC resource.
-- Admins receive a clickable in-game message pointing to the releases page when a new version
-  is available.
-- Result is cached per session; the API is only called once per server start.
+- Queries the **GitHub Releases API** at `https://api.github.com/repos/VictorGugug/BlockProt-Plus/releases/latest`
+  on every server start (asynchronous, one call per session).
+- On startup, logs a warning to console if a newer version is published.
+- When an op joins and `notify_op_of_updates: true` is set, they receive a clickable in-game
+  message that opens `https://github.com/VictorGugug/BlockProt-Plus/releases`.
+- `/bp update` (op-only) re-runs the check and messages all online players with the result.
+- The result is cached for the entire session — the API is never called more than once per start.
+- Network errors and API rate limits are silently ignored; the plugin starts normally regardless.
+
+### 30. Pet Protection (SP26-ZV)
+
+Protects tamed animals (wolves, cats, parrots, horses, llamas, etc.) with the same ownership
+model used for blocks. Data is stored in each entity's `PersistentDataContainer`.
+
+| Toggle | Default | Description |
+|---|---|---|
+| `enabled` | `true` | Master switch for the entire system |
+| `auto_protect_on_tame` | `true` | Protect automatically when a pet is tamed |
+| `no_damage` | `true` | Block other players from damaging the pet |
+| `no_interact` | `false` | Block right-click (feeding, naming, sitting) |
+| `no_leash` | `true` | Block other players from leashing/unleashing |
+| `no_pickup` | `false` | Block parrot shoulder-pickup by others |
+
+- Owner, players with `blockprot.admin`, and players with `blockprot.bypass` always bypass.
+- **Settings GUI** — right-click your tamed pet while holding a **stick** (or the item
+  configured via `pet_protection.menu_item`) to open a GUI with individual toggles,
+  plus *Enable All* / *Disable All* buttons.
+- **Death notification** — the online owner receives a chat message when their protected
+  pet dies, including the pet's name if one was set.
+- **Hot-reloadable** — all settings are read at event time; `/bp reload` applies changes
+  without restarting the server.
+- Configured under `pet_protection:` in `config.yml`.
 
 ### 21. Cached Profile Service
 
@@ -415,6 +443,15 @@ inactivity_cleanup_days: -1   # -1 = disabled
 
 # ── Optional feature preset ───────────────────────────────────────────────
 optional_features_enable_all: false
+
+# ── Pet protection (SP26-ZV) ──────────────────────────────────────────────
+pet_protection:
+  enabled: true                # master switch
+  auto_protect_on_tame: true   # protect on tame; owner can adjust toggles via GUI
+  menu_item: STICK             # held item that opens the pet settings GUI
+  denied_message: "§c[BlockProt] §rYou don't have permission to interact with this pet."
+  # Per-pet toggles are stored on the entity itself (PersistentDataContainer)
+  # and can be changed individually through the in-game settings GUI.
 ```
 
 ---
@@ -446,6 +483,10 @@ optional_features_enable_all: false
 | `util/SkinCache.java` | Async Mojang skin fetcher for offline/cracked servers |
 | `util/TemporaryActionBar.java` | Repeating action bar message utility |
 | `BlockProtConsole.java` | Plain-text console message helper; post-startup notifications only |
+| `pets/PetNBTHandler.java` | Reads and writes pet protection data via PersistentDataContainer |
+| `listeners/PetProtectionListener.java` | Enforces pet protection on damage, interact, leash, and parrot pickup events |
+| `listeners/PetMenuOpenListener.java` | Opens the pet settings GUI on right-click with the configured item |
+| `inventories/PetSettingsInventory.java` | GUI with per-toggle switches for each pet protection option |
 
 ---
 
