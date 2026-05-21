@@ -41,28 +41,21 @@ public class AboutCommand implements CommandExecutor {
         final PluginDescriptionFile description = BlockProt.getInstance().getDescription();
 
         builder.append(Translator.get(TranslationKey.ABOUT__TITLE).replace("{version}", "v" + description.getVersion()) + "\n");
-        builder.append(Translator.get(TranslationKey.ABOUT__ORIGINAL_AUTHOR) + "\n");
         builder.append(Translator.get(TranslationKey.ABOUT__FORK_MAINTAINERS) + "\n");
-        builder.append(createUrlComponent(
-            Translator.get(TranslationKey.ABOUT__REPORT_ORIGINAL),
-            "https://github.com/spnda/BlockProt/issues",
-            "Report bugs or suggestions for the original plugin"
-        ));
-        builder.append("\n");
         builder.append(createUrlComponent(
             Translator.get(TranslationKey.ABOUT__REPORT_FORK),
             "https://github.com/VictorGugug/BlockProt-Reloaded/issues",
-            "Report bugs specific to this fork here"
+            Translator.get(TranslationKey.ABOUT__REPORT_FORK_HOVER)
         ));
 
         sender.spigot().sendMessage(builder.create());
         return true;
     }
 
-    private @NotNull TextComponent createUrlComponent(@NotNull String text, @NotNull String url, String hoverText) {
+    private @NotNull TextComponent createUrlComponent(@NotNull String text, @NotNull String url, @Nullable String hoverText) {
         final TextComponent component = new TextComponent(text);
         component.setClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, url));
-        if (hoverText != null)
+        if (hoverText != null && !hoverText.isBlank())
             component.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new Text(hoverText)));
         return component;
     }

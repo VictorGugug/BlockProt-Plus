@@ -1,6 +1,7 @@
 import org.kohsuke.github.GHReleaseBuilder
 import org.kohsuke.github.GitHub
 import org.gradle.jvm.toolchain.JavaLanguageVersion
+import java.util.Properties
 
 buildscript {
     repositories {
@@ -37,8 +38,63 @@ val blockProtVersion: String by project
 val versionSuffix: String by project
 val targetJavaVersion: String by project
 
-/** Full version string: "1.2.9" or "1.2.9-SNAPSHOT", "1.2.9-beta.1", etc. */
-val fullVersion: String = if (versionSuffix.isBlank()) blockProtVersion else "$blockProtVersion-$versionSuffix"
+/**
+ * Full version string with auto-incrementing SNAPSHOT counter.
+ *
+ * Rules:
+ *  - If versionSuffix is blank → clean release, e.g. "1.3.0"
+ *  - If versionSuffix == "SNAPSHOT" → auto-append counter 1..5, stored in
+ *    `.gradle/snapshot-counter.properties` next to this build script.
+ *    Counter resets to 1 when blockProtVersion changes.
+ *    When counter would exceed 5 the version number is bumped (patch → +1,
+ *    patch==9 → minor +1 patch→0, minor==9 → major +1 minor→0 patch→0)
+ *    and the counter resets to 1.
+ *  - Any other suffix → "$blockProtVersion-$versionSuffix"
+ */
+fun computeFullVersion(): String {
+    val rawSuffix = versionSuffix.trim()
+    if (rawSuffix.isBlank()) return blockProtVersion
+    if (!rawSuffix.equals("SNAPSHOT", ignoreCase = true)) return "$blockProtVersion-$rawSuffix"
+
+    // ── SNAPSHOT auto-counter ────────────────────────────────────────────────
+    val counterFile = file(".gradle/snapshot-counter.properties")
+    counterFile.parentFile.mkdirs()
+
+    val props = Properties()
+    if (counterFile.exists()) counterFile.inputStream().use<java.io.InputStream, Unit> { props.load(it) }
+
+    val storedVersion = props.getProperty("trackedVersion", "")
+    var counter       = props.getProperty("counter", "0").toIntOrNull() ?: 0
+
+    var effectiveVersion = blockProtVersion
+
+    if (storedVersion != blockProtVersion) {
+        // Version changed externally → start fresh
+        counter = 1
+        props["trackedVersion"] = blockProtVersion
+    } else {
+        counter++
+        if (counter > 5) {
+            // Bump version number
+            val parts = blockProtVersion.split(".").map { it.toInt() }.toMutableList()
+            while (parts.size < 3) parts.add(0)
+            parts[2]++
+            if (parts[2] > 9) { parts[2] = 0; parts[1]++ }
+            if (parts[1] > 9) { parts[1] = 0; parts[0]++ }
+            effectiveVersion = parts.joinToString(".")
+            counter = 1
+            // Persist new base version back so next invocation knows
+            props["trackedVersion"] = effectiveVersion
+        }
+    }
+
+    props["counter"] = counter.toString()
+    counterFile.outputStream().use<java.io.OutputStream, Unit> { props.store(it, "BlockProt SNAPSHOT counter — do not edit manually") }
+
+    return "$effectiveVersion-SNAPSHOT-$counter"
+}
+
+val fullVersion: String = computeFullVersion()
 
 allprojects {
     apply(plugin = "org.gradle.java-library")

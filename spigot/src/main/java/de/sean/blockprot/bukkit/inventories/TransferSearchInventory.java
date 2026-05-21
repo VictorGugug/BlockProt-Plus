@@ -1,0 +1,247 @@
+package de.sean.blockprot.bukkit.inventories;
+
+import de.sean.blockprot.bukkit.BlockProt;
+import de.sean.blockprot.bukkit.TranslationKey;
+import de.sean.blockprot.bukkit.Translator;
+import de.sean.blockprot.bukkit.VersionCompat;
+import de.sean.blockprot.bukkit.nbt.BlockNBTHandler;
+import de.sean.blockprot.bukkit.nbt.StatHandler;
+import org.bukkit.Bukkit;
+import org.bukkit.Material;
+import org.bukkit.OfflinePlayer;
+import org.bukkit.block.Block;
+import org.bukkit.entity.Player;
+import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryCloseEvent;
+import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.SkullMeta;
+import org.bukkit.scheduler.BukkitTask;
+import org.enginehub.squirrelid.Profile;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
+import java.util.Arrays;
+import java.util.Objects;
+import java.util.concurrent.ConcurrentLinkedQueue;
+
+/**
+ * GUI for searching a player to transfer block ownership to.
+ * Opens a chat/anvil input for the query, then shows matching players as skulls.
+ * Clicking a skull executes the transfer immediately.
+ */
+public final class TransferSearchInventory extends BlockProtInventory {
+
+    private final ConcurrentLinkedQueue<Profile> resultQueue = new ConcurrentLinkedQueue<>();
+    private final int maxResults = getSize() - 1;
+
+    @Nullable private BukkitTask loadTask = null;
+    @Nullable private BukkitTask updateTask = null;
+
+    @Override
+    int getSize() { return InventoryConstants.tripleLine; }
+
+    @Override
+    String getTranslatedInventoryName() {
+        return Translator.get(TranslationKey.INVENTORIES__TRANSFER__TITLE);
+    }
+
+    /** Opens a text-input prompt, then fills the result GUI. */
+    public static void openSearch(@NotNull Player player) {
+        String prompt = Translator.get(TranslationKey.INVENTORIES__TRANSFER__SEARCH_PROMPT);
+        if (VersionCompat.isPaper()) {
+            ChatInput.open(player, BlockProt.getInstance(),
+                text -> openResult(player, text));
+        } else {
+            AnvilInput.open(player, BlockProt.getInstance(),
+                prompt, prompt,
+                text -> openResult(player, text));
+        }
+    }
+
+    private static void openResult(@NotNull Player player, @Nullable String text) {
+        if (text == null || text.isBlank()) return;
+        Inventory inv = new TransferSearchInventory().fill(player, text);
+        if (inv != null) player.openInventory(inv);
+    }
+
+    @Override
+    public void onClick(@NotNull InventoryClickEvent event, @NotNull InventoryState state) {
+        Player player = (Player) event.getWhoClicked();
+        ItemStack item = event.getCurrentItem();
+        if (item == null) return;
+        event.setCancelled(true);
+
+        switch (item.getType()) {
+            case BLACK_STAINED_GLASS_PANE -> closeAndOpen(player,
+                new BlockLockInventory().fill(player,
+                    state.getBlock() != null ? state.getBlock().getType() : Material.CHEST,
+                    state.getBlock() != null ? new BlockNBTHandler(state.getBlock()) : null));
+            case PLAYER_HEAD, SKELETON_SKULL -> {
+                if (!(item.getItemMeta() instanceof SkullMeta meta)) return;
+                if (meta.getOwningPlayer() == null) return;
+                OfflinePlayer target = meta.getOwningPlayer();
+                Block block = state.getBlock();
+                if (block == null) { player.closeInventory(); return; }
+
+                doTransfer(player, block, target);
+            }
+            default -> closeAndOpen(player, null);
+        }
+    }
+
+    @Override
+    public void onClose(@NotNull InventoryCloseEvent event, @NotNull InventoryState state) {
+        if (loadTask != null) loadTask.cancel();
+        if (updateTask != null) updateTask.cancel();
+    }
+
+    @Nullable
+    public Inventory fill(@NotNull Player player, @NotNull String searchQuery) {
+        InventoryState state = InventoryState.get(player.getUniqueId());
+        if (state == null) return null;
+
+        for (int i = 0; i < maxResults; i++) {
+            setItemStack(i, Material.SKELETON_SKULL, "Buscando...");
+        }
+        setBackButton();
+
+        updateTask = Bukkit.getScheduler().runTaskTimer(BlockProt.getInstance(),
+            new UpdateTask(state), 0L, 1L);
+        loadTask = Bukkit.getScheduler().runTaskAsynchronously(BlockProt.getInstance(),
+            new LoadTask(player, searchQuery,
+                BlockProt.getDefaultConfig().getFriendSearchSimilarityPercentage()));
+
+        return inventory;
+    }
+
+    // ── transfer logic ────────────────────────────────────────────────────────
+
+    private void doTransfer(@NotNull Player player, @NotNull Block block, @NotNull OfflinePlayer target) {
+        if (target.getUniqueId() == null) { player.closeInventory(); return; }
+        if (target.getUniqueId().equals(player.getUniqueId())) {
+            player.sendMessage(Translator.get(TranslationKey.MESSAGES__TRANSFER_SELF_GUI));
+            closeAndOpen(player, new BlockLockInventory().fill(player, block.getType(), new BlockNBTHandler(block)));
+            return;
+        }
+
+        BlockNBTHandler handler;
+        try { handler = new BlockNBTHandler(block); }
+        catch (RuntimeException e) { player.closeInventory(); return; }
+
+        if (!handler.isOwner(player.getUniqueId())) {
+            player.sendMessage(Translator.get(TranslationKey.MESSAGES__TRANSFER_NOT_OWNER_GUI));
+            player.closeInventory();
+            return;
+        }
+
+        var result = handler.transferOwner(
+            player.getUniqueId().toString(),
+            target.getUniqueId().toString()
+        );
+
+        if (result.success) {
+            if (target.isOnline() && target.getPlayer() != null)
+                StatHandler.addBlock(target.getPlayer(), block.getLocation());
+            String name = target.getName() != null ? target.getName() : target.getUniqueId().toString().substring(0, 8);
+            player.sendMessage(Translator.get(TranslationKey.MESSAGES__TRANSFER_SUCCESS).replace("{player}", name));
+            player.closeInventory();
+        } else {
+            player.sendMessage(Translator.get(TranslationKey.MESSAGES__TRANSFER_FAILED));
+            closeAndOpen(player, new BlockLockInventory().fill(player, block.getType(), new BlockNBTHandler(block)));
+        }
+    }
+
+    // ── inner tasks ───────────────────────────────────────────────────────────
+
+    private class UpdateTask implements Runnable {
+        private final InventoryState state;
+        private int idx = 0;
+
+        UpdateTask(@NotNull InventoryState state) { this.state = state; }
+
+        @Override
+        public void run() {
+            var scheduler = Bukkit.getScheduler();
+            if (loadTask != null
+                && !scheduler.isQueued(loadTask.getTaskId())
+                && !scheduler.isCurrentlyRunning(loadTask.getTaskId())
+                && resultQueue.isEmpty()) {
+                if (idx == 0) for (int i = 0; i < maxResults; i++) inventory.clear(i);
+                if (updateTask != null) updateTask.cancel();
+                return;
+            }
+
+            Profile profile;
+            while ((profile = resultQueue.poll()) != null && idx < maxResults) {
+                if (idx == 0) for (int i = 0; i < maxResults; i++) inventory.clear(i);
+                final String name = profile.getName() != null ? profile.getName() : profile.getUniqueId().toString();
+                setPlayerSkull(idx, BlockProtInventory.createPlayerProfile(profile.getUniqueId(), name));
+                idx++;
+            }
+            if (idx == maxResults) {
+                if (loadTask != null) loadTask.cancel();
+                if (updateTask != null) updateTask.cancel();
+            }
+        }
+    }
+
+    private class LoadTask implements Runnable {
+        private final Player player;
+        private final String query;
+        private final double minSimilarity;
+
+        LoadTask(@NotNull Player player, @NotNull String query, double minSimilarity) {
+            this.player = player;
+            this.query = query;
+            this.minSimilarity = minSimilarity;
+        }
+
+        @Override
+        public void run() {
+            try {
+                var uuids = Arrays.stream(Bukkit.getOfflinePlayers())
+                    .map(OfflinePlayer::getUniqueId)
+                    .filter(u -> u.version() == 3 || u.version() == 4 || u.version() == 0)
+                    .toList();
+
+                BlockProt.getProfileService().findAllByUuid(uuids).stream()
+                    .filter(Objects::nonNull)
+                    .filter(p -> p.getName() != null && !p.getUniqueId().equals(player.getUniqueId()))
+                    .map(p -> new org.apache.commons.lang3.tuple.ImmutablePair<>(p, similarity(p.getName(), query)))
+                    .filter(pair -> pair.right >= minSimilarity)
+                    .sorted((a, b) -> b.right.compareTo(a.right))
+                    .limit(maxResults)
+                    .map(pair -> pair.left)
+                    .forEach(resultQueue::add);
+            } catch (Exception e) {
+                BlockProt.getInstance().getLogger().warning("TransferSearchInventory load failed: " + e.getMessage());
+            }
+        }
+
+        private double similarity(String a, String b) {
+            String longer  = a.length() >= b.length() ? a : b;
+            String shorter = a.length() <  b.length() ? a : b;
+            int len = longer.length();
+            if (len == 0) return 1.0;
+            return (len - levenshtein(longer, shorter)) / (double) len;
+        }
+
+        private int levenshtein(CharSequence a, CharSequence b) {
+            if (a.isEmpty()) return b.length();
+            if (b.isEmpty()) return a.length();
+            int[] mem = new int[b.length()];
+            for (int i = 0; i < b.length(); i++) mem[i] = i;
+            for (int i = 1; i < a.length(); i++) {
+                int[] cur = new int[b.length()];
+                cur[0] = i;
+                for (int j = 1; j < b.length(); j++) {
+                    int cost = a.charAt(i - 1) == b.charAt(j - 1) ? 0 : 1;
+                    cur[j] = Math.min(Math.min(mem[j] + 1, cur[j - 1] + 1), mem[j - 1] + cost);
+                }
+                mem = cur;
+            }
+            return mem[b.length() - 1];
+        }
+    }
+}

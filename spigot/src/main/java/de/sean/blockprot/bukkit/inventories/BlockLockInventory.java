@@ -123,6 +123,11 @@ public class BlockLockInventory extends BlockProtInventory {
                         }
                     );
                 }
+                case ENDER_PEARL -> {
+                    // Open transfer-search GUI: pick a player to transfer ownership to
+                    player.closeInventory();
+                    TransferSearchInventory.openSearch(player);
+                }
                 case SPYGLASS -> closeAndOpen(player, new BlockInspectContentsInventory(player).fill());
                 case CLOCK -> closeAndOpen(player, new AuditInventory().fill(player));
                 default -> closeAndOpen(
@@ -212,9 +217,15 @@ public class BlockLockInventory extends BlockProtInventory {
             );
         }
         setItemStack(
-            offset,
+            offset++,
             Material.NAME_TAG,
             TranslationKey.INVENTORIES__SET_BLOCK_NAME
+        );
+        // Transfer block ownership to another player
+        setItemStack(
+            offset,
+            Material.ENDER_PEARL,
+            TranslationKey.INVENTORIES__TRANSFER__BUTTON
         );
         if (PlayerInventoryClipboard.contains(player.getUniqueId().toString())) {
             setItemStack(

@@ -19,14 +19,34 @@
 package de.sean.blockprot.bukkit;
 
 /**
- * Represents the permission keys for BlockProt, handled by the Spigot server.
+ * Permission nodes for BlockProt.
+ *
+ * <p>Three node model:
+ * <ul>
+ *   <li>{@link #USER}       — all standard player actions (lock, friends, settings, stats, etc.)  default: true</li>
+ *   <li>{@link #USER_ADMIN} — all admin actions (reload, info, debug, etc.)                       default: op</li>
+ *   <li>{@link #BYPASS}     — bypass all block protections                                        default: false</li>
+ * </ul>
+ *
+ * <p>Legacy nodes are kept as aliases so existing code that references them continues to compile;
+ * internally they resolve to one of the three real nodes above.
+ *
  * @since 1.1.7
  */
 public enum Permissions {
-    LOCK("blockprot.lock"),
-    INFO("blockprot.info"),
-    ADMIN("blockprot.admin"),
-    BYPASS("blockprot.bypass");
+
+    // ── Real permission nodes (declared in plugin.yml) ──────────────────────
+    USER("blockprot.user"),
+    USER_ADMIN("blockprot.user.admin"),
+    BYPASS("blockprot.bypass"),
+
+    // ── Legacy aliases (not in plugin.yml; used internally for back-compat) ─
+    /** @deprecated Use {@link #USER} */
+    @Deprecated LOCK("blockprot.user"),
+    /** @deprecated Use {@link #USER_ADMIN} */
+    @Deprecated INFO("blockprot.user.admin"),
+    /** @deprecated Use {@link #USER_ADMIN} */
+    @Deprecated ADMIN("blockprot.user.admin");
 
     private final String text;
 

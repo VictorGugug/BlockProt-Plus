@@ -9,15 +9,16 @@ disabled: Disabled
 
 about:
   title: "§x§a§3§c§6§e§bBlockProt {version} - Spigot Plugin"
-  original_author: "§7Original author: §fspnda"
-  fork_maintainers: "§7Fork maintainers: §fVickey & Reim §8(alias ZarZey)"
-  report_original: "§x§c§3§e§e§a§7Report issues (original plugin)"
-  report_fork: "§x§6§6§c§6§6§6Report issues (SP26 fork)"
+  fork_maintainers: "§7Maintainer: §fVickey §8(VictorGugug)"
+  report_fork: "§x§6§6§c§6§6§6Report issues / Suggestions"
+  report_fork_hover: "Click to open the issue tracker on GitHub"
 
 inventories:
   back: "Back"
   last_page: "Last page"
   next_page: "Next page"
+  loading: "Loading..."
+  searching: "Searching..."
   block_lock: "Block Lock"
   user_settings: "User Settings"
   block_info: "Block Info"
@@ -61,6 +62,13 @@ inventories:
     no_entries: "No entries found."
     teleport: "Teleport to block"
     open: "Access Log"
+    action_count: "§7{count} action(s)"
+    click_hint: "§7Click to view full history."
+    player_history: "§aPlayer history"
+    action_access_denied: "§cAccess denied"
+    action_opened: "§aOpened"
+    action_item_taken: "§eTook item(s)"
+    action_item_placed: "§2Placed item(s)"
   # ── Pet protection (SP26-ZV) ──────────────────────────────────────────────
   pet:
     settings: "§dPet Settings"
@@ -69,12 +77,66 @@ inventories:
     no_interact: "§eBlock interaction"
     no_leash: "§6Block leash"
     no_pickup: "§bBlock pickup (parrot)"
-  # ─────────────────────────────────────────────────────────────────────────
+  # ── Transfer GUI ──────────────────────────────────────────────────────────
+  transfer:
+    title: "§8[§dTransfer Block§8] Search player"
+    search_prompt: "Player name"
+    button: "Transfer block"
+    button_lore: "Transfer ownership to another player."
+  # ── Timed access GUI ──────────────────────────────────────────────────────
+  timed:
+    title: "§8[§6Timed Access§8] Select duration"
+    button: "§eTimed Access"
+    button_lore: "Grant access for a limited time. Click to select duration."
+    info: "§eInfo"
+    over_max: "§cExceeds the configured maximum"
+    max_label: "§7Maximum: §f{duration}"
+    no_limit: "§7Maximum: §fNo limit"
+    player_label: "§7Player: §f{player}"
+  # ── User menu ─────────────────────────────────────────────────────────────
+  user_menu:
+    title: "§8[§bUser§8] §fBlockProt"
+    settings: "§fMy Settings"
+    settings_lore: "Configure your personal preferences."
+    friends: "§aFriends"
+    friends_lore: "Manage your global friends list."
+    stats: "§bStatistics"
+    stats_lore: "See how many blocks you have protected."
+    transfer: "§dTransfer block"
+    transfer_lore: "Look at a block and use /bp transfer <player>."
+    timed: "§eTimed access"
+    timed_lore: "Look at a block and use /bp timed <player> <seconds>."
+    hints: "§7Protection hints"
+    hints_lore: "Toggle block-placement protection hints."
+    hints_already: "§7Hints already managed."
+    about: "§fAbout BlockProt"
+    about_lore: "Plugin information."
+    close: "§cClose"
+    close_lore: "Close this menu."
+  # ── Admin menu ────────────────────────────────────────────────────────────
+  admin_menu:
+    title: "§8[§cAdmin§8] §fBlockProt"
+    reload: "§aReload config"
+    reload_lore: "Reloads config.yml and translations."
+    update: "§bCheck for updates"
+    update_lore: "Check if a new version is available."
+    integrations: "§dActive integrations"
+    integrations_lore: "Lists enabled integrations in chat."
+    stats: "§fStatistics"
+    stats_lore: "Opens the global statistics menu."
+    debug: "§cDiagnostics (debug)"
+    debug_lore: "Runs internal plugin tests and writes to the log."
+    info: "§eBlock info"
+    info_lore: "Close and use /bp info <player> to list their blocks."
+    close: "§cClose"
+    close_lore: "Close this menu."
 
 messages:
   permission_granted: "Permission granted."
   unlocked: "Unlocked."
   no_permission: "No permission."
+  error_prefix: "§c[BlockProt]: "
+  pet_death_notification: "§c§l[BlockProt] §r§cYour pet §e{pet_name}§c has died."
   friend_added: "Friend added."
   friend_removed: "Friend removed."
   friend_already_added: "Friend already added."
@@ -101,21 +163,38 @@ messages:
   only_players: "Only players can use this command."
   reload_done: "§aFinished reloading BlockProt."
   integrations_enabled: "§7Enabled integrations ({count}): {integrations}"
-  # ── New in SP26 ───────────────────────────────────────────────────────────
+  # ── Transfer ──────────────────────────────────────────────────────────────
   transfer_success: "§aOwnership transferred to §f{player}§a. You were added as a friend."
   transfer_usage: "§cUsage: /bp transfer <player>  (look at a block you own)"
   transfer_not_owner: "§cYou are not the owner of that block."
   transfer_player_not_found: "§cPlayer not found: {player}"
   transfer_self: "§cYou cannot transfer a block to yourself."
+  transfer_self_gui: "§cYou cannot transfer a block to yourself."
+  transfer_not_owner_gui: "§cYou are not the owner of that block."
+  transfer_failed: "§cCould not transfer the block."
+  # ── Timed access ──────────────────────────────────────────────────────────
   timed_access_success: "§aGranted §f{player}§a temporary access for §f{seconds}§a second(s)."
+  timed_access_granted: "§aTemporary access granted for §f{duration}§a."
   timed_access_usage: "§cUsage: /bp timed <player> <seconds>  (look at a block you own)"
   timed_access_revoked: "§6Timed access for §f{player}§6 was revoked."
   timed_access_not_owner: "§cYou are not the owner of that block or it is not lockable."
+  timed_access_over_max: "§cDuration exceeds the configured maximum ({duration})."
+  timed_access_invalid_state: "§cTimed access is only available for friends on a specific block."
+  # ── Admin info ────────────────────────────────────────────────────────────
   admin_info_header: "§6=== Blocks owned by {player} ==="
   admin_info_entry: "§7  {world} §f{x}, {y}, {z}"
   admin_info_usage: "§cUsage: /bp info <player>"
   admin_info_player_not_found: "§cPlayer not found: {player}"
   admin_info_no_blocks: "§7{player} owns no locked blocks."
+  # ── User / Admin menus ────────────────────────────────────────────────────
+  user_transfer_hint: "§7Look at a block you own then use: §f/bp transfer <player>"
+  user_timed_hint: "§7Look at a block you own then use: §f/bp timed <player> <seconds>"
+  hints_disabled: "§aProtection hints disabled."
+  hints_already: "§7Hints already managed. Adjust them in My Settings."
+  admin_reload_done: "§a[BP Admin] Config and translations reloaded."
+  admin_integrations: "§7[BP Admin] Integrations ({count}): {integrations}"
+  admin_info_hint: "§7[BP Admin] Use §f/bp info <player>§7 to list their protected blocks."
+  admin_debug_hint: "§7[BP Admin] Running diagnostics..."
 
 console:
   config_change_detected: "Configuration change detected; reloading..."
@@ -149,6 +228,7 @@ console:
   java_too_old: "Java version too old: {version} (BlockProt SP26 requires Java 25+)"
   not_paper: "Not running on Paper. Chat-based player search is disabled and will fall back to the anvil GUI. Paper is recommended."
   typed_views_fallback: "Running Paper/Spigot 1.21.0-1.21.3 before typed inventory views. AnvilInput fallbacks will be used."
+  stats_save_failed: "Statistics file could not be saved: {error}"
 
 worlds:
   scan_start: "Scanning worlds... ({count} loaded)"

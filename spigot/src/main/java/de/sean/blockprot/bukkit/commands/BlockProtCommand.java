@@ -18,8 +18,7 @@
 
 package de.sean.blockprot.bukkit.commands;
 
-import de.sean.blockprot.bukkit.BlockProt;
-import de.sean.blockprot.bukkit.Translator;
+import de.sean.blockprot.bukkit.Permissions;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabExecutor;
@@ -28,40 +27,61 @@ import org.jetbrains.annotations.NotNull;
 import java.util.*;
 
 /**
- * Wrapper around all commands for BlockProt. Implements tab-completion and dispatch
- * for all registered sub-command executors.
+ * Main dispatcher for /blockprot (alias /bp).
+ *
+ * <p>Only two public subcommands exist:
+ * <ul>
+ *   <li>{@code user}  — opens the user GUI;  requires {@code blockprot.user} (default: true)</li>
+ *   <li>{@code admin} — opens the admin GUI; requires {@code blockprot.user.admin} (default: op)</li>
+ * </ul>
+ *
+ * <p>All legacy subcommands (help, settings, friends, reload, …) are still registered internally
+ * so that the underlying command classes continue to work if invoked directly from other plugins
+ * or scripts, but they are NOT shown in tab-complete.
  *
  * @since 1.1.2
  */
 public final class BlockProtCommand implements TabExecutor {
 
-    private static final Map<String, CommandExecutor> canonicalExecutors = new LinkedHashMap<>();
-    private static final Map<String, List<String>> englishAliases = new LinkedHashMap<>();
+    /** Publicly advertised commands (shown in tab-complete). */
+    private static final Map<String, CommandExecutor> publicExecutors = new LinkedHashMap<>();
+
+    /** All commands including legacy ones (not shown in tab-complete). */
+    private static final Map<String, CommandExecutor> allExecutors = new LinkedHashMap<>();
 
     static {
-        var statsCommand = new StatisticsCommand();
-        register("stats",        statsCommand, "statistics");
-        register("settings",     new SettingsCommand());
-        register("about",        new AboutCommand());
-        register("update",       new UpdateCommand());
-        register("reload",       new ReloadCommand());
-        register("integrations", new IntegrationsCommand());
-        register("debug",        new DebugCommand());
-        register("disablehints", new HintsCommand());
-        register("friends",      new FriendsAddAllCommand());
-        register("transfer",     new TransferCommand());
-        register("timed",        new TimedAccessCommand());
-        register("info",         new InfoCommand());
-        var helpCommand = new HelpCommand();
-        register("help",         helpCommand);
+        // ── Public GUI commands ──────────────────────────────────────────────
+        register(true,  "user",         new UserMenuCommand());
+        register(true,  "admin",        new AdminMenuCommand());
+
+        // ── Legacy commands (hidden from tab-complete, still functional) ─────
+        register(false, "stats",        new StatisticsCommand(), "statistics");
+        register(false, "settings",     new SettingsCommand());
+        register(false, "about",        new AboutCommand());
+        register(false, "update",       new UpdateCommand());
+        register(false, "reload",       new ReloadCommand());
+        register(false, "integrations", new IntegrationsCommand());
+        register(false, "debug",        new DebugCommand());
+        register(false, "disablehints", new HintsCommand());
+        register(false, "friends",      new FriendsAddAllCommand());
+        register(false, "transfer",     new TransferCommand());
+        register(false, "timed",        new TimedAccessCommand());
+        register(false, "info",         new InfoCommand());
+        register(false, "help",         new HelpCommand());
     }
 
     @Override
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command,
                              @NotNull String label, @NotNull String[] args) {
-        if (args.length == 0) return false;
+        if (args.length == 0) {
+            // Default: open the appropriate GUI
+            if (sender.isOp() || sender.hasPermission(Permissions.USER_ADMIN.key())) {
+                return allExecutors.get("admin").onCommand(sender, command, label, args);
+            }
+            return allExecutors.get("user").onCommand(sender, command, label, args);
+        }
 
-        var executor = buildExecutorMap().get(args[0].toLowerCase(Locale.ROOT));
+        var executor = allExecutors.get(args[0].toLowerCase(Locale.ROOT));
         if (executor != null) {
             return executor.onCommand(sender, command, label, args);
         }
@@ -73,72 +93,52 @@ public final class BlockProtCommand implements TabExecutor {
                                                @NotNull String alias, @NotNull String[] args) {
         if (args.length <= 1) {
             final var list = new ArrayList<String>();
-            for (var entry : buildExecutorMap().entrySet()) {
+            for (var entry : publicExecutors.entrySet()) {
                 if (entry.getValue().canUseCommand(sender))
                     list.add(entry.getKey());
             }
+            // Filter by what they have typed so far
+            String partial = args.length == 1 ? args[0].toLowerCase(Locale.ROOT) : "";
+            list.removeIf(s -> !s.startsWith(partial));
             return list;
         }
 
-        var executor = buildExecutorMap().get(args[0].toLowerCase(Locale.ROOT));
+        var executor = allExecutors.get(args[0].toLowerCase(Locale.ROOT));
         if (executor != null) {
             final var completions = executor.onTabComplete(sender, command, alias, args);
             if (completions != null) return completions;
         }
-
         return Collections.emptyList();
     }
 
-    private static void register(@NotNull String canonical, @NotNull CommandExecutor executor, String... aliases) {
-        canonicalExecutors.put(canonical, executor);
-        englishAliases.put(canonical, List.of(aliases));
-    }
-
-    @NotNull
-    private static Map<String, CommandExecutor> buildExecutorMap() {
-        Map<String, CommandExecutor> result = new LinkedHashMap<>();
-        for (var entry : canonicalExecutors.entrySet()) {
-            result.put(entry.getKey(), entry.getValue());
-            for (String alias : englishAliases.getOrDefault(entry.getKey(), Collections.emptyList())) {
-                result.put(alias.toLowerCase(Locale.ROOT), entry.getValue());
-            }
-        }
-        addLocalizedAliases(result);
-        return result;
-    }
-
-    private static void addLocalizedAliases(@NotNull Map<String, CommandExecutor> result) {
-        try {
-            if (!BlockProt.getDefaultConfig().isLocalizedCommandAliasesEnabled()) return;
-        } catch (AssertionError ignored) {
-            return;
-        }
-
-        String lang = Translator.getLocale().getLanguage().toLowerCase(Locale.ROOT);
-        if (!lang.equals("es")) return;
-
-        alias(result, "stats", "estadisticas");
-        alias(result, "settings", "ajustes", "configuracion");
-        alias(result, "about", "acerca");
-        alias(result, "update", "actualizar");
-        alias(result, "reload", "recargar");
-        alias(result, "integrations", "integraciones");
-        alias(result, "debug", "depurar");
-        alias(result, "disablehints", "desactivarsugerencias");
-        alias(result, "friends", "amigos");
-        alias(result, "transfer", "transferir");
-        alias(result, "timed", "temporal");
-        alias(result, "info", "info");
-        alias(result, "help", "ayuda");
-    }
-
-    private static void alias(@NotNull Map<String, CommandExecutor> result,
-                              @NotNull String canonical,
-                              @NotNull String... aliases) {
-        CommandExecutor executor = canonicalExecutors.get(canonical);
-        if (executor == null) return;
+    private static void register(boolean isPublic, @NotNull String canonical,
+                                 @NotNull CommandExecutor executor, String... aliases) {
+        if (isPublic) publicExecutors.put(canonical, executor);
+        allExecutors.put(canonical, executor);
         for (String alias : aliases) {
-            result.put(alias.toLowerCase(Locale.ROOT), executor);
+            allExecutors.put(alias.toLowerCase(Locale.ROOT), executor);
+        }
+        // Spanish localized aliases for public commands
+        addSpanishAliases(canonical, executor);
+    }
+
+    private static void addSpanishAliases(@NotNull String canonical, @NotNull CommandExecutor executor) {
+        switch (canonical) {
+            case "user"  -> allExecutors.put("usuario",       executor);
+            case "admin" -> allExecutors.put("administrador", executor);
+            // Legacy
+            case "stats"        -> allExecutors.put("estadisticas",          executor);
+            case "settings"     -> { allExecutors.put("ajustes", executor); allExecutors.put("configuracion", executor); }
+            case "about"        -> allExecutors.put("acerca",                executor);
+            case "update"       -> allExecutors.put("actualizar",            executor);
+            case "reload"       -> allExecutors.put("recargar",              executor);
+            case "integrations" -> allExecutors.put("integraciones",         executor);
+            case "debug"        -> allExecutors.put("depurar",               executor);
+            case "disablehints" -> allExecutors.put("desactivarsugerencias", executor);
+            case "friends"      -> allExecutors.put("amigos",                executor);
+            case "transfer"     -> allExecutors.put("transferir",            executor);
+            case "timed"        -> allExecutors.put("temporal",              executor);
+            case "help"         -> allExecutors.put("ayuda",                 executor);
         }
     }
 }

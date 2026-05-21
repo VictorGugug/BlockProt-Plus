@@ -293,6 +293,16 @@ public final class DefaultConfig extends BlockProtConfig {
 
     public boolean shouldEnableAllOptionalFeatures() { return config.getBoolean("optional_features_enable_all", false); }
     public boolean isLocalizedCommandAliasesEnabled() { return config.getBoolean("localized_command_aliases", true); }
+
+    /**
+     * Maximum timed-access duration in seconds. Returns {@code Long.MAX_VALUE} when unlimited.
+     * Configured via {@code timed_access_max_duration_days} in config.yml.
+     */
+    public long getTimedAccessMaxDurationSeconds() {
+        int days = config.getInt("timed_access_max_duration_days", 90);
+        if (days <= 0) return Long.MAX_VALUE;
+        return (long) days * 24 * 60 * 60;
+    }
     public boolean isMysqlEnabled() { return mysqlConfig != null && mysqlConfig.contains("mysql.enabled") && mysqlConfig.getBoolean("mysql.enabled"); }
 
     @NotNull public String getMysqlJdbcUrl() {

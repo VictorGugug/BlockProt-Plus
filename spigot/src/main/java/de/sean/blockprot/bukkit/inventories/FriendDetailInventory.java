@@ -31,16 +31,23 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Arrays;
-import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
 
 /**
- * The detail inventory for managing a single friend and their permission.
+ * The detail inventory for managing a single friend and their permissions.
+ *
+ * <p>Layout (single row = 9 slots):
+ * <ul>
+ *   <li>Slot 0: Player skull</li>
+ *   <li>Slot 1: Remove friend (red glass)</li>
+ *   <li>Slot 2: Timed access — CLOCK (only when viewing a block friend)</li>
+ *   <li>Slot 8: Back button</li>
+ * </ul>
  */
 public final class FriendDetailInventory extends BlockProtInventory {
     @Nullable
@@ -68,27 +75,27 @@ public final class FriendDetailInventory extends BlockProtInventory {
             case RED_STAINED_GLASS_PANE -> {
                 final var friend = state.currentFriend;
                 assert friend != null;
-
                 modifyFriendsForAction(player, friend, FriendModifyAction.REMOVE_FRIEND);
-                // We remove the friend, so the player does not exist anymore either.
                 this.playerHandler = null;
                 closeAndOpen(player, new FriendManageInventory().fill(player));
             }
-            case ENDER_EYE -> {
-                // Feature removed
+            case CLOCK -> {
+                // Open timed-access duration picker — only for block friends, not global
+                if (state.getBlock() != null) {
+                    closeAndOpen(player, new TimedAccessInventory().fill(player));
+                } else {
+                    player.sendMessage(Translator.get(TranslationKey.MESSAGES__TIMED_ACCESS_INVALID_STATE));
+                }
             }
-            case PLAYER_HEAD -> {
-                // Don't do anything.
-            }
+            case ENDER_EYE -> { /* Feature removed */ }
+            case PLAYER_HEAD -> { /* Don't do anything */ }
             default -> closeAndOpen(player, null);
         }
         event.setCancelled(true);
     }
 
     @Override
-    public void onClose(@NotNull InventoryCloseEvent event, @NotNull InventoryState state) {
-        // Access flags feature removed
-    }
+    public void onClose(@NotNull InventoryCloseEvent event, @NotNull InventoryState state) {}
 
     @Nullable
     public Inventory fill(@NotNull Player player) {
@@ -98,6 +105,7 @@ public final class FriendDetailInventory extends BlockProtInventory {
         final var uuid = state.currentFriend;
         if (uuid == null) return inventory;
 
+        // Slot 0: player skull
         if (!uuid.equals(FriendSupportingHandler.publicUuid)) {
             try {
                 final var profile = BlockProt.getProfileService().findByUuid(uuid);
@@ -109,28 +117,39 @@ public final class FriendDetailInventory extends BlockProtInventory {
             }
         } else {
             setItemStack(0, Material.PLAYER_HEAD,
-                    TranslationKey.INVENTORIES__FRIENDS__THE_PUBLIC,
-                    List.of(Translator.get(TranslationKey.INVENTORIES__FRIENDS__THE_PUBLIC_DESC)));
+                TranslationKey.INVENTORIES__FRIENDS__THE_PUBLIC,
+                List.of(Translator.get(TranslationKey.INVENTORIES__FRIENDS__THE_PUBLIC_DESC)));
         }
-        setItemStack(
-            1, Material.RED_STAINED_GLASS_PANE, TranslationKey.INVENTORIES__FRIENDS__REMOVE);
 
+        // Slot 1: remove button
+        setItemStack(1, Material.RED_STAINED_GLASS_PANE, TranslationKey.INVENTORIES__FRIENDS__REMOVE);
+
+        // Slot 2: timed access — only for block-scoped friends
+        if (state.getBlock() != null) {
+            ItemStack clockItem = new ItemStack(Material.CLOCK);
+            ItemMeta clockMeta = clockItem.getItemMeta();
+            if (clockMeta != null) {
+                clockMeta.setDisplayName(Translator.get(TranslationKey.INVENTORIES__TIMED__BUTTON));
+                clockMeta.setLore(List.of(Translator.get(TranslationKey.INVENTORIES__TIMED__BUTTON_LORE)));
+                clockItem.setItemMeta(clockMeta);
+            }
+            inventory.setItem(2, clockItem);
+        }
+
+        // Resolve friend handler
         final @Nullable FriendSupportingHandler<NBTCompound> handler =
             getFriendSupportingHandler(state.friendSearchState, player, state.getBlock());
         if (handler == null) return null;
 
-        final Optional<FriendHandler> friendHandler =
-            handler.getFriend(uuid.toString());
-
+        final Optional<FriendHandler> friendHandler = handler.getFriend(uuid.toString());
         if (friendHandler.isEmpty()) {
             BlockProt.getInstance().getLogger().warning(
-                    "Tried to open a " + this.getClass().getSimpleName() + " with a unknown player.");
+                "Tried to open a " + this.getClass().getSimpleName() + " with an unknown player.");
             return null;
         }
         playerHandler = friendHandler.get();
 
         setBackButton();
-
         return inventory;
     }
 }
