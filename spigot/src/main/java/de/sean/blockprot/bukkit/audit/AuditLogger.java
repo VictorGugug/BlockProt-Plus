@@ -1,6 +1,8 @@
 package de.sean.blockprot.bukkit.audit;
 
 import de.sean.blockprot.bukkit.BlockProt;
+import de.sean.blockprot.bukkit.TranslationKey;
+import de.sean.blockprot.bukkit.Translator;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.jetbrains.annotations.NotNull;
@@ -64,7 +66,7 @@ public final class AuditLogger {
         File mysqlDir = new File(dataFolder, "mysql");
         if (!mysqlDir.exists()) mysqlDir.mkdirs();
 
-        // Migra el archivo viejo de la raiz a mysql/ si todavia existe ahi
+        // Migrate the old database from the root folder to mysql/ if it still exists there.
         File oldDb = new File(dataFolder, DB_NAME);
         File newDb = new File(mysqlDir, DB_NAME);
         if (oldDb.exists() && !newDb.exists()) {
@@ -153,7 +155,9 @@ public final class AuditLogger {
                 }
                 writesSincePrune++;
             } catch (SQLException e) {
-                BlockProt.getInstance().getLogger().warning("[Audit] Failed to save event: " + e.getMessage());
+                BlockProt.getInstance().getLogger().warning(
+                    Translator.get(TranslationKey.CONSOLE__AUDIT_LOGGER_FAILED)
+                        .replace("{error}", e.getMessage()));
             }
         });
     }
@@ -175,7 +179,9 @@ public final class AuditLogger {
                 }
             }
         } catch (SQLException e) {
-            BlockProt.getInstance().getLogger().warning("[Audit] Failed to read events by block: " + e.getMessage());
+            BlockProt.getInstance().getLogger().warning(
+                Translator.get(TranslationKey.CONSOLE__AUDIT_LOGGER_FAILED)
+                    .replace("{error}", e.getMessage()));
         }
         return entries;
     }
@@ -194,7 +200,9 @@ public final class AuditLogger {
                 }
             }
         } catch (SQLException e) {
-            BlockProt.getInstance().getLogger().warning("[Audit] Failed to read events by player: " + e.getMessage());
+            BlockProt.getInstance().getLogger().warning(
+                Translator.get(TranslationKey.CONSOLE__AUDIT_LOGGER_FAILED)
+                    .replace("{error}", e.getMessage()));
         }
         return entries;
     }

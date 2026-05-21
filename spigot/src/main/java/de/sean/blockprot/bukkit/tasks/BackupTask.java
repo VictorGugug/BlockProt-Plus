@@ -6,18 +6,12 @@ import de.sean.blockprot.bukkit.BlockProtLogger;
 import de.sean.blockprot.bukkit.TranslationKey;
 import de.sean.blockprot.bukkit.Translator;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.text.SimpleDateFormat;
-import java.time.Duration;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Date;
@@ -35,8 +29,8 @@ import java.util.zip.ZipOutputStream;
  *
  * <p>Backups are saved to: {@code plugins/BlockProt/backups/YYYY-MM-DD_HH-mm.zip}</p>
  *
- * <p>The optional GitHub version check is performed <em>asynchronously</em> after the
- * ZIP has been written, so it never adds latency to the server startup sequence.</p>
+ * <p>Version metadata is written from the cached {@link UpdateChecker#latestVersion}
+ * value when available, avoiding a redundant HTTP request at startup.</p>
  *
  * @since SP26
  */
@@ -74,7 +68,7 @@ public final class BackupTask implements Runnable {
         boolean hasPriorData = forced || hasPriorData(dataFolder);
 
         if (!hasPriorData) {
-            // Fresh install — no backup needed, no noise in console.
+            // Fresh installation — no backup needed.
             return;
         }
 
@@ -93,25 +87,31 @@ public final class BackupTask implements Runnable {
         } catch (Exception ignored) {}
 
         String timestamp = DATE_FMT.format(new Date());
-        String suffix = "";
-        if (version != null && !version.isBlank()) {
-            suffix = "_v" + version.replaceAll("\\s+", "_");
-        }
+        String suffix = version.isBlank() ? "" : "_v" + version.replaceAll("\\s+", "_");
 
         File zipFile = new File(backupDir, timestamp + suffix + ".zip");
 
         try (ZipOutputStream zos = new ZipOutputStream(new FileOutputStream(zipFile))) {
             addDirectory(dataFolder, dataFolder.getName(), zos, backupDir);
 
-            // Minimal metadata — no network calls here.
-            StringBuilder meta = new StringBuilder();
-            meta.append("plugin: BlockProt\n");
-            meta.append("version: ").append(version).append("\n");
+            // Write minimal metadata — no network calls on the main thread.
+            String meta = "plugin: BlockProt\nversion: " + version + "\n";
+
+            // Use the cached latest-version result from UpdateChecker if available,
+            // to avoid a redundant HTTP request at startup.
+            de.sean.blockprot.util.SemanticVersion cached = UpdateChecker.latestVersion;
+            if (cached != null) {
+                boolean isLatest = cached.compareTo(new de.sean.blockprot.util.SemanticVersion(version)) <= 0;
+                meta += "latest_release: " + cached + "\nis_latest: " + isLatest + "\n";
+                BlockProtLogger.log("backup", "Version check (cached): latest=" + cached
+                    + ", running=" + version + ", isLatest=" + isLatest);
+            }
+
             zos.putNextEntry(new ZipEntry("release_info.txt"));
-            zos.write(meta.toString().getBytes());
+            zos.write(meta.getBytes());
             zos.closeEntry();
 
-            BlockProtLogger.log("backup", "Pre-existing data detected. Backup created at "
+            BlockProtLogger.log("backup", "Pre-existing data detected. Backup created: "
                 + zipFile.getAbsolutePath());
             BlockProtConsole.info(
                 Translator.get(TranslationKey.CONSOLE__BACKUP_CREATED)
@@ -124,62 +124,6 @@ public final class BackupTask implements Runnable {
             BlockProt.getInstance().getLogger().warning(
                 Translator.get(TranslationKey.CONSOLE__BACKUP_FAILED)
                     .replace("{error}", e.getMessage()));
-            return;
-        }
-
-        // Kick off the optional GitHub version check asynchronously — it must NOT
-        // block startup. Any network failure is silently discarded.
-        final String currentVersion = version;
-        final File finalZip = zipFile;
-        org.bukkit.Bukkit.getScheduler().runTaskAsynchronously(BlockProt.getInstance(), () ->
-            appendVersionInfoAsync(finalZip, currentVersion));
-    }
-
-    /**
-     * Queries the GitHub Releases API and appends is_latest_release info to the zip's
-     * metadata file. Runs completely off the main thread. All exceptions are swallowed.
-     */
-    private static void appendVersionInfoAsync(@NotNull File zipFile, @NotNull String version) {
-        String latestTag = "";
-        boolean isLatest = false;
-        try {
-            HttpClient client = HttpClient.newBuilder()
-                .connectTimeout(Duration.ofSeconds(3))
-                .build();
-            HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("https://api.github.com/repos/VictorGugug/BlockProt-Plus/releases/latest"))
-                .header("User-Agent", "BlockProt-BackupTask")
-                .header("Accept", "application/vnd.github+json")
-                .timeout(Duration.ofSeconds(3))
-                .GET()
-                .build();
-            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-            if (response.statusCode() == 200) {
-                String body = response.body();
-                int idx = body.indexOf("\"tag_name\"");
-                if (idx >= 0) {
-                    int colon  = body.indexOf(':', idx);
-                    int quote1 = body.indexOf('"', colon + 1);
-                    int quote2 = body.indexOf('"', quote1 + 1);
-                    if (quote1 >= 0 && quote2 > quote1) {
-                        latestTag = body.substring(quote1 + 1, quote2);
-                        String cmp = latestTag.startsWith("v") || latestTag.startsWith("V")
-                            ? latestTag.substring(1) : latestTag;
-                        isLatest = cmp.equals(version);
-                    }
-                }
-            }
-        } catch (Throwable ignored) {
-            // Best-effort — network down, rate-limited, etc.
-        }
-
-        if (!latestTag.isEmpty() && zipFile.exists()) {
-            // We can't reopen a ZipOutputStream to append, so we log the info instead.
-            BlockProtLogger.log("backup", "GitHub version check: latest=" + latestTag
-                + ", running=" + version + ", isLatest=" + isLatest);
-            if (isLatest) {
-                BlockProtLogger.log("backup", "Running the latest release.");
-            }
         }
     }
 

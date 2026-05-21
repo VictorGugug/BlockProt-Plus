@@ -112,7 +112,7 @@ public final class BlockProt extends JavaPlugin {
     @Override
     public void onEnable() {
         if (isRunningCraftBukkit()) {
-            final var message = "This plugin does not support running on CraftBukkit servers! Please use any Spigot server instead!";
+            final var message = "This plugin does not support CraftBukkit. Please use Spigot or Paper.";
             getLogger().severe(message);
             getServer().getPluginManager().registerEvents(new ErrorEventListener(message), this);
             return;
@@ -124,14 +124,16 @@ public final class BlockProt extends JavaPlugin {
         new BlockProtAPI(this);
         BlockProtLogger.init(this.getDataFolder());
         String version = this.getDescription().getVersion();
-        BlockProtLogger.log("Plugin version: " + version);
+
+        // Session header — written to the log file only, not the console.
+        BlockProtLogger.log("=== Startup: BlockProt v" + version + " ===");
         BlockProtLogger.log("Server: " + Bukkit.getVersion());
         BlockProtLogger.log("Runtime: " + VersionCompat.getDiagnosticString());
+        if (VersionCompat.is26Family()) {
+            BlockProtLogger.log("Version scheme: 26.x year-based detected.");
+        }
 
         BlockProtConsole.beginStartup(this.getLogger());
-        if (VersionCompat.is26Family()) {
-            BlockProtLogger.log("Detected 26.x year-based version scheme.");
-        }
 
         StatHandler.enable();
         this.cleanLegacyConfigKeys();
@@ -175,12 +177,13 @@ public final class BlockProt extends JavaPlugin {
         metrics = new Metrics(this, pluginId);
         metrics.addCustomChart(new IntegrationBarChart());
 
+        // Enable integrations — one console line per enabled integration.
         for (PluginIntegration integration : integrations) {
             try {
                 integration.enable();
                 if (integration.isEnabled()) {
                     BlockProtConsole.integrationEnabled(integration.name);
-                    BlockProtLogger.log("integration", "Enabled plugin integration for plugin with id '" + integration.name + "'");
+                    BlockProtLogger.log("integration", "Enabled: " + integration.name);
                 }
             } catch (NoClassDefFoundError ignored) {}
         }
@@ -222,7 +225,7 @@ public final class BlockProt extends JavaPlugin {
     @Override
     public void onDisable() {
         if (!isRunningCraftBukkit()) {
-            BlockProtLogger.log("Saving statistic file...");
+            getLogger().info("Saving statistics to disk...");
             StatHandler.disable();
             getServer().getOnlinePlayers().forEach(HumanEntity::closeInventory);
         }
@@ -253,7 +256,7 @@ public final class BlockProt extends JavaPlugin {
 
         InputStream defaultLanguageStream = this.getResource(langFolder + defaultLanguageFile);
         if (defaultLanguageStream == null) {
-            throw new RuntimeException("Failed to get default language file. Possibly corrupt plugin?");
+            throw new RuntimeException("Failed to load the default language file. The plugin JAR may be corrupt.");
         }
         YamlConfiguration defaultLanguageConfig = YamlConfiguration.loadConfiguration(
             new BufferedReader(new InputStreamReader(defaultLanguageStream)));
@@ -282,9 +285,13 @@ public final class BlockProt extends JavaPlugin {
         pm.registerEvents(listener, this);
     }
 
+    /**
+     * Registers a plugin integration. Logs to the session file only;
+     * console output is deferred until after the integration is confirmed enabled.
+     */
     void registerIntegration(@NotNull PluginIntegration integration) {
         this.integrations.add(integration);
-        BlockProtConsole.integration(integration.name);
+        BlockProtLogger.log("integration", "Registered: " + integration.name);
     }
 
     @Nullable
@@ -322,7 +329,7 @@ public final class BlockProt extends JavaPlugin {
             if (!diskConfig.contains(key)) {
                 diskConfig.set(key, jarConfig.get(key));
                 added++;
-                BlockProtLogger.log("lang-merge", resource + " added missing key: " + key);
+                BlockProtLogger.log("lang-merge", resource + " — added missing key: " + key);
             }
         }
 
@@ -339,25 +346,23 @@ public final class BlockProt extends JavaPlugin {
     }
 
     /**
-     * Reescribe el config.yml en disco usando el template del jar como base,
-     * preservando todos los valores que el usuario ya tiene configurados.
-     * Esto garantiza que el formato, comentarios y secciones siempre estén limpios.
-     * También elimina claves obsoletas (mysql, console, lockable_*) si existen.
+     * Rewrites config.yml on disk using the bundled JAR template as a base,
+     * preserving all values the administrator has already configured.
+     * This ensures format, comments, and sections are always clean,
+     * and removes obsolete keys (mysql, console, lockable_*) if present.
      */
     private void cleanLegacyConfigKeys() {
         File diskFile = new File(this.getDataFolder(), "config.yml");
         if (!diskFile.exists()) return;
 
-        // Lee los valores actuales del usuario
         YamlConfiguration userValues = YamlConfiguration.loadConfiguration(diskFile);
 
-        // Lee el template limpio del jar
         InputStream jarStream = this.getResource("config.yml");
         if (jarStream == null) return;
         YamlConfiguration template = YamlConfiguration.loadConfiguration(
             new BufferedReader(new InputStreamReader(jarStream)));
 
-        // Aplica los valores del usuario sobre el template (solo claves que existen en el template)
+        // Overlay user values onto the clean template (template keys only).
         for (String key : template.getKeys(true)) {
             if (template.isConfigurationSection(key)) continue;
             if (userValues.contains(key)) {
@@ -365,10 +370,9 @@ public final class BlockProt extends JavaPlugin {
             }
         }
 
-        // Guarda el template con valores del usuario → formato limpio garantizado
         try {
             template.save(diskFile);
-            BlockProtLogger.log("config-clean", "Rewrote config.yml with clean format, preserving user values.");
+            BlockProtLogger.log("config-clean", "config.yml rewritten with clean format; user values preserved.");
         } catch (IOException e) {
             BlockProtLogger.warn("Failed to rewrite config.yml: " + e.getMessage());
         }
@@ -398,7 +402,7 @@ public final class BlockProt extends JavaPlugin {
             if (!diskConfig.contains(key)) {
                 diskConfig.set(key, jarConfig.get(key));
                 added++;
-                BlockProtLogger.log("config-merge", "config.yml added missing key: " + key);
+                BlockProtLogger.log("config-merge", "config.yml — added missing key: " + key);
             }
         }
 
@@ -407,7 +411,7 @@ public final class BlockProt extends JavaPlugin {
             diskConfig.save(diskFile);
             BlockProtConsole.info(Translator.get(TranslationKey.CONSOLE__CONFIG_KEYS_UPDATED)
                 .replace("{count}", String.valueOf(added)));
-            BlockProtLogger.log("config-merge", "config.yml merge completed; added " + added + " missing option(s).");
+            BlockProtLogger.log("config-merge", "config.yml merge complete — added " + added + " missing option(s).");
         } catch (IOException e) {
             BlockProtConsole.warn(Translator.get(TranslationKey.CONSOLE__CONFIG_KEYS_SAVE_FAILED)
                 .replace("{error}", e.getMessage()));

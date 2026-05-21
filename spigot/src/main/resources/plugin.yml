@@ -3,9 +3,9 @@ version: ${version}
 main: de.sean.blockprot.bukkit.BlockProt
 api-version: '1.21'
 authors: [ Zar ]
-description: Block protection plugin — SP26-ZV fork by Zar
+description: Block protection plugin — BlockProt Reloaded
 prefix: BlockProt
-website: https://github.com/VictorGugug/BlockProt-SP26-ZV
+website: https://github.com/VictorGugug/BlockProt-Reloaded
 permissions:
   blockprot.lock:
     default: true
@@ -15,19 +15,19 @@ permissions:
     description: Allows a player to view info on any locked blocks
   blockprot.admin:
     default: false
-    description: Allows a player to unlock and edit other blocks that do not belong to them
+    description: Allows a player to unlock and edit blocks that do not belong to them
   blockprot.bypass:
     default: false
     description: Allows a player to bypass any protection, effectively having access to every block.
   blockprot.lockmax:
     default: false
-    description: Removes or overrides the restriction from player_max_locked_block_count, only if it is set. To override, use blockprot.locklimit.<number>.
+    description: Removes or overrides the restriction from player_max_locked_block_count. To override, use blockprot.locklimit.<number>.
   blockprot.locklimit.<number>:
     default: false
     description: Sets a per-player block lock limit. e.g. blockprot.locklimit.50
   blockprot.debug:
     default: false
-    description: Allows a player to execute debug commands. This is usually only used by the developer but can help assist in fixing issues.
+    description: Allows a player to execute debug commands.
 commands:
   blockprot:
     description: The main blockprot command

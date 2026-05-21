@@ -63,7 +63,8 @@ public final class BlockProtConsole {
     }
 
     /**
-     * Prints a simple startup summary, then clears the buffer so subsequent calls print immediately.
+     * Prints a simple startup summary, then clears the buffer so subsequent calls
+     * print immediately.
      *
      * @param version The plugin version string.
      */
@@ -71,18 +72,9 @@ public final class BlockProtConsole {
         List<String> lines = startupBuffer != null ? startupBuffer : new ArrayList<>();
         startupBuffer = null; // exit buffering mode
 
-        log("BlockProt v" + version + " enabled.");
+        log("BlockProt v" + version + " enabled successfully.");
         for (String line : lines) {
             log(line);
-        }
-    }
-
-    /** Sends one banner line via the plugin logger. */
-    private static void log(@NotNull String line) {
-        if (pluginLogger != null) {
-            pluginLogger.info(line);
-        } else {
-            Bukkit.getConsoleSender().sendMessage(line);
         }
     }
 
@@ -100,24 +92,26 @@ public final class BlockProtConsole {
         emit(message);
     }
 
-    /** Warning line — always printed immediately (never buffered). */
+    /**
+     * Warning line — always printed immediately via the plugin logger (never buffered).
+     * Uses {@code logger.warning()} so the output carries the correct
+     * {@code [HH:MM:SS WARN]} timestamp, consistent with info/success lines.
+     */
     public static void warn(@NotNull String message) {
-        Bukkit.getConsoleSender().sendMessage("[BlockProt] WARN: " + message);
+        if (pluginLogger != null) {
+            pluginLogger.warning(message);
+        } else {
+            Bukkit.getConsoleSender().sendMessage("[BlockProt] WARN: " + message);
+        }
     }
 
     /**
-     * "Integration registered" line — buffered during startup, immediate otherwise.
+     * Logs an integration-enabled confirmation — buffered during startup,
+     * immediate otherwise. Prints a single line after the integration is
+     * confirmed active; do not also call {@link #integration(String)} for
+     * the same plugin to avoid duplicate console output.
      *
      * @param integrationName The plugin id (e.g. "claimchunk").
-     */
-    public static void integration(@NotNull String integrationName) {
-        emit("Integration: " + integrationName + " registered");
-    }
-
-    /**
-     * "Integration enabled" confirmation — buffered during startup, immediate otherwise.
-     *
-     * @param integrationName The plugin id.
      */
     public static void integrationEnabled(@NotNull String integrationName) {
         emit("Integration enabled: " + integrationName);
@@ -127,15 +121,24 @@ public final class BlockProtConsole {
     // Private helpers
     // -------------------------------------------------------------------------
 
+    /** Sends one line via the plugin logger (INFO level). */
+    private static void log(@NotNull String line) {
+        if (pluginLogger != null) {
+            pluginLogger.info(line);
+        } else {
+            Bukkit.getConsoleSender().sendMessage(line);
+        }
+    }
+
     /**
-     * Buffers the message during startup; prints it immediately (with prefix) after.
+     * Buffers the message during startup; prints it immediately (via plugin logger)
+     * after startup completes.
      */
     private static void emit(@NotNull String message) {
         if (startupBuffer != null) {
             startupBuffer.add(message);
         } else {
-            Bukkit.getConsoleSender().sendMessage("[BlockProt] " + message);
+            log(message);
         }
     }
-
 }

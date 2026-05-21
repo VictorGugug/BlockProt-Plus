@@ -100,7 +100,11 @@ public final class Translator {
     public static void loadFromConfigs(@NotNull final YamlConfiguration defaultConfig,
                                        @NotNull final YamlConfiguration config) {
         String localeStr = config.getString("locale");
-        Translator.locale = (localeStr == null) ? Locale.ROOT : new Locale(localeStr);
+        // Locale.forLanguageTag() replaces the deprecated new Locale(String) constructor.
+        // Translation files use underscores (e.g. "zh_CN"); IETF tags use hyphens ("zh-CN").
+        Translator.locale = (localeStr == null || localeStr.isBlank())
+            ? Locale.ROOT
+            : Locale.forLanguageTag(localeStr.replace('_', '-'));
 
         final String langFile = BlockProt.getDefaultConfig().getLanguageFile();
         TranslationKey[] translations = TranslationKey.values();

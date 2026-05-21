@@ -1,12 +1,11 @@
 # ┌─────────────────────────────────────────────────────────────────┐
-# │                     BlockProt Configuration                     │
-# │                        SP26-ZV Edition                         │
+# │                  BlockProt Reloaded — Configuration             │
 # ├─────────────────────────────────────────────────────────────────┤
 # │  Sections:                                                      │
 # │   1. General                                                    │
 # │   2. Player & Protection Defaults                               │
 # │   3. Safety & Protection Behavior                               │
-# │   4. Pet Protection (SP26-ZV)                                   │
+# │   4. Pet Protection                                             │
 # │   5. Effects                                                    │
 # │   6. Optional Features                                          │
 # │                                                                 │
@@ -97,7 +96,7 @@ respect_spawn_protection: true
 
 
 # ════════════════════════════════════════════════════════════════════
-# ──────────── 4. PET PROTECTION  (SP26-ZV) ─────────────────────────
+# ──────────── 4. PET PROTECTION ────────────────────────────────────
 # ════════════════════════════════════════════════════════════════════
 #
 # Protects tamed animals (wolves, cats, parrots, horses, etc.)

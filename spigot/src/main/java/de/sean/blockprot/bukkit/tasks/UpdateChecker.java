@@ -33,7 +33,6 @@ import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.io.*;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -54,8 +53,13 @@ public final class UpdateChecker implements Runnable {
     private static final String RELEASE_URL =
         "https://github.com/VictorGugug/BlockProt-Plus/releases/latest";
 
+    /**
+     * Cached result of the last successful GitHub API call.
+     * Package-accessible so {@link BackupTask} can read the cached value
+     * without issuing a redundant HTTP request.
+     */
     @Nullable
-    private static SemanticVersion latestVersion;
+    static volatile SemanticVersion latestVersion;
 
     @Nullable
     private final List<Player> recipients;
@@ -83,7 +87,8 @@ public final class UpdateChecker implements Runnable {
      * @param description The plugin.yml file of the plugin.
      * @param recipients  The list of players to message.
      */
-    public UpdateChecker(@NotNull final PluginDescriptionFile description, @Nullable final List<Player> recipients) {
+    public UpdateChecker(@NotNull final PluginDescriptionFile description,
+                         @Nullable final List<Player> recipients) {
         this.recipients = recipients;
         this.description = description;
         this.currentVersion = new SemanticVersion(description.getVersion());
@@ -131,14 +136,14 @@ public final class UpdateChecker implements Runnable {
         boolean isOutdated = latestVersion.compareTo(currentVersion) > 0;
 
         if (this.recipients != null && !this.recipients.isEmpty()) {
-            // In-game notification for ops on join.
+            // In-game notification for ops/admins on join.
             String message;
             if (isOutdated) {
                 message = description.getName() + " v" + currentVersion
-                    + " detected, but v" + latestVersion + " is available.";
+                    + " is installed, but v" + latestVersion + " is available.";
             } else if (latestVersion.compareTo(currentVersion) < 0) {
                 message = description.getName() + " is running v" + currentVersion
-                    + " (newer than latest release v" + latestVersion + ")";
+                    + " (ahead of the latest release v" + latestVersion + ")";
             } else {
                 message = description.getName() + " is up to date (v" + currentVersion + ")";
             }
@@ -153,14 +158,14 @@ public final class UpdateChecker implements Runnable {
                 player.sendMessage(comp);
             }
         } else {
-            // Startup console check: only print if outdated; log silently otherwise.
+            // Startup console check: only print a warning if outdated; log silently otherwise.
             if (isOutdated) {
                 BlockProt.getInstance().getLogger().warning(
                     description.getName() + " v" + currentVersion
                         + " — update available: v" + latestVersion
                         + " | " + RELEASE_URL);
             } else {
-                // Silent: log to session file only, no console noise.
+                // Up to date — write to session log only, no console noise.
                 BlockProtLogger.log("update-checker",
                     description.getName() + " is up to date (v" + currentVersion + ")");
             }

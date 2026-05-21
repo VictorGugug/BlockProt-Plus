@@ -20,6 +20,9 @@ import java.util.concurrent.atomic.AtomicLong;
  * Watches the plugin data directory and reloads BlockProt after relevant YAML
  * files change. Reloads are debounced to avoid duplicate reloads while an
  * editor is still writing the file.
+ *
+ * <p>The pre-reload backup is performed on an async thread so that the ZIP
+ * creation never stalls the main thread tick.</p>
  */
 public final class ConfigFileWatcher implements Runnable {
 
@@ -77,7 +80,7 @@ public final class ConfigFileWatcher implements Runnable {
                 if (!key.reset()) break;
             }
         } catch (InterruptedException | ClosedWatchServiceException ignored) {
-            // Plugin shutdown.
+            // Plugin shutdown — exit cleanly.
         } catch (Exception e) {
             plugin.getLogger().warning(Translator.get(TranslationKey.CONSOLE__FILEWATCHER_ERROR)
                 .replace("{error}", e.getMessage()));
@@ -91,10 +94,11 @@ public final class ConfigFileWatcher implements Runnable {
         Bukkit.getScheduler().runTaskLaterAsynchronously(plugin, () -> {
             long timeSinceLastEvent = System.currentTimeMillis() - lastEventTime.get();
             if (timeSinceLastEvent >= DEBOUNCE_MS - 100) {
+                // Run backup on the async thread first so ZIP creation never
+                // stalls the main thread, then hand off the config reload.
+                plugin.getLogger().info(Translator.get(TranslationKey.CONSOLE__CONFIG_CHANGE_DETECTED));
+                new BackupTask(plugin.getDataFolder(), true).run();
                 Bukkit.getScheduler().runTask(plugin, () -> {
-                    plugin.getLogger().info(Translator.get(TranslationKey.CONSOLE__CONFIG_CHANGE_DETECTED));
-                    // Backup before reload so any auto-repair has a recovery point.
-                    new de.sean.blockprot.bukkit.tasks.BackupTask(plugin.getDataFolder(), true).run();
                     plugin.reloadConfigAndTranslations();
                     plugin.getLogger().info(Translator.get(TranslationKey.CONSOLE__CONFIG_RELOADED));
                 });

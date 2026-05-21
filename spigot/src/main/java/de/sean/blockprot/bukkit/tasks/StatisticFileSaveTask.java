@@ -19,6 +19,9 @@
 package de.sean.blockprot.bukkit.tasks;
 
 import de.sean.blockprot.bukkit.BlockProt;
+import de.sean.blockprot.bukkit.BlockProtConsole;
+import de.sean.blockprot.bukkit.TranslationKey;
+import de.sean.blockprot.bukkit.Translator;
 import de.sean.blockprot.bukkit.nbt.StatHandler;
 
 import java.io.IOException;
@@ -29,8 +32,9 @@ public class StatisticFileSaveTask implements Runnable {
         try {
             StatHandler.saveFile();
         } catch (IOException e) {
-            BlockProt.getInstance().getLogger().warning(
-                "Failed to save statistics file: " + e.getMessage());
+            BlockProtConsole.warn(
+                Translator.get(TranslationKey.CONSOLE__STATS_SAVE_FAILED)
+                    .replace("{error}", e.getMessage()));
         }
     }
 }

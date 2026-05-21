@@ -16,10 +16,11 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.regex.Pattern;
 
 /**
  * Task that releases protected blocks from inactive players.
- * Only activated if inactivity_cleanup_days > 0 in config.yml.
+ * Only activated if {@code inactivity_cleanup_days > 0} in config.yml.
  * Runs once at server startup on an async thread.
  *
  * <p>Players are processed in batches of {@link #BATCH_SIZE} with a
@@ -30,8 +31,11 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public final class InactivityCleanupTask implements Runnable {
 
-    private static final int BATCH_SIZE   = 200;
+    private static final int  BATCH_SIZE     = 200;
     private static final long BATCH_PAUSE_MS = 50L; // ~1 server tick between batches
+
+    /** Pre-compiled pattern for stripping legacy Minecraft color codes from console output. */
+    private static final Pattern COLOR_STRIP = Pattern.compile("(?i)§[0-9A-FK-ORX]");
 
     private final long thresholdMs;
 
@@ -98,7 +102,8 @@ public final class InactivityCleanupTask implements Runnable {
             if (freed > 0) {
                 String msg = Translator.get(TranslationKey.MESSAGES__INACTIVITY_CLEANUP_DONE)
                     .replace("{count}", String.valueOf(freed));
-                BlockProt.getInstance().getLogger().info(msg.replaceAll("(?i)§[0-9A-FK-ORX]", ""));
+                // Strip color codes before printing to the console logger.
+                BlockProt.getInstance().getLogger().info(COLOR_STRIP.matcher(msg).replaceAll(""));
                 Bukkit.getOnlinePlayers().stream()
                     .filter(p -> p.hasPermission("blockprot.admin"))
                     .forEach(p -> p.sendMessage(LegacyComponentSerializer.legacySection().deserialize(msg)));

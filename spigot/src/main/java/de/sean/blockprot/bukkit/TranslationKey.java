@@ -137,6 +137,8 @@ public enum TranslationKey {
     CONSOLE__JAVA_TOO_OLD,
     CONSOLE__NOT_PAPER,
     CONSOLE__TYPED_VIEWS_FALLBACK,
+    /** Emitted when the statistics file could not be saved to disk. */
+    CONSOLE__STATS_SAVE_FAILED,
 
     WORLDS__SCAN_START,
     WORLDS__SCAN_WORLD_ADDED,
