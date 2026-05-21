@@ -26,6 +26,7 @@ import de.sean.blockprot.bukkit.integrations.*;
 import de.sean.blockprot.bukkit.listeners.*;
 import de.sean.blockprot.bukkit.metrics.IntegrationBarChart;
 import de.sean.blockprot.bukkit.nbt.StatHandler;
+import de.sean.blockprot.bukkit.nbt.TimedAccessManager;
 import de.sean.blockprot.bukkit.storage.HybridDatabase;
 import de.sean.blockprot.bukkit.tasks.ConfigFileWatcher;
 import de.sean.blockprot.bukkit.tasks.BackupTask;
@@ -203,7 +204,7 @@ public final class BlockProt extends JavaPlugin {
         registerEvent(pm, new RedstoneEventListener());
         registerEvent(pm, new LockEffectListener());
 
-        // ── Pet protection listeners (SP26-ZV) ────────────────────────────────
+        // ── Pet protection listeners (BlockProt Reloaded) ──────────────────────
         // Always registered so the config toggle is hot-reloadable (/bp reload).
         // Each event handler checks isPetProtectionEnabled() at the top and returns
         // immediately when disabled, adding zero overhead when the feature is off.
@@ -229,6 +230,7 @@ public final class BlockProt extends JavaPlugin {
             StatHandler.disable();
             getServer().getOnlinePlayers().forEach(HumanEntity::closeInventory);
         }
+        TimedAccessManager.cancelAll();
         if (fileWatcher    != null) fileWatcher.stop();
         if (auditLogger    != null) auditLogger.close();
         if (hybridDatabase != null) hybridDatabase.close();

@@ -1,15 +1,15 @@
 Copyright (C) ${year} Zar (VictorGugug)
-This file is part of BlockProt SP26-ZV <https://github.com/VictorGugug/BlockProt-SP26-ZV>.
+This file is part of BlockProt Reloaded <https://github.com/VictorGugug/BlockProt-Reloaded>.
 
-BlockProt SP26-ZV is free software: you can redistribute it and/or modify
+BlockProt Reloaded is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
 (at your option) any later version.
 
-BlockProt SP26-ZV is distributed in the hope that it will be useful,
+BlockProt Reloaded is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with BlockProt SP26-ZV.  If not, see <http://www.gnu.org/licenses/>.
+along with BlockProt Reloaded.  If not, see <http://www.gnu.org/licenses/>.

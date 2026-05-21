@@ -31,6 +31,8 @@ public final class HelpCommand implements CommandExecutor {
         send(sender, Translator.get(TranslationKey.HELP__FRIENDS_TITLE));
         send(sender, Translator.get(TranslationKey.HELP__FRIENDS_GUI));
         send(sender, Translator.get(TranslationKey.HELP__FRIENDS_ADDALL));
+        send(sender, Translator.get(TranslationKey.HELP__TRANSFER));
+        send(sender, Translator.get(TranslationKey.HELP__TIMED_ACCESS));
 
         send(sender, Translator.get(TranslationKey.HELP__OTHER_TITLE));
         send(sender, Translator.get(TranslationKey.HELP__SETTINGS));
@@ -38,6 +40,9 @@ public final class HelpCommand implements CommandExecutor {
         send(sender, Translator.get(TranslationKey.HELP__ABOUT));
         send(sender, Translator.get(TranslationKey.HELP__DISABLE_HINTS));
 
+        if (sender.isOp() || sender.hasPermission("blockprot.admin")) {
+            send(sender, Translator.get(TranslationKey.HELP__ADMIN_INFO));
+        }
         if (sender.isOp()) {
             send(sender, Translator.get(TranslationKey.HELP__INTEGRATIONS));
             send(sender, Translator.get(TranslationKey.HELP__UPDATE));

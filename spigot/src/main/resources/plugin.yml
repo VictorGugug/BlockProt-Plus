@@ -15,7 +15,7 @@ permissions:
     description: Allows a player to view info on any locked blocks
   blockprot.admin:
     default: false
-    description: Allows a player to unlock and edit blocks that do not belong to them
+    description: Allows a player to unlock and edit blocks that do not belong to them, and use admin commands like /bp info.
   blockprot.bypass:
     default: false
     description: Allows a player to bypass any protection, effectively having access to every block.

@@ -47,11 +47,11 @@ public final class UpdateChecker implements Runnable {
      * Returns the latest published release (non-prerelease, non-draft).
      */
     private static final String GITHUB_API_URL =
-        "https://api.github.com/repos/VictorGugug/BlockProt-Plus/releases/latest";
+        "https://api.github.com/repos/VictorGugug/BlockProt-Reloaded/releases/latest";
 
     /** Release page shown to players when an update is available. */
     private static final String RELEASE_URL =
-        "https://github.com/VictorGugug/BlockProt-Plus/releases/latest";
+        "https://github.com/VictorGugug/BlockProt-Reloaded/releases/latest";
 
     /**
      * Cached result of the last successful GitHub API call.
@@ -109,7 +109,7 @@ public final class UpdateChecker implements Runnable {
             HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(GITHUB_API_URL))
                 // GitHub API requires a User-Agent header.
-                .header("User-Agent", "BlockProt-SP26-ZV-UpdateChecker")
+                .header("User-Agent", "BlockProt-Reloaded-UpdateChecker")
                 .header("Accept", "application/vnd.github+json")
                 .timeout(Duration.ofSeconds(5))
                 .GET()

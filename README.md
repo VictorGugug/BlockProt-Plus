@@ -1,16 +1,16 @@
 <div align="center">
 
-# BlockProt — SP26-ZV
+# BlockProt Reloaded
 
-[![CI](https://img.shields.io/github/actions/workflow/status/VictorGugug/BlockProt-Plus/ci.yml?branch=main&style=flat-square&label=CI)](https://github.com/VictorGugug/BlockProt-Plus/actions)
-[![Release](https://img.shields.io/github/v/release/VictorGugug/BlockProt-Plus?style=flat-square&color=brightgreen&label=Release)](https://github.com/VictorGugug/BlockProt-Plus/releases)
+[![CI](https://img.shields.io/github/actions/workflow/status/VictorGugug/BlockProt-Reloaded/ci.yml?branch=main&style=flat-square&label=CI)](https://github.com/VictorGugug/BlockProt-Reloaded/actions)
+[![Release](https://img.shields.io/github/v/release/VictorGugug/BlockProt-Reloaded?style=flat-square&color=brightgreen&label=Release)](https://github.com/VictorGugug/BlockProt-Reloaded/releases)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg?style=flat-square)](LICENSE)
 [![Java](https://img.shields.io/badge/Java-25+-orange?style=flat-square)](https://openjdk.org/projects/jdk/25/)
 [![Paper](https://img.shields.io/badge/Paper-1.21%2B%20%7C%2026.x-white?style=flat-square)](https://papermc.io/)
 
 **Fork created and maintained by [Zar](https://github.com/VictorGugug)**
 
-*Java 25 · Paper 26.x · MySQL index · per-world config · access audit · pet protection · auto-backup*
+*Java 25 · Paper 26.x · MySQL index · per-world config · access audit · pet protection · auto-backup · ownership transfer · timed access*
 
 </div>
 
@@ -20,10 +20,10 @@
 > Players lock chests, furnaces, and other blocks through a modern GUI — no commands to memorize.
 > This fork extends the original NBT core with production-grade features for large or long-running servers.
 
-![Main menu](https://raw.githubusercontent.com/VictorGugug/BlockProt-Plus/main/images/main_menu.png)
-![Friend settings](https://raw.githubusercontent.com/VictorGugug/BlockProt-Plus/main/images/friend_settings.png)
-![Player settings](https://raw.githubusercontent.com/VictorGugug/BlockProt-Plus/main/images/user_settings.png)
-![Redstone settings](https://raw.githubusercontent.com/VictorGugug/BlockProt-Plus/main/images/redstone_settings.png)
+![Main menu](https://raw.githubusercontent.com/VictorGugug/BlockProt-Reloaded/main/images/main_menu.png)
+![Friend settings](https://raw.githubusercontent.com/VictorGugug/BlockProt-Reloaded/main/images/friend_settings.png)
+![Player settings](https://raw.githubusercontent.com/VictorGugug/BlockProt-Reloaded/main/images/user_settings.png)
+![Redstone settings](https://raw.githubusercontent.com/VictorGugug/BlockProt-Reloaded/main/images/redstone_settings.png)
 
 ---
 
@@ -31,14 +31,14 @@
 
 ### Pre-built JAR
 
-Download the latest JAR from [Releases](https://github.com/VictorGugug/BlockProt-Plus/releases)
+Download the latest JAR from [Releases](https://github.com/VictorGugug/BlockProt-Reloaded/releases)
 and drop it in your `plugins/` folder. Requires **Java 25** and **Paper/Spigot 1.21+**.
 
 ### Build from source
 
 ```bash
-git clone https://github.com/VictorGugug/BlockProt-Plus.git
-cd BlockProt-Plus
+git clone https://github.com/VictorGugug/BlockProt-Reloaded.git
+cd BlockProt-Reloaded
 ./gradlew :blockprot-spigot:shadowJar
 # Output → spigot/build/libs/BlockProt-VERSION.jar
 ```
@@ -98,7 +98,7 @@ obsolete keys (`mysql.*`, `console.*`, `lockable_*`) regardless of what was ther
 
 ---
 
-### SP26-ZV additions
+### BlockProt Reloaded additions
 
 All additions are **disabled by default** unless noted. The upstream NBT core is unchanged.
 
@@ -138,7 +138,7 @@ NBT remains the source of truth. MySQL/MariaDB is an optional index for fast loo
 
 #### 6. SQLite Access Audit Log
 
-![Audit log screenshot](https://raw.githubusercontent.com/VictorGugug/BlockProt-Plus/main/images/audit-log.png)
+![Audit log screenshot](https://raw.githubusercontent.com/VictorGugug/BlockProt-Reloaded/main/images/audit-log.png)
 
 - Stored at `mysql/blockprot_audit.sqlite`.
 - Records `ACCESS_DENIED` / `ACCESS_GRANTED` / `OPENED` / `ITEM_TAKEN` / `ITEM_PLACED`.
@@ -204,7 +204,7 @@ NBT remains the source of truth. MySQL/MariaDB is an optional index for fast loo
 - Async Mojang fallback for cracked/offline servers.
 - SkinRestorer takes priority when installed.
 
-#### 17. Pet Protection *(SP26-ZV, default: disabled)*
+#### 17. Pet Protection *(default: disabled)*
 
 Protects tamed animals (wolves, cats, parrots, horses, llamas …) using the same ownership
 model as blocks. Data stored in `PersistentDataContainer`.
@@ -237,6 +237,34 @@ model as blocks. Data stored in `PersistentDataContainer`.
 
 - Admins (`blockprot.admin`) can click any block entry in **Stats → Your Blocks** to teleport to it.
 
+#### 21. Ownership Transfer (`/bp transfer`)
+
+- `/bp transfer <player>` — look at any block you own and type this command.
+- The target player becomes the new owner; the old owner is added as a friend automatically so they retain access.
+- Resolves offline players (Mojang API).
+- Self-transfer and non-owner attempts are rejected with clear messages.
+
+#### 22. Copy-Paste Replaces Friends (fixed, GitHub #268)
+
+- Previously, pasting a block configuration would **append** the copied friend list to the existing one.
+- Now paste **replaces** the friend list, matching what users expected.
+- Owner is never overwritten by paste (security).
+
+#### 23. Time-Limited Friend Access (`/bp timed`)
+
+- `/bp timed <player> <seconds>` — grants a player temporary access to a looked-at block.
+- Access is revoked automatically when the timer elapses (Bukkit scheduler task).
+- All grants are **in-memory**: a server restart revokes all pending timers (safe-by-default).
+- Cancels and replaces any existing timer if called again for the same block+player pair.
+- `TimedAccessManager.grant()` / `TimedAccessManager.revoke()` available as API.
+
+#### 24. Admin Block List (`/bp info`)
+
+- `/bp info <player>` — lists every block the specified player currently owns, with world, X/Y/Z coordinates.
+- Requires `blockprot.admin` or OP.
+- Verifies that each reported block is still actually locked by that player (stale stat entries are skipped).
+- Tab-completes online player names.
+
 ---
 
 ## Commands
@@ -247,6 +275,9 @@ model as blocks. Data stored in `PersistentDataContainer`.
 | `/bp settings` | Open player settings GUI |
 | `/bp friends` | Open global friend list GUI |
 | `/bp friends addall <player>` | Add player to every block you own |
+| `/bp transfer <player>` | Transfer ownership of a looked-at block to another player |
+| `/bp timed <player> <seconds>` | Grant temporary timed access to a looked-at block |
+| `/bp info <player>` | *(admin)* List all blocks owned by a player |
 | `/bp stats` | View protection statistics |
 | `/bp about` | Plugin info and version |
 | `/bp reload` | Reload config (backup runs first) |
@@ -264,7 +295,7 @@ Alias: `/blockprot`. Spanish aliases available when `localized_command_aliases: 
 |---|---|---|
 | `blockprot.lock` | Lock blocks | true |
 | `blockprot.info` | View info on any locked block | op |
-| `blockprot.admin` | Unlock and edit blocks owned by others | false |
+| `blockprot.admin` | Unlock/edit others' blocks, run `/bp info` | false |
 | `blockprot.bypass` | Bypass all protection | false |
 | `blockprot.lockmax` | Remove per-player block lock limit | false |
 | `blockprot.locklimit.<N>` | Per-player lock limit override | false |
@@ -330,7 +361,7 @@ clear_protection_on_shulker_break: false
 allow_break_protected_blocks: false
 respect_spawn_protection: true
 
-# ── 4. Pet Protection (SP26-ZV) ───────────────────────────────────────────────
+# ── 4. Pet Protection ────────────────────────────────────────────────────────
 pet_protection:
   enabled: false
   auto_protect_on_tame: true
@@ -404,7 +435,7 @@ Language files in `spigot/src/main/resources/lang/`. All message values support 
 ## Contact / Support
 
 Maintained by **Zar**.
-[Open an issue](https://github.com/VictorGugug/BlockProt-Plus/issues) for bugs or questions.
+[Open an issue](https://github.com/VictorGugug/BlockProt-Reloaded/issues) for bugs or questions.
 
 ---
 

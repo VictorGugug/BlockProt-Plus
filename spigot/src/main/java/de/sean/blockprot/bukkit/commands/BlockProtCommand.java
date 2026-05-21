@@ -49,6 +49,9 @@ public final class BlockProtCommand implements TabExecutor {
         register("debug",        new DebugCommand());
         register("disablehints", new HintsCommand());
         register("friends",      new FriendsAddAllCommand());
+        register("transfer",     new TransferCommand());
+        register("timed",        new TimedAccessCommand());
+        register("info",         new InfoCommand());
         var helpCommand = new HelpCommand();
         register("help",         helpCommand);
     }
@@ -123,6 +126,9 @@ public final class BlockProtCommand implements TabExecutor {
         alias(result, "debug", "depurar");
         alias(result, "disablehints", "desactivarsugerencias");
         alias(result, "friends", "amigos");
+        alias(result, "transfer", "transferir");
+        alias(result, "timed", "temporal");
+        alias(result, "info", "info");
         alias(result, "help", "ayuda");
     }
 

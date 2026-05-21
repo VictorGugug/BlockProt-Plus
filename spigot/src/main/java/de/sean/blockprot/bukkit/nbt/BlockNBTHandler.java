@@ -328,6 +328,29 @@ public final class BlockNBTHandler extends FriendSupportingHandler<NBTCompound> 
     }
 
     /**
+     * Transfers ownership of this block from {@code currentOwner} to {@code newOwner}.
+     * The old owner is automatically added as a regular friend so they retain access.
+     * Requires that the caller is the current owner or has admin permission.
+     *
+     * @param currentOwnerUuid UUID string of the current owner.
+     * @param newOwnerUuid     UUID string of the player to transfer ownership to.
+     * @return A {@link LockReturnValue} indicating success or the reason for failure.
+     * @since 1.2.0
+     */
+    @NotNull
+    public LockReturnValue transferOwner(@NotNull final String currentOwnerUuid, @NotNull final String newOwnerUuid) {
+        if (!isOwner(currentOwnerUuid)) return new LockReturnValue(false, LockReturnValue.Reason.NO_PERMISSION);
+        if (currentOwnerUuid.equals(newOwnerUuid)) return new LockReturnValue(false, LockReturnValue.Reason.NO_PERMISSION);
+        // Keep old owner as a friend so they can still access the block.
+        if (!containsFriend(currentOwnerUuid)) addFriend(currentOwnerUuid);
+        setOwner(newOwnerUuid);
+        // Remove the new owner from the friend list if present (they are now the owner).
+        if (containsFriend(newOwnerUuid)) removeFriend(newOwnerUuid);
+        applyToOtherContainer();
+        return new LockReturnValue(true, null);
+    }
+
+    /**
      * Modifies the friends of this block for given {@code action}.
      *
      * @param player The player requesting this command, should be the owner.
@@ -450,8 +473,11 @@ public final class BlockNBTHandler extends FriendSupportingHandler<NBTCompound> 
 
     @Override
     public void pasteNbt(@NotNull NBTContainer container) {
-        // We remove the owner key for security reasons.
+        // We remove the owner key for security reasons — owner must never change via paste.
         container.removeKey(OWNER_ATTRIBUTE);
+        // Clear existing friends so that paste REPLACES rather than appends.
+        // This matches GitHub #268: copy-paste should overwrite the friend list, not merge it.
+        this.setFriends(java.util.Collections.emptyList());
         super.pasteNbt(container);
         this.applyToOtherContainer();
     }

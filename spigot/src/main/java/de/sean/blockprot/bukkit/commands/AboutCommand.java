@@ -51,7 +51,7 @@ public class AboutCommand implements CommandExecutor {
         builder.append("\n");
         builder.append(createUrlComponent(
             Translator.get(TranslationKey.ABOUT__REPORT_FORK),
-            "https://github.com/VictorGugug/BlockProt-SP26/issues",
+            "https://github.com/VictorGugug/BlockProt-Reloaded/issues",
             "Report bugs specific to this fork here"
         ));
 

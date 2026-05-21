@@ -92,7 +92,7 @@ tasks.register("github") {
         subprojects.filter { it.name != "common" }.forEach {
             val dir = it.layout.buildDirectory.dir("libs").get().asFile
             files.add(dir.listFiles()?.firstOrNull { file ->
-                file.name.startsWith("BlockProt-") && file.name.endsWith(".jar")
+                file.name.startsWith("BlockProt-Reloaded-") && file.name.endsWith(".jar")
                     && !file.name.endsWith("-javadoc.jar")
                     && !file.name.endsWith("-sources.jar")
             })
@@ -102,6 +102,6 @@ tasks.register("github") {
         files.forEach {
             ghRelease.uploadAsset(it, "application/java-archive")
         }
-        ghRelease.update().name("BlockProt SP26-ZV $version").update()
+        ghRelease.update().name("BlockProt Reloaded $version").update()
     }
 }
