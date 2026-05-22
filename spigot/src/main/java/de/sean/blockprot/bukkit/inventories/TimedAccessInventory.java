@@ -82,6 +82,11 @@ public final class TimedAccessInventory extends BlockProtInventory {
             inventory.setItem(i, item(mat, label, lore));
         }
 
+        // Custom duration button: slot 13 (centre of row 1)
+        inventory.setItem(13, item(Material.WRITABLE_BOOK,
+            "§e" + Translator.get(TranslationKey.INVENTORIES__TIMED__BUTTON),
+            List.of("§7" + Translator.get(TranslationKey.INVENTORIES__TIMED__BUTTON_LORE))));
+
         // Info slot: slot 26
         List<String> infoLore = new ArrayList<>();
         infoLore.add(Translator.get(TranslationKey.INVENTORIES__TIMED__PLAYER_LABEL).replace("{player}", friendName));
@@ -107,6 +112,47 @@ public final class TimedAccessInventory extends BlockProtInventory {
         // Back button: slot 18
         if (slot == getSize() - 9) {
             closeAndOpen(player, new FriendDetailInventory().fill(player));
+            return;
+        }
+
+        // Custom duration input: slot 13
+        if (slot == 13) {
+            player.closeInventory();
+            AnvilInput.open(player, BlockProt.getInstance(),
+                "", Translator.get(TranslationKey.INVENTORIES__TIMED__BUTTON),
+                text -> {
+                    if (text == null || text.isBlank()) return;
+                    long secs = parseDurationInput(text);
+                    if (secs <= 0) {
+                        player.sendMessage(Translator.get(TranslationKey.MESSAGES__TIMED_ACCESS_INVALID_STATE));
+                        return;
+                    }
+                    long maxSecs = BlockProt.getDefaultConfig().getTimedAccessMaxDurationSeconds();
+                    if (maxSecs != Long.MAX_VALUE && secs > maxSecs) {
+                        player.sendMessage(Translator.get(TranslationKey.MESSAGES__TIMED_ACCESS_OVER_MAX)
+                            .replace("{duration}", formatDuration(maxSecs)));
+                        return;
+                    }
+                    InventoryState invState = InventoryState.get(player.getUniqueId());
+                    if (invState == null || invState.currentFriend == null || invState.getBlock() == null) {
+                        player.sendMessage(Translator.get(TranslationKey.MESSAGES__TIMED_ACCESS_INVALID_STATE));
+                        return;
+                    }
+                    boolean granted = TimedAccessManager.grant(
+                        invState.getBlock().getLocation(),
+                        invState.currentFriend,
+                        player.getUniqueId(),
+                        secs
+                    );
+                    if (granted) {
+                        player.sendMessage(Translator.get(TranslationKey.MESSAGES__TIMED_ACCESS_GRANTED)
+                            .replace("{duration}", formatDuration(secs)));
+                    } else {
+                        player.sendMessage(Translator.get(TranslationKey.MESSAGES__TIMED_ACCESS_NOT_OWNER));
+                    }
+                    var inv = new FriendDetailInventory().fill(player);
+                    if (inv != null) player.openInventory(inv);
+                });
             return;
         }
 
@@ -167,6 +213,36 @@ public final class TimedAccessInventory extends BlockProtInventory {
             return mins + "min " + rem + "s";
         }
         return totalSeconds + "s";
+    }
+
+    /**
+     * Parses a human-readable duration string into seconds.
+     * Accepted formats: "30s", "5m", "5min", "2h", "1d", "7d", or a plain number (treated as seconds).
+     * Returns 0 or negative if the input is invalid.
+     */
+    public static long parseDurationInput(@NotNull String input) {
+        input = input.trim().toLowerCase();
+        try {
+            // Plain number → seconds
+            return Long.parseLong(input);
+        } catch (NumberFormatException ignored) {}
+        java.util.regex.Matcher m = java.util.regex.Pattern
+            .compile("(\\d+)\\s*([smhd](?:in)?)").matcher(input);
+        long total = 0;
+        boolean matched = false;
+        while (m.find()) {
+            long val = Long.parseLong(m.group(1));
+            String unit = m.group(2);
+            total += switch (unit) {
+                case "s"         -> val;
+                case "m", "min"  -> val * 60;
+                case "h"         -> val * 3600;
+                case "d"         -> val * 86400;
+                default          -> 0;
+            };
+            matched = true;
+        }
+        return matched ? total : -1;
     }
 
     private String tryGetName(UUID uuid) {

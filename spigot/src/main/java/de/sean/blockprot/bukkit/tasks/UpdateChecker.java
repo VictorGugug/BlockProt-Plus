@@ -44,10 +44,11 @@ public final class UpdateChecker implements Runnable {
 
     /**
      * GitHub Releases API endpoint for this fork.
-     * Returns the latest published release (non-prerelease, non-draft).
+     * {@code /releases/latest} only returns stable releases.
+     * We use {@code /releases} (list) so we can also detect pre-releases.
      */
     private static final String GITHUB_API_URL =
-        "https://api.github.com/repos/VictorGugug/BlockProt-Reloaded/releases/latest";
+        "https://api.github.com/repos/VictorGugug/BlockProt-Reloaded/releases";
 
     /** Release page shown to players when an update is available. */
     private static final String RELEASE_URL =
@@ -59,7 +60,7 @@ public final class UpdateChecker implements Runnable {
      * without issuing a redundant HTTP request.
      */
     @Nullable
-    static volatile SemanticVersion latestVersion;
+    public static volatile SemanticVersion latestVersion;
 
     @Nullable
     private final List<Player> recipients;
@@ -108,7 +109,6 @@ public final class UpdateChecker implements Runnable {
 
             HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(GITHUB_API_URL))
-                // GitHub API requires a User-Agent header.
                 .header("User-Agent", "BlockProt-Reloaded-UpdateChecker")
                 .header("Accept", "application/vnd.github+json")
                 .timeout(Duration.ofSeconds(5))
@@ -117,15 +117,30 @@ public final class UpdateChecker implements Runnable {
 
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
-            if (response.statusCode() != 200) {
-                // No release published yet, or API rate-limited — silently ignore.
-                return;
+            if (response.statusCode() != 200) return;
+
+            // Parse the list of releases and find the highest version
+            // that is compatible with the current build type.
+            // If running a pre-release we consider all releases.
+            // If running a stable release we only consider stable releases
+            // (but still show ahead-of-release info).
+            GitHubRelease[] releases = new com.google.gson.Gson().fromJson(
+                response.body(), GitHubRelease[].class);
+
+            SemanticVersion best = null;
+            for (GitHubRelease rel : releases) {
+                if (rel.draft) continue;
+                SemanticVersion v = rel.asSemantic();
+                if (v.isExperimental()) continue;
+                // If running stable, prefer stable releases; still track
+                // pre-release channels when we ourselves are a pre-release.
+                if (!currentVersion.isPreRelease() && rel.prerelease) continue;
+                if (best == null || v.compareTo(best) > 0) best = v;
             }
 
-            GitHubRelease release = new Gson().fromJson(response.body(), GitHubRelease.class);
-            SemanticVersion fetched = release.asSemantic();
-            UpdateChecker.latestVersion = fetched;
-            this.sendMessage(currentVersion, fetched);
+            if (best == null) return; // no applicable release found
+            UpdateChecker.latestVersion = best;
+            this.sendMessage(currentVersion, best);
 
         } catch (Exception ignored) {
             // Network error or JSON parse failure — silently ignore.
@@ -173,20 +188,18 @@ public final class UpdateChecker implements Runnable {
     }
 
     /**
-     * Represents the response from the GitHub Releases API
-     * ({@code GET /repos/{owner}/{repo}/releases/latest}).
-     *
-     * <p>Only the {@code tag_name} field is used; everything else is ignored.</p>
+     * Represents one entry from {@code GET /repos/{owner}/{repo}/releases}.
      */
     public static final class GitHubRelease {
-        /** The release tag, e.g. {@code "1.2.9"} or {@code "v1.2.9"}. */
         @SerializedName("tag_name")
         String tagName;
 
-        /**
-         * Converts {@link #tagName} to a {@link SemanticVersion}.
-         * Strips a leading {@code v} if present (e.g. {@code v1.2.9} → {@code 1.2.9}).
-         */
+        @SerializedName("prerelease")
+        boolean prerelease;
+
+        @SerializedName("draft")
+        boolean draft;
+
         @Contract(" -> new")
         public @NotNull SemanticVersion asSemantic() {
             String version = tagName != null ? tagName : "0.0.0";

@@ -139,8 +139,8 @@ public final class BlockProt extends JavaPlugin {
         StatHandler.enable();
         this.cleanLegacyConfigKeys();
         this.saveDefaultConfig();
-        this.saveResource("blocks.yml", false);
-        this.saveResource("mysql/mysql.yml", false);
+        saveResourceSilent("blocks.yml", false);
+        saveResourceSilent("mysql/mysql.yml", false);
         this.reloadConfigAndTranslations();
         VersionValidator.validateStartup();
 
@@ -149,7 +149,7 @@ public final class BlockProt extends JavaPlugin {
             new BackupTask(this.getDataFolder()).run();
         }
         this.mergeMissingConfigKeys();
-        this.saveResource("worlds.yml", false);
+        saveResourceSilent("worlds.yml", false);
         if (defaultConfig.isWorldsConfigEnabled()) {
             File worldsFile = new File(this.getDataFolder(), "worlds.yml");
             YamlConfiguration worldsDisk = WorldsConfig.scanAndPopulate(worldsFile, this.getConfig(), this.getLogger());
@@ -419,6 +419,17 @@ public final class BlockProt extends JavaPlugin {
                 .replace("{error}", e.getMessage()));
             BlockProtLogger.log("config-merge", "Failed to save config.yml after merge: " + e.getMessage());
         }
+    }
+
+    /**
+     * Saves a resource silently — does not log a warning when the file already exists.
+     */
+    private void saveResourceSilent(@NotNull String name, boolean replace) {
+        File dest = new File(this.getDataFolder(), name);
+        if (!replace && dest.exists()) return; // already there, skip quietly
+        try {
+            this.saveResource(name, replace);
+        } catch (Exception ignored) {}
     }
 
     private boolean isRunningCraftBukkit() {

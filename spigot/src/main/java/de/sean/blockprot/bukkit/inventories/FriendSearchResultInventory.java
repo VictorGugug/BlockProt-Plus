@@ -164,7 +164,7 @@ public class FriendSearchResultInventory extends BlockProtInventory {
         loadTask = Bukkit.getScheduler().runTaskAsynchronously(BlockProt.getInstance(), new AsyncResultLoadTask(state, player, searchQuery));
 
         for (int i = 0; i < maxResults; i++) {
-            this.setItemStack(i, Material.SKELETON_SKULL, "Loading...");
+            this.setItemStack(i, Material.SKELETON_SKULL, TranslationKey.INVENTORIES__LOADING);
         }
         setBackButton();
         return inventory;

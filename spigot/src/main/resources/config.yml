@@ -144,6 +144,11 @@ block_lock_sounds: true
 # Enable ALL optional features at once regardless of their individual settings.
 optional_features_enable_all: false
 
+# Show all /bp subcommands (stats, transfer, timed, debug, etc.) in tab-complete
+# and allow their use. When false only /bp user and /bp admin are exposed.
+# Always set to true if you need the legacy CLI commands.
+commands_enabled: false
+
 # Maximum duration (in days) that timed block access can be granted via the GUI.
 # 0 or negative = no limit. Default is 90 (3 months).
 timed_access_max_duration_days: 90

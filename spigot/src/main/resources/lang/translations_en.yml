@@ -57,6 +57,11 @@ inventories:
     global_statistics: "Server statistics"
     container_count: "Block count"
     your_blocks: "Your blocks"
+  stats:
+    lore_remote: "§7[✓] Right-click: Remote access"
+    lore_tp: "§7[✓] Left-click: Teleport"
+    lore_no_remote: "§c[✗] Right-click: No permission (blockprot.remote.access)"
+    lore_no_tp: "§c[✗] Left-click: No permission (blockprot.blocks.tp)"
   audit:
     title: "Access Log"
     no_entries: "No entries found."
@@ -191,6 +196,10 @@ messages:
   user_timed_hint: "§7Look at a block you own then use: §f/bp timed <player> <seconds>"
   hints_disabled: "§aProtection hints disabled."
   hints_already: "§7Hints already managed. Adjust them in My Settings."
+  copy_done: "§aConfiguration copied."
+  paste_done: "§aConfiguration pasted."
+  no_permission_remote: "§c[✗] No permission: blockprot.remote.access"
+  no_permission_tp: "§c[✗] No permission: blockprot.blocks.tp"
   admin_reload_done: "§a[BP Admin] Config and translations reloaded."
   admin_integrations: "§7[BP Admin] Integrations ({count}): {integrations}"
   admin_info_hint: "§7[BP Admin] Use §f/bp info <player>§7 to list their protected blocks."

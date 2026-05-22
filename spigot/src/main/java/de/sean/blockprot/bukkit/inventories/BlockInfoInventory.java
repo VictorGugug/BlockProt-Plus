@@ -133,7 +133,8 @@ public class BlockInfoInventory extends BlockProtInventory {
             try {
                 final var profile = BlockProt.getProfileService().findByUuid(UUID.fromString(owner));
                 assert profile != null;
-                setPlayerSkull(0, Bukkit.getServer().createPlayerProfile(profile.getUniqueId(), profile.getName()));
+                final String ownerName = profile.getName() != null ? profile.getName() : owner.substring(0, 8);
+                setPlayerSkull(0, BlockProtInventory.createPlayerProfile(profile.getUniqueId(), ownerName));
             } catch (Exception e) {
                 BlockProt.getInstance().getLogger().warning("Failed to update PlayerProfile: " + e.getMessage());
             }

@@ -2,6 +2,8 @@ package de.sean.blockprot.bukkit.listeners;
 
 import de.sean.blockprot.bukkit.BlockProt;
 import de.sean.blockprot.bukkit.Permissions;
+import de.sean.blockprot.bukkit.TranslationKey;
+import de.sean.blockprot.bukkit.Translator;
 import de.sean.blockprot.bukkit.pets.PetNBTHandler;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
@@ -156,7 +158,8 @@ public final class PetProtectionListener implements Listener {
         if (owner == null || !owner.isOnline()) return;
 
         String petName = dead.getCustomName() != null ? dead.getCustomName() : dead.getType().name();
-        owner.sendMessage("§c§l[BlockProt] §r§cTu mascota §e" + petName + "§c ha muerto.");
+        String message = Translator.get(TranslationKey.MESSAGES__PET_DEATH_NOTIFICATION).replace("{pet_name}", petName);
+        owner.sendMessage(message);
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

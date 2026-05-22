@@ -12,6 +12,8 @@ inventories:
   back: Atrás
   last_page: Última página
   next_page: Siguiente página
+  loading: Cargando...
+  searching: Buscando...
   block_lock: Proteger
   user_settings: Configuración de Usuario
   block_info: Información del Bloque
@@ -55,6 +57,13 @@ inventories:
     no_entries: "Sin registros."
     teleport: "Teletransportarse al bloque"
     open: "Registro de Accesos"
+    action_count: "§7{count} acción(es)"
+    click_hint: "§7Haz clic para ver el historial completo."
+    player_history: "§aHistorial del jugador"
+    action_access_denied: "§cAcceso denegado"
+    action_opened: "§aAbrió"
+    action_item_taken: "§eTomó artículo(s)"
+    action_item_placed: "§2Colocó artículo(s)"
   # ── Protección de mascotas (SP26-ZV) ─────────────────────────────────────
   pet:
     settings: "§dAjustes de Mascota"
@@ -68,6 +77,8 @@ messages:
   permission_granted: Protegido.
   unlocked: Desprotegido.
   no_permission: No tienes permiso.
+  error_prefix: "§c[BlockProt]: "
+  pet_death_notification: "§c§l[BlockProt] §r§cTu mascota §e{pet_name}§c ha muerto."
   friend_added: Permiso añadido.
   friend_removed: Permiso eliminado.
   friend_already_added: Ya tiene permiso.

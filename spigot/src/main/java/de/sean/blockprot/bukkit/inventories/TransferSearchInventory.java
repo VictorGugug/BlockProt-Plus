@@ -3,6 +3,7 @@ package de.sean.blockprot.bukkit.inventories;
 import de.sean.blockprot.bukkit.BlockProt;
 import de.sean.blockprot.bukkit.TranslationKey;
 import de.sean.blockprot.bukkit.Translator;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import de.sean.blockprot.bukkit.VersionCompat;
 import de.sean.blockprot.bukkit.nbt.BlockNBTHandler;
 import de.sean.blockprot.bukkit.nbt.StatHandler;
@@ -102,7 +103,7 @@ public final class TransferSearchInventory extends BlockProtInventory {
         if (state == null) return null;
 
         for (int i = 0; i < maxResults; i++) {
-            setItemStack(i, Material.SKELETON_SKULL, "Buscando...");
+            setItemStack(i, Material.SKELETON_SKULL, TranslationKey.INVENTORIES__SEARCHING);
         }
         setBackButton();
 
@@ -120,7 +121,8 @@ public final class TransferSearchInventory extends BlockProtInventory {
     private void doTransfer(@NotNull Player player, @NotNull Block block, @NotNull OfflinePlayer target) {
         if (target.getUniqueId() == null) { player.closeInventory(); return; }
         if (target.getUniqueId().equals(player.getUniqueId())) {
-            player.sendMessage(Translator.get(TranslationKey.MESSAGES__TRANSFER_SELF_GUI));
+            player.sendActionBar(LegacyComponentSerializer.legacySection().deserialize(
+                Translator.get(TranslationKey.MESSAGES__TRANSFER_SELF_GUI)));
             closeAndOpen(player, new BlockLockInventory().fill(player, block.getType(), new BlockNBTHandler(block)));
             return;
         }
@@ -130,7 +132,8 @@ public final class TransferSearchInventory extends BlockProtInventory {
         catch (RuntimeException e) { player.closeInventory(); return; }
 
         if (!handler.isOwner(player.getUniqueId())) {
-            player.sendMessage(Translator.get(TranslationKey.MESSAGES__TRANSFER_NOT_OWNER_GUI));
+            player.sendActionBar(LegacyComponentSerializer.legacySection().deserialize(
+                Translator.get(TranslationKey.MESSAGES__TRANSFER_NOT_OWNER_GUI)));
             player.closeInventory();
             return;
         }
@@ -144,10 +147,12 @@ public final class TransferSearchInventory extends BlockProtInventory {
             if (target.isOnline() && target.getPlayer() != null)
                 StatHandler.addBlock(target.getPlayer(), block.getLocation());
             String name = target.getName() != null ? target.getName() : target.getUniqueId().toString().substring(0, 8);
-            player.sendMessage(Translator.get(TranslationKey.MESSAGES__TRANSFER_SUCCESS).replace("{player}", name));
+            player.sendActionBar(LegacyComponentSerializer.legacySection().deserialize(
+                Translator.get(TranslationKey.MESSAGES__TRANSFER_SUCCESS).replace("{player}", name)));
             player.closeInventory();
         } else {
-            player.sendMessage(Translator.get(TranslationKey.MESSAGES__TRANSFER_FAILED));
+            player.sendActionBar(LegacyComponentSerializer.legacySection().deserialize(
+                Translator.get(TranslationKey.MESSAGES__TRANSFER_FAILED)));
             closeAndOpen(player, new BlockLockInventory().fill(player, block.getType(), new BlockNBTHandler(block)));
         }
     }

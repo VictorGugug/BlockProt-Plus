@@ -199,9 +199,10 @@ public final class AuditInventory extends BlockProtInventory {
                     int total = group == null ? 1 : group.size();
                     AuditEntry latest = group == null ? entry : group.get(0);
                     displayName = actionIcon(latest.action()) + " §f" + (latest.playerName() != null ? latest.playerName() : latest.playerUuid());
-                    lore.add("§7" + DATE_FMT.format(new Date(latest.timestamp())) + " · " + total + " acción(es)");
+                    String actionCountLabel = Translator.get(TranslationKey.INVENTORIES__AUDIT__ACTION_COUNT).replace("{count}", String.valueOf(total));
+                    lore.add("§7" + DATE_FMT.format(new Date(latest.timestamp())) + " · " + actionCountLabel);
                     lore.add("§8" + latest.world() + " " + latest.x() + "," + latest.y() + "," + latest.z());
-                    lore.add("§7Click para ver historial completo.");
+                    lore.add(Translator.get(TranslationKey.INVENTORIES__AUDIT__CLICK_HINT));
                 } else {
                     displayName = actionIcon(entry.action()) + " §f" + (entry.playerName() != null ? entry.playerName() : entry.playerUuid());
                     lore.add("§7" + DATE_FMT.format(new Date(entry.timestamp())) + " — §r" + actionLabel(entry.action()));
@@ -223,7 +224,7 @@ public final class AuditInventory extends BlockProtInventory {
         }
 
         if (selectedPlayerUuid != null) {
-            setItemStack(52, Material.PAPER, "§aPlayer history");
+            setItemStack(52, Material.PAPER, TranslationKey.INVENTORIES__AUDIT__PLAYER_HISTORY);
         }
 
         setBackButton(53);
@@ -241,14 +242,14 @@ public final class AuditInventory extends BlockProtInventory {
         };
     }
 
-    /** Returns a human-readable Spanish label for each audit action type. */
+    /** Returns a human-readable label for each audit action type. */
     private static String actionLabel(@NotNull AuditLogger.Action action) {
         return switch (action) {
-            case ACCESS_DENIED -> "§cAcceso denegado";
-            case OPENED        -> "§aAbrió";
-            case ITEM_TAKEN    -> "§eSacó item(s)";
-            case ITEM_PLACED   -> "§2Puso item(s)";
-            default            -> "§7Acceso";
+            case ACCESS_DENIED -> Translator.get(TranslationKey.INVENTORIES__AUDIT__ACTION_ACCESS_DENIED);
+            case OPENED        -> Translator.get(TranslationKey.INVENTORIES__AUDIT__ACTION_OPENED);
+            case ITEM_TAKEN    -> Translator.get(TranslationKey.INVENTORIES__AUDIT__ACTION_ITEM_TAKEN);
+            case ITEM_PLACED   -> Translator.get(TranslationKey.INVENTORIES__AUDIT__ACTION_ITEM_PLACED);
+            default            -> "§7Access";
         };
     }
 }

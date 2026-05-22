@@ -17,16 +17,21 @@ import java.util.List;
 
 /**
  * GUI for regular user operations. Opened via /bp user.
- * Requires blockprot.user (default: true for all players).
+ * Items centred on row 1 (slots 9–17 of a triple-line inventory).
+ *
+ * Removed: Transfer and Timed (accessible via /bp transfer and /bp timed).
+ * Hints toggle is now only in My Settings.
  */
 public class UserMenuInventory extends BlockProtInventory {
 
-    public UserMenuInventory() {
-        super(false);
-    }
+    private static final int SLOT_SETTINGS = 11;
+    private static final int SLOT_FRIENDS  = 12;
+    private static final int SLOT_STATS    = 13;
+    private static final int SLOT_ABOUT    = 14;
 
-    @Override
-    int getSize() { return InventoryConstants.tripleLine; }
+    public UserMenuInventory() { super(false); }
+
+    @Override int getSize() { return InventoryConstants.tripleLine; }
 
     @Override
     String getTranslatedInventoryName() {
@@ -37,30 +42,18 @@ public class UserMenuInventory extends BlockProtInventory {
     public Inventory fill(@NotNull Player player) {
         inventory = createInventory();
 
-        inventory.setItem(0, item(Material.WRITABLE_BOOK,
+        inventory.setItem(SLOT_SETTINGS, item(Material.WRITABLE_BOOK,
             Translator.get(TranslationKey.INVENTORIES__USER_MENU__SETTINGS),
             Translator.get(TranslationKey.INVENTORIES__USER_MENU__SETTINGS_LORE)));
-        inventory.setItem(1, item(Material.PLAYER_HEAD,
+        inventory.setItem(SLOT_FRIENDS, item(Material.PLAYER_HEAD,
             Translator.get(TranslationKey.INVENTORIES__USER_MENU__FRIENDS),
             Translator.get(TranslationKey.INVENTORIES__USER_MENU__FRIENDS_LORE)));
-        inventory.setItem(2, item(Material.BOOK,
+        inventory.setItem(SLOT_STATS, item(Material.BOOK,
             Translator.get(TranslationKey.INVENTORIES__USER_MENU__STATS),
             Translator.get(TranslationKey.INVENTORIES__USER_MENU__STATS_LORE)));
-        inventory.setItem(3, item(Material.ENDER_PEARL,
-            Translator.get(TranslationKey.INVENTORIES__USER_MENU__TRANSFER),
-            Translator.get(TranslationKey.INVENTORIES__USER_MENU__TRANSFER_LORE)));
-        inventory.setItem(4, item(Material.CLOCK,
-            Translator.get(TranslationKey.INVENTORIES__USER_MENU__TIMED),
-            Translator.get(TranslationKey.INVENTORIES__USER_MENU__TIMED_LORE)));
-        inventory.setItem(5, item(Material.KNOWLEDGE_BOOK,
-            Translator.get(TranslationKey.INVENTORIES__USER_MENU__HINTS),
-            Translator.get(TranslationKey.INVENTORIES__USER_MENU__HINTS_LORE)));
-        inventory.setItem(6, item(Material.NETHER_STAR,
+        inventory.setItem(SLOT_ABOUT, item(Material.NETHER_STAR,
             Translator.get(TranslationKey.INVENTORIES__USER_MENU__ABOUT),
             Translator.get(TranslationKey.INVENTORIES__USER_MENU__ABOUT_LORE)));
-        inventory.setItem(8, item(Material.BARRIER,
-            Translator.get(TranslationKey.INVENTORIES__USER_MENU__CLOSE),
-            Translator.get(TranslationKey.INVENTORIES__USER_MENU__CLOSE_LORE)));
 
         return inventory;
     }
@@ -72,50 +65,26 @@ public class UserMenuInventory extends BlockProtInventory {
         int slot = event.getRawSlot();
         if (slot < 0 || slot >= getSize()) return;
 
-        switch (slot) {
-            case 0 -> {
-                InventoryState newState = new InventoryState(null);
-                newState.friendSearchState = InventoryState.FriendSearchState.DEFAULT_FRIEND_SEARCH;
-                InventoryState.set(player.getUniqueId(), newState);
-                player.openInventory(new UserSettingsInventory().fill(player));
-                new PlayerSettingsHandler(player).setHasPlayerInteractedWithMenu(true);
-            }
-            case 1 -> {
-                InventoryState newState = new InventoryState(null);
-                newState.friendSearchState = InventoryState.FriendSearchState.DEFAULT_FRIEND_SEARCH;
-                InventoryState.set(player.getUniqueId(), newState);
-                var inv = new FriendManageInventory().fill(player);
-                if (inv != null) player.openInventory(inv);
-            }
-            case 2 -> {
-                InventoryState newState = new InventoryState(null);
-                newState.friendSearchState = InventoryState.FriendSearchState.DEFAULT_FRIEND_SEARCH;
-                InventoryState.set(player.getUniqueId(), newState);
-                player.openInventory(new StatisticsInventory().fill(player));
-            }
-            case 3 -> {
-                player.closeInventory();
-                player.sendMessage(Translator.get(TranslationKey.MESSAGES__USER_TRANSFER_HINT));
-            }
-            case 4 -> {
-                player.closeInventory();
-                player.sendMessage(Translator.get(TranslationKey.MESSAGES__USER_TIMED_HINT));
-            }
-            case 5 -> {
-                player.closeInventory();
-                var settings = new PlayerSettingsHandler(player);
-                if (!settings.hasPlayerInteractedWithMenu()) {
-                    settings.setHasPlayerInteractedWithMenu(true);
-                    player.sendMessage(Translator.get(TranslationKey.MESSAGES__HINTS_DISABLED));
-                } else {
-                    player.sendMessage(Translator.get(TranslationKey.MESSAGES__HINTS_ALREADY));
-                }
-            }
-            case 6 -> {
-                player.closeInventory();
-                player.performCommand("blockprot about");
-            }
-            case 8 -> player.closeInventory();
+        if (slot == SLOT_SETTINGS) {
+            InventoryState newState = new InventoryState(null);
+            newState.friendSearchState = InventoryState.FriendSearchState.DEFAULT_FRIEND_SEARCH;
+            InventoryState.set(player.getUniqueId(), newState);
+            player.openInventory(new UserSettingsInventory().fill(player));
+            new PlayerSettingsHandler(player).setHasPlayerInteractedWithMenu(true);
+        } else if (slot == SLOT_FRIENDS) {
+            InventoryState newState = new InventoryState(null);
+            newState.friendSearchState = InventoryState.FriendSearchState.DEFAULT_FRIEND_SEARCH;
+            InventoryState.set(player.getUniqueId(), newState);
+            var inv = new FriendManageInventory().fill(player);
+            if (inv != null) player.openInventory(inv);
+        } else if (slot == SLOT_STATS) {
+            InventoryState newState = new InventoryState(null);
+            newState.friendSearchState = InventoryState.FriendSearchState.DEFAULT_FRIEND_SEARCH;
+            InventoryState.set(player.getUniqueId(), newState);
+            player.openInventory(new StatisticsInventory().fill(player));
+        } else if (slot == SLOT_ABOUT) {
+            player.closeInventory();
+            player.performCommand("blockprot about");
         }
     }
 

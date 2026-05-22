@@ -39,6 +39,8 @@ public enum Permissions {
     USER("blockprot.user"),
     USER_ADMIN("blockprot.user.admin"),
     BYPASS("blockprot.bypass"),
+    REMOTE_ACCESS("blockprot.remote.access"),
+    BLOCKS_TP("blockprot.blocks.tp"),
 
     // ── Legacy aliases (not in plugin.yml; used internally for back-compat) ─
     /** @deprecated Use {@link #USER} */

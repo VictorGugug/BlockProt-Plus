@@ -84,7 +84,23 @@ public class DebugCommand implements CommandExecutor {
         BlockProtLogger.separator();
         BlockProtLogger.log("=== /blockprot debug run ===");
         BlockProtLogger.log("Player: " + player.getName() + " (" + player.getUniqueId() + ")");
-        BlockProtLogger.log("Time: " + java.time.LocalDateTime.now());
+        BlockProtLogger.log("Time:   " + java.time.LocalDateTime.now());
+
+        // Version info
+        var desc = BlockProt.getInstance().getDescription();
+        var currentVer = new de.sean.blockprot.util.SemanticVersion(desc.getVersion());
+        var latestVer  = de.sean.blockprot.bukkit.tasks.UpdateChecker.latestVersion;
+        BlockProtLogger.log("Version (current): " + currentVer
+            + (currentVer.isPreRelease() ? " [pre-release]" : " [stable]")
+            + (currentVer.isExperimental() ? " [experimental]" : ""));
+        BlockProtLogger.log("Version (latest):  " + (latestVer != null ? latestVer.toString() : "not checked yet"));
+        if (latestVer != null) {
+            int cmp = latestVer.compareTo(currentVer);
+            BlockProtLogger.log("Update status:     " + (cmp > 0 ? "OUTDATED" : cmp < 0 ? "ahead of release" : "up to date"));
+        }
+        BlockProtLogger.log("Server:  " + Bukkit.getVersion());
+        BlockProtLogger.log("API:     " + Bukkit.getBukkitVersion());
+        BlockProtLogger.log("Java:    " + System.getProperty("java.version"));
 
         int[] counts = new int[]{0,0}; // [passed, failed]
 
@@ -95,6 +111,8 @@ public class DebugCommand implements CommandExecutor {
         checkInventoryCreation(counts);
         checkProfileService(player, counts);
         checkLockableMaterials(counts);
+        checkSkinsRestorer(counts);
+        checkAuditLogger(counts);
         checkOnlinePlayers(counts);
 
         BlockProtLogger.separator();
@@ -246,17 +264,44 @@ public class DebugCommand implements CommandExecutor {
         }
     }
 
+    private void checkSkinsRestorer(int[] counts) {
+        BlockProtLogger.separator();
+        BlockProtLogger.log("--- 8. SkinsRestorer ---");
+        var plugin = Bukkit.getPluginManager().getPlugin("SkinsRestorer");
+        if (plugin == null) {
+            BlockProtLogger.log("SkinsRestorer: not installed (using Mojang API fallback)");
+            counts[0]++;
+        } else if (!plugin.isEnabled()) {
+            BlockProtLogger.warn("SkinsRestorer: installed but disabled");
+            counts[0]++;
+        } else {
+            BlockProtLogger.pass("SkinsRestorer: enabled (v" + plugin.getDescription().getVersion() + ")");
+            counts[0]++;
+        }
+    }
+
+    private void checkAuditLogger(int[] counts) {
+        BlockProtLogger.separator();
+        BlockProtLogger.log("--- 9. AuditLogger ---");
+        var audit = BlockProt.getAuditLogger();
+        if (audit == null) {
+            BlockProtLogger.log("AuditLogger: disabled in config");
+            counts[0]++;
+        } else {
+            BlockProtLogger.pass("AuditLogger: active");
+            counts[0]++;
+        }
+    }
+
     private void checkOnlinePlayers(int[] counts) {
         BlockProtLogger.separator();
-        BlockProtLogger.log("--- 8. Online Players ---");
+        BlockProtLogger.log("--- 10. Online Players ---");
         BlockProtLogger.log("Count: " + Bukkit.getOnlinePlayers().size());
         for (Player p : Bukkit.getOnlinePlayers()) {
             BlockProtLogger.log("  - " + p.getName() + " (" + p.getUniqueId() + ")");
         }
         counts[0]++;
     }
-
-    // =========================================================================
 
     @Nullable
     @Override

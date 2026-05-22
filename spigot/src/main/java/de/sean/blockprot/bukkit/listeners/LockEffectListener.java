@@ -222,10 +222,13 @@ public final class LockEffectListener implements Listener {
 
     private static void playChestSound(@NotNull Location loc, boolean locked) {
         if (!BlockProt.getDefaultConfig().isLockSoundEnabled()) return;
-        loc.getWorld().playSound(loc,
-                locked ? Sound.BLOCK_CHEST_CLOSE : Sound.BLOCK_CHEST_OPEN,
-                0.35f,
-                1.0f
-        );
+        Block block = loc.getWorld().getBlockAt(loc.clone().subtract(0.5, 0.5, 0.5));
+        Sound sound;
+        if (block.getState() instanceof org.bukkit.block.ShulkerBox) {
+            sound = locked ? Sound.ENTITY_SHULKER_CLOSE : Sound.ENTITY_SHULKER_OPEN;
+        } else {
+            sound = locked ? Sound.BLOCK_CHEST_CLOSE : Sound.BLOCK_CHEST_OPEN;
+        }
+        loc.getWorld().playSound(loc, sound, 0.35f, 1.0f);
     }
 }

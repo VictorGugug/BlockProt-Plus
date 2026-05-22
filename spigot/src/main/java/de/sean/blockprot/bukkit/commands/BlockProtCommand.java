@@ -18,6 +18,7 @@
 
 package de.sean.blockprot.bukkit.commands;
 
+import de.sean.blockprot.bukkit.BlockProt;
 import de.sean.blockprot.bukkit.Permissions;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
@@ -25,6 +26,7 @@ import org.bukkit.command.TabExecutor;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
+import java.util.Map;
 
 /**
  * Main dispatcher for /blockprot (alias /bp).
@@ -81,7 +83,15 @@ public final class BlockProtCommand implements TabExecutor {
             return allExecutors.get("user").onCommand(sender, command, label, args);
         }
 
-        var executor = allExecutors.get(args[0].toLowerCase(Locale.ROOT));
+        String sub = args[0].toLowerCase(Locale.ROOT);
+        // When commands_enabled=false, only "user" and "admin" are allowed
+        boolean extraEnabled = BlockProt.getDefaultConfig().areExtraCommandsEnabled();
+        if (!extraEnabled && !sub.equals("user") && !sub.equals("admin")
+                && !sub.equals("usuario") && !sub.equals("administrador")) {
+            return false;
+        }
+
+        var executor = allExecutors.get(sub);
         if (executor != null) {
             return executor.onCommand(sender, command, label, args);
         }
@@ -93,13 +103,18 @@ public final class BlockProtCommand implements TabExecutor {
                                                @NotNull String alias, @NotNull String[] args) {
         if (args.length <= 1) {
             final var list = new ArrayList<String>();
-            for (var entry : publicExecutors.entrySet()) {
+            boolean extraEnabled = BlockProt.getDefaultConfig().areExtraCommandsEnabled();
+            Map<String, CommandExecutor> source = extraEnabled ? allExecutors : publicExecutors;
+            for (var entry : source.entrySet()) {
                 if (entry.getValue().canUseCommand(sender))
                     list.add(entry.getKey());
             }
-            // Filter by what they have typed so far
             String partial = args.length == 1 ? args[0].toLowerCase(Locale.ROOT) : "";
             list.removeIf(s -> !s.startsWith(partial));
+            // If extras disabled, still only show public ones in tab-complete
+            if (!extraEnabled) {
+                list.removeIf(s -> !publicExecutors.containsKey(s));
+            }
             return list;
         }
 

@@ -22,29 +22,31 @@ import de.sean.blockprot.bukkit.BlockProt;
 import de.sean.blockprot.bukkit.Permissions;
 import de.sean.blockprot.bukkit.TranslationKey;
 import de.sean.blockprot.bukkit.Translator;
+import de.sean.blockprot.bukkit.nbt.BlockNBTHandler;
 import de.sean.blockprot.bukkit.nbt.stats.BukkitListStatistic;
+import de.sean.blockprot.bukkit.nbt.stats.LocationListEntry;
 import de.sean.blockprot.nbt.stats.ListStatisticItem;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
+import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
 public final class StatisticListInventory extends BlockProtInventory {
-    /** Stores the statistic for pages to use. */
     private BukkitListStatistic<ListStatisticItem<?, Material>, ?> statistic;
 
     @Override
-    int getSize() {
-        return InventoryConstants.sextupletLine;
-    }
+    int getSize() { return InventoryConstants.sextupletLine; }
 
     @Override
     @NotNull String getTranslatedInventoryName() {
@@ -54,104 +56,129 @@ public final class StatisticListInventory extends BlockProtInventory {
     @Override
     public void onClick(@NotNull InventoryClickEvent event, @NotNull InventoryState state) {
         event.setCancelled(true);
+        if (!(event.getWhoClicked() instanceof Player player)) return;
         ItemStack item = event.getCurrentItem();
         if (item == null) return;
+
         switch (item.getType()) {
-            case CYAN_STAINED_GLASS_PANE:
+            case CYAN_STAINED_GLASS_PANE -> {
                 if (state.currentPageIndex >= 1) {
                     state.currentPageIndex--;
-                    closeAndOpen(
-                        event.getWhoClicked(),
-                        this.fill((Player) event.getWhoClicked(), null)
-                    );
+                    closeAndOpen(player, this.fill(player, null));
                 }
-                break;
-            case BLUE_STAINED_GLASS_PANE:
+            }
+            case BLUE_STAINED_GLASS_PANE -> {
                 state.currentPageIndex++;
-                closeAndOpen(event.getWhoClicked(), fill((Player) event.getWhoClicked(), null));
-                break;
-            case BLACK_STAINED_GLASS_PANE:
-                closeAndOpen(event.getWhoClicked(), new StatisticsInventory().fill((Player) event.getWhoClicked()));
-                break;
-            default:
-                // Admin TP: clicking a block item teleports the admin to that block.
-                if (event.getWhoClicked() instanceof Player player
-                        && player.hasPermission(Permissions.ADMIN.key())) {
-                    int slot = event.getSlot();
-                    final InventoryState tpState = InventoryState.get(player.getUniqueId());
-                    if (tpState != null) {
-                        int offset2 = (this.getSize() - 3) * tpState.currentPageIndex;
-                        int idx = offset2 + slot;
-                        List<ListStatisticItem<?, Material>> fullList = this.statistic.get()
-                            .stream()
-                            .filter(i2 -> BlockProt.getDefaultConfig().isLockable(i2.getItemType()))
-                            .collect(java.util.stream.Collectors.toList());
-                        if (idx >= 0 && idx < fullList.size()) {
-                            ListStatisticItem<?, Material> entry = fullList.get(idx);
-                            if (entry instanceof de.sean.blockprot.bukkit.nbt.stats.LocationListEntry locEntry) {
-                                Location loc = locEntry.get();
-                                if (loc.getWorld() != null) {
-                                    player.closeInventory();
-                                    player.teleport(loc.clone().add(0.5, 1.0, 0.5));
-                                    InventoryState.remove(player.getUniqueId());
-                                    return;
-                                }
-                            }
-                        }
-                    }
-                }
-                break;
+                closeAndOpen(player, fill(player, null));
+            }
+            case BLACK_STAINED_GLASS_PANE ->
+                closeAndOpen(player, new StatisticsInventory().fill(player));
+            default -> handleBlockItemClick(event, player, state);
+        }
+    }
+
+    private void handleBlockItemClick(@NotNull InventoryClickEvent event,
+                                      @NotNull Player player,
+                                      @NotNull InventoryState state) {
+        List<ListStatisticItem<?, Material>> fullList = getFilteredList();
+        int offset = (this.getSize() - 3) * state.currentPageIndex;
+        int idx = offset + event.getSlot();
+        if (idx < 0 || idx >= fullList.size()) return;
+
+        ListStatisticItem<?, Material> entry = fullList.get(idx);
+        if (!(entry instanceof LocationListEntry locEntry)) return;
+        Location loc = locEntry.get();
+        if (loc.getWorld() == null) return;
+
+        boolean leftClick  = event.getClick() == ClickType.LEFT || event.getClick() == ClickType.SHIFT_LEFT;
+        boolean rightClick = event.getClick() == ClickType.RIGHT || event.getClick() == ClickType.SHIFT_RIGHT;
+
+        if (leftClick) {
+            // TP — requires blockprot.blocks.tp
+            if (!player.hasPermission(Permissions.BLOCKS_TP.key())) {
+                player.sendActionBar(net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer
+                    .legacySection().deserialize(Translator.get(TranslationKey.MESSAGES__NO_PERMISSION_TP)));
+                return;
+            }
+            player.closeInventory();
+            player.teleport(loc.clone().add(0.5, 1.0, 0.5));
+            InventoryState.remove(player.getUniqueId());
+        } else if (rightClick) {
+            // Remote access — requires blockprot.remote.access
+            if (!player.hasPermission(Permissions.REMOTE_ACCESS.key())) {
+                player.sendActionBar(net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer
+                    .legacySection().deserialize(Translator.get(TranslationKey.MESSAGES__NO_PERMISSION_REMOTE)));
+                return;
+            }
+            // Open BlockLockInventory for the target block remotely
+            var block = loc.getBlock();
+            if (!BlockProt.getDefaultConfig().isLockable(block.getType())) return;
+            var handler = new BlockNBTHandler(block);
+            InventoryState remoteState = new InventoryState(block);
+            remoteState.friendSearchState = InventoryState.FriendSearchState.FRIEND_SEARCH;
+            InventoryState.set(player.getUniqueId(), remoteState);
+            var lockInv = new BlockLockInventory().fill(player, block.getType(), handler);
+            if (lockInv != null) player.openInventory(lockInv);
         }
     }
 
     @Override
-    public void onClose(@NotNull InventoryCloseEvent event, @NotNull InventoryState state) {
+    public void onClose(@NotNull InventoryCloseEvent event, @NotNull InventoryState state) {}
 
-    }
-
-    /**
-     * @param stat Can be null to indicate that this inventory should use the previously
-     *             cached statistic. Will throw {@link RuntimeException} if there is no
-     *             cached statistic.
-     */
-    public Inventory fill(@NotNull final Player player, @Nullable final BukkitListStatistic<ListStatisticItem<?, Material>, ?> stat)
-        throws RuntimeException {
+    public Inventory fill(@NotNull final Player player,
+                          @Nullable final BukkitListStatistic<ListStatisticItem<?, Material>, ?> stat) {
         if (stat != null) this.statistic = stat;
         if (this.statistic == null) throw new RuntimeException("No cached statistic available.");
 
-        List<ListStatisticItem<?, Material>> list = this.statistic.get();
+        List<ListStatisticItem<?, Material>> list = getFilteredList();
         final InventoryState state = InventoryState.get(player.getUniqueId());
         if (state == null) return inventory;
 
-        // Verify that all block locations are valid and remove them if necessary.
-        // We'll log these into the console for users to report so that this doesn't
-        // need to happen.
-        list = list.stream()
-                .filter((item) -> BlockProt.getDefaultConfig().isLockable(item.getItemType()))
-                .collect(Collectors.toList());
-
         final int max = this.getSize() - 3;
         int offset = max * state.currentPageIndex;
+
+        boolean canTp     = player.hasPermission(Permissions.BLOCKS_TP.key());
+        boolean canRemote = player.hasPermission(Permissions.REMOTE_ACCESS.key());
+
+        String loreTP     = Translator.get(canTp     ? TranslationKey.INVENTORIES__STATS__LORE_TP
+                                                     : TranslationKey.INVENTORIES__STATS__LORE_NO_TP);
+        String loreRemote = Translator.get(canRemote ? TranslationKey.INVENTORIES__STATS__LORE_REMOTE
+                                                     : TranslationKey.INVENTORIES__STATS__LORE_NO_REMOTE);
+
         for (int i = 0; i < Math.min(list.size() - offset, max); ++i) {
-            final ListStatisticItem<?, Material> item = list.get(offset + i);
-            setItemStack(
-                i,
-                item.getItemType(),
-                item.getTitle()
-            );
+            final ListStatisticItem<?, Material> entry = list.get(offset + i);
+            setItemStackWithLore(i, entry.getItemType(), entry.getTitle(), loreTP, loreRemote);
         }
 
         if (list.size() - offset > max) {
-            setItemStack(
-                max,
-                Material.CYAN_STAINED_GLASS_PANE,
-                TranslationKey.INVENTORIES__LAST_PAGE);
-            setItemStack(
-                max + 1,
-                Material.BLUE_STAINED_GLASS_PANE,
-                TranslationKey.INVENTORIES__NEXT_PAGE);
+            setItemStack(max,     Material.CYAN_STAINED_GLASS_PANE, TranslationKey.INVENTORIES__LAST_PAGE);
+            setItemStack(max + 1, Material.BLUE_STAINED_GLASS_PANE, TranslationKey.INVENTORIES__NEXT_PAGE);
         }
         setBackButton();
         return inventory;
+    }
+
+    private List<ListStatisticItem<?, Material>> getFilteredList() {
+        return statistic.get()
+            .stream()
+            .filter(i -> BlockProt.getDefaultConfig().isLockable(i.getItemType()))
+            .collect(Collectors.toList());
+    }
+
+    private void setItemStackWithLore(int index, Material material, String name,
+                                      String loreTp, String loreRemote) {
+        ItemStack stack = new ItemStack(material, 1);
+        ItemMeta meta = stack.getItemMeta();
+        if (meta == null) {
+            inventory.setItem(index, stack);
+            return;
+        }
+        meta.setDisplayName(name);
+        List<String> lore = new ArrayList<>();
+        lore.add(loreTp);
+        lore.add(loreRemote);
+        meta.setLore(lore);
+        stack.setItemMeta(meta);
+        inventory.setItem(index, stack);
     }
 }

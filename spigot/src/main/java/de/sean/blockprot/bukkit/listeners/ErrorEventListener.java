@@ -18,6 +18,8 @@
 
 package de.sean.blockprot.bukkit.listeners;
 
+import de.sean.blockprot.bukkit.TranslationKey;
+import de.sean.blockprot.bukkit.Translator;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
@@ -37,7 +39,7 @@ public class ErrorEventListener implements Listener {
     @EventHandler
     public void onJoin(@NotNull PlayerJoinEvent event) {
         if (event.getPlayer().isOp() && !errorMessage.isEmpty()) {
-            event.getPlayer().sendMessage("§c[BlockProt]: " + errorMessage);
+            event.getPlayer().sendMessage(Translator.get(TranslationKey.MESSAGES__ERROR_PREFIX) + errorMessage);
             errorMessage = "";
         }
     }

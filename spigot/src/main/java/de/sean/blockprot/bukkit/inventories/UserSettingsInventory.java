@@ -31,11 +31,29 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
 
+/**
+ * Single-row inventory with user settings.
+ *
+ * Layout (singleLine = 9 slots, 0-8):
+ *   0 = Lock on place
+ *   1 = Hints toggle        ← new, above the back button area
+ *   2 = Friends skull
+ *   8 = Back
+ *
+ * Hints semantics:
+ *   hasPlayerInteractedWithMenu = false → hints are ENABLED (player hasn't dismissed them)
+ *   hasPlayerInteractedWithMenu = true  → hints are DISABLED
+ *   Toggle flips the value and updates the enchant visual.
+ */
 public class UserSettingsInventory extends BlockProtInventory {
+
+    // Slot indices
+    private static final int SLOT_LOCK_ON_PLACE = 0;
+    private static final int SLOT_HINTS         = 1;
+    private static final int SLOT_FRIENDS       = 2;
+
     @Override
-    int getSize() {
-        return InventoryConstants.singleLine;
-    }
+    int getSize() { return InventoryConstants.singleLine; }
 
     @NotNull
     @Override
@@ -50,37 +68,61 @@ public class UserSettingsInventory extends BlockProtInventory {
         if (item == null) return;
         switch (item.getType()) {
             case BARRIER -> {
-                // Lock on place button, default value is true
-                PlayerSettingsHandler settingsHandler = new PlayerSettingsHandler(player);
-                settingsHandler.setLockOnPlace(!settingsHandler.getLockOnPlace());
-                inventory.setItem(0, toggleOption(item, null));
+                // Lock on place toggle
+                PlayerSettingsHandler h = new PlayerSettingsHandler(player);
+                h.setLockOnPlace(!h.getLockOnPlace());
+                inventory.setItem(SLOT_LOCK_ON_PLACE, toggleOption(item, null));
+            }
+            case KNOWLEDGE_BOOK -> {
+                // Hints toggle
+                PlayerSettingsHandler h = new PlayerSettingsHandler(player);
+                // hasPlayerInteractedWithMenu=true means hints are DISABLED; flip it
+                boolean hintsCurrentlyEnabled = !h.hasPlayerInteractedWithMenu();
+                h.setHasPlayerInteractedWithMenu(hintsCurrentlyEnabled); // true = disable, false = enable
+                // Refresh the whole inventory so the enchant / name updates
+                fill(player);
             }
             case PLAYER_HEAD -> {
                 state.friendSearchState = InventoryState.FriendSearchState.DEFAULT_FRIEND_SEARCH;
                 closeAndOpen(player, new FriendManageInventory().fill(player));
             }
-            default -> closeAndOpen(player, null); // This also includes Material.BLACK_STAINED_GLASS_PANE
+            case BLACK_STAINED_GLASS_PANE -> {
+                // Back → re-open the User Menu
+                player.openInventory(new UserMenuInventory().fill(player));
+            }
+            default -> closeAndOpen(player, null);
         }
         event.setCancelled(true);
     }
 
     @Override
-    public void onClose(@NotNull InventoryCloseEvent event, @NotNull InventoryState state) {
-    }
+    public void onClose(@NotNull InventoryCloseEvent event, @NotNull InventoryState state) {}
 
     public Inventory fill(Player player) {
-        PlayerSettingsHandler settingsHandler = new PlayerSettingsHandler(player);
-        boolean lockOnPlace = settingsHandler.getLockOnPlace();
+        PlayerSettingsHandler settings = new PlayerSettingsHandler(player);
+
+        // Slot 0: Lock on place
         setEnchantedOptionItemStack(
-            0,
+            SLOT_LOCK_ON_PLACE,
             Material.BARRIER,
             TranslationKey.INVENTORIES__LOCK_ON_PLACE,
-            lockOnPlace
+            settings.getLockOnPlace()
         );
+
+        // Slot 1: Hints toggle
+        // hintsEnabled = true when player has NOT yet dismissed them
+        boolean hintsEnabled = !settings.hasPlayerInteractedWithMenu();
+        setEnchantedOptionItemStack(
+            SLOT_HINTS,
+            Material.KNOWLEDGE_BOOK,
+            TranslationKey.INVENTORIES__USER_MENU__HINTS,
+            hintsEnabled
+        );
+
+        // Slot 2: Friends skull
         if (!BlockProt.getDefaultConfig().isFriendFunctionalityDisabled()) {
-            // Slot 1: skull genérico primero, luego async actualiza con skin real
             setItemStack(
-                1,
+                SLOT_FRIENDS,
                 Material.PLAYER_HEAD,
                 Translator.get(TranslationKey.INVENTORIES__FRIENDS__MANAGE)
             );
@@ -91,15 +133,14 @@ public class UserSettingsInventory extends BlockProtInventory {
                         var profile = BlockProtInventory.createPlayerProfile(
                             player.getUniqueId(), player.getName());
                         Bukkit.getScheduler().runTask(BlockProt.getInstance(), () -> {
-                            setPlayerSkull(1, profile);
-                            // Restaurar el nombre del item después de poner el skull
-                            var stack = inventory.getItem(1);
+                            setPlayerSkull(SLOT_FRIENDS, profile);
+                            var stack = inventory.getItem(SLOT_FRIENDS);
                             if (stack != null) {
                                 var meta = stack.getItemMeta();
                                 if (meta != null) {
                                     meta.setDisplayName(Translator.get(TranslationKey.INVENTORIES__FRIENDS__MANAGE));
                                     stack.setItemMeta(meta);
-                                    inventory.setItem(1, stack);
+                                    inventory.setItem(SLOT_FRIENDS, stack);
                                 }
                             }
                         });
@@ -110,7 +151,8 @@ public class UserSettingsInventory extends BlockProtInventory {
                 }
             );
         }
-        setBackButton();
+
+        setBackButton(); // slot 8
         return inventory;
     }
 }

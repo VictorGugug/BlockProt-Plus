@@ -25,6 +25,7 @@ import de.sean.blockprot.bukkit.Translator;
 import de.sean.blockprot.bukkit.events.BlockAccessMenuEvent;
 import de.sean.blockprot.bukkit.nbt.BlockNBTHandler;
 import de.sean.blockprot.bukkit.nbt.PlayerInventoryClipboard;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
@@ -79,26 +80,25 @@ public class BlockLockInventory extends BlockProtInventory {
                     );
                 }
                 case OAK_SIGN -> {
-                    var handler = getNbtHandlerOrNull(block);
-                    closeAndOpen(
-                        player,
-                        handler == null
-                            ? null
-                            : new BlockInfoInventory().fill(player, handler)
-                    );
+                    // Block info removed from chest menu — accessible via other means.
                 }
                 case KNOWLEDGE_BOOK -> {
                     // Paste
                     var handler = getNbtHandlerOrNull(block);
                     var container = PlayerInventoryClipboard.get(player.getUniqueId().toString());
-                    if (handler != null && container != null)
+                    if (handler != null && container != null) {
                         handler.pasteNbt(container);
+                        player.sendActionBar(LegacyComponentSerializer.legacySection().deserialize(
+                            Translator.get(TranslationKey.MESSAGES__PASTE_DONE)));
+                    }
                 }
                 case PAPER -> {
                     // Copy
                     var handler = getNbtHandlerOrNull(block);
                     if (handler != null) {
                         PlayerInventoryClipboard.set(player.getUniqueId().toString(), handler.getNbtCopy());
+                        player.sendActionBar(LegacyComponentSerializer.legacySection().deserialize(
+                            Translator.get(TranslationKey.MESSAGES__COPY_DONE)));
                         // The player probably doesn't want to paste the data onto the same container.
                         closeAndOpen(player, null);
                     }
@@ -130,10 +130,22 @@ public class BlockLockInventory extends BlockProtInventory {
                 }
                 case SPYGLASS -> closeAndOpen(player, new BlockInspectContentsInventory(player).fill());
                 case CLOCK -> closeAndOpen(player, new AuditInventory().fill(player));
-                default -> closeAndOpen(
-                    player,
-                    null
-                );
+                case WRITABLE_BOOK -> {
+                    // Open user menu from chest
+                    InventoryState menuState = new InventoryState(null);
+                    menuState.friendSearchState = InventoryState.FriendSearchState.DEFAULT_FRIEND_SEARCH;
+                    InventoryState.set(player.getUniqueId(), menuState);
+                    player.openInventory(new UserMenuInventory().fill(player));
+                }
+                case COMMAND_BLOCK -> {
+                    // Open admin menu from chest (admin only)
+                    if (player.hasPermission(Permissions.ADMIN.key())) {
+                        InventoryState menuState = new InventoryState(null);
+                        menuState.friendSearchState = InventoryState.FriendSearchState.DEFAULT_FRIEND_SEARCH;
+                        InventoryState.set(player.getUniqueId(), menuState);
+                        player.openInventory(new AdminMenuInventory().fill(player));
+                    }
+                }
             }
         }
         event.setCancelled(true);
@@ -167,42 +179,48 @@ public class BlockLockInventory extends BlockProtInventory {
             );
         }
 
-        // We insert a 'inspect contents' button if the player does not own the block and has admin permissions.
-        var rightItemOffset = !isNotProtected && !handler.isOwner(player.getUniqueId()) && (state.getBlock().getState() instanceof InventoryHolder) && player.hasPermission(Permissions.ADMIN.key()) ? 1 : 0;
-        if (rightItemOffset == 1) {
-            setItemStack(
-                getSize() - 2,
-                Material.SPYGLASS,
-                TranslationKey.INVENTORIES__INSPECT_CONTENTS
-            );
+        // ── Fixed bottom-row layout (slots 9-17, second row of doubleLine inventory) ──
+        // Slot 17: back
+        // Slot 16: User Menu  (always)
+        // Slot 15: Admin Menu (only if player has admin permission)
+        // Slot 14: Copy Configuration (only if manager)
+        // Slot 13: Paste Configuration (only if manager + has clipboard)
+        // Slot 12: Inspect Contents (only if spyglass applies)
+        // Slot 11: Audit Log (only if owner/admin + logger active)
+        setBackButton(); // slot 17
+
+        boolean isAdmin = player.hasPermission(Permissions.ADMIN.key());
+        // User Menu — slot 16, always visible ("above the back button")
+        setItemStack(getSize() - 2, Material.WRITABLE_BOOK,
+            Translator.get(TranslationKey.INVENTORIES__USER_MENU__TITLE));
+        // Admin Menu — slot 15, only for admins
+        if (isAdmin) {
+            setItemStack(getSize() - 3, Material.COMMAND_BLOCK,
+                Translator.get(TranslationKey.INVENTORIES__ADMIN_MENU__TITLE));
         }
 
         if (!isNotProtected && state.menuPermissions.contains(BlockAccessMenuEvent.MenuPermission.MANAGER)) {
-            fillManagerItems(state, player, rightItemOffset);
+            fillManagerItems(state, player);
         }
 
-        if (!isNotProtected && state.menuPermissions.contains(BlockAccessMenuEvent.MenuPermission.INFO)) {
-            setItemStack(
-                getSize() - 2 - rightItemOffset,
-                Material.OAK_SIGN,
-                TranslationKey.INVENTORIES__BLOCK_INFO
-            );
+        // Inspect contents — slot 12 (admin, non-owner, inventory holder block)
+        boolean showInspect = !isNotProtected && !handler.isOwner(player.getUniqueId())
+            && (state.getBlock().getState() instanceof InventoryHolder)
+            && isAdmin;
+        if (showInspect) {
+            setItemStack(getSize() - 6, Material.SPYGLASS, TranslationKey.INVENTORIES__INSPECT_CONTENTS);
         }
 
-        // Audit button: owner or admin only, and only when the audit logger is active.
-        boolean isOwnerOrAdmin = handler.isOwner(player.getUniqueId()) || player.hasPermission(Permissions.ADMIN.key());
+        // Audit — slot 11 (owner or admin, logger active)
+        boolean isOwnerOrAdmin = handler.isOwner(player.getUniqueId()) || isAdmin;
         if (!isNotProtected && isOwnerOrAdmin && BlockProt.getAuditLogger() != null) {
-            setItemStack(
-                getSize() - 5 - rightItemOffset,
-                Material.CLOCK,
-                TranslationKey.INVENTORIES__AUDIT__OPEN
-            );
+            setItemStack(getSize() - 7, Material.CLOCK, TranslationKey.INVENTORIES__AUDIT__OPEN);
         }
-        setBackButton();
         return inventory;
     }
 
-    private void fillManagerItems(@NotNull InventoryState state, @NotNull Player player, int rightItemOffset) {
+    private void fillManagerItems(@NotNull InventoryState state, @NotNull Player player) {
+        // First row items (manager actions): slots 1..4
         var offset = 1;
         setItemStack(
             offset++,
@@ -227,17 +245,18 @@ public class BlockLockInventory extends BlockProtInventory {
             Material.ENDER_PEARL,
             TranslationKey.INVENTORIES__TRANSFER__BUTTON
         );
+        // Copy/paste — fixed bottom-row slots 14 (copy) and 13 (paste)
+        setItemStack(
+            getSize() - 4,
+            Material.PAPER,
+            TranslationKey.INVENTORIES__COPY_CONFIGURATION
+        );
         if (PlayerInventoryClipboard.contains(player.getUniqueId().toString())) {
             setItemStack(
-                getSize() - 4 - rightItemOffset,
+                getSize() - 5,
                 Material.KNOWLEDGE_BOOK,
                 TranslationKey.INVENTORIES__PASTE_CONFIGURATION
             );
         }
-        setItemStack(
-            getSize() - 3 - rightItemOffset,
-            Material.PAPER,
-            TranslationKey.INVENTORIES__COPY_CONFIGURATION
-        );
     }
 }

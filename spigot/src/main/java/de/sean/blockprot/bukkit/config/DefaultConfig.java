@@ -291,6 +291,10 @@ public final class DefaultConfig extends BlockProtConfig {
         return config.contains("lock_hint_cooldown_in_seconds") ? config.getLong("lock_hint_cooldown_in_seconds") : 10;
     }
 
+    public boolean areExtraCommandsEnabled() {
+        return config.getBoolean("commands_enabled", false);
+    }
+
     public boolean shouldEnableAllOptionalFeatures() { return config.getBoolean("optional_features_enable_all", false); }
     public boolean isLocalizedCommandAliasesEnabled() { return config.getBoolean("localized_command_aliases", true); }
 
