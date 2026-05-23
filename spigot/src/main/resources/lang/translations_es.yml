@@ -4,10 +4,9 @@ enabled: Activado
 disabled: Desactivado
 about:
   title: "§x§a§3§c§6§e§bBlockProt {version} - Spigot Plugin"
-  original_author: "§7Autor original: §fspnda"
-  fork_maintainers: "§7Mantenedores del fork: §fVickey & Reim §8(alias ZarZey)"
-  report_original: "§x§c§3§e§e§a§7Reportar problemas (plugin original)"
-  report_fork: "§x§6§6§c§6§6§6Reportar problemas (fork SP26)"
+  fork_maintainers: "§7Mantenedor: §fVickey §8(VictorGugug)"
+  report_fork: "§x§6§6§c§6§6§6Reportar problemas / Sugerencias"
+  report_fork_hover: "Haz clic para abrir el rastreador de problemas en GitHub"
 inventories:
   back: Atrás
   last_page: Última página
@@ -52,6 +51,9 @@ inventories:
     global_statistics: Estadísticas del servidor
     container_count: Número de bloques
     your_blocks: Tus bloques
+  stats:
+    lore_tp: "§7[✓] Clic: Teletransportar al bloque"
+    lore_no_tp: "§c[✗] Sin permiso (blockprot.blocks.tp)"
   audit:
     title: "Registro de Accesos"
     no_entries: "Sin registros."
@@ -72,6 +74,55 @@ inventories:
     no_interact: "§eBloquear interacción"
     no_leash: "§6Bloquear correa"
     no_pickup: "§bBloquear recoger (loro)"
+  transfer:
+    title: "§8[§dTransferir bloque§8] Buscar jugador"
+    search_prompt: "Nombre del jugador"
+    button: "Transferir bloque"
+    button_lore: "Transferir propiedad a otro jugador."
+  timed:
+    title: "§8[§6Acceso temporal§8] Seleccionar duración"
+    button: "§eAcceso temporal"
+    button_lore: "Concede acceso por tiempo limitado."
+    info: "§eInfo"
+    over_max: "§cSupera el máximo configurado"
+    max_label: "§7Máximo: §f{duration}"
+    no_limit: "§7Máximo: §fSin límite"
+    player_label: "§7Jugador: §f{player}"
+  user_menu:
+    title: "[Usuario] BlockProt"
+    settings: "Mis ajustes"
+    settings_lore: "Configura tus preferencias personales."
+    friends: "Amigos"
+    friends_lore: "Gestiona tu lista global de amigos."
+    stats: "Estadísticas"
+    stats_lore: "Ver cuántos bloques has protegido."
+    transfer: "Transferir bloque"
+    transfer_lore: "Mira un bloque y usa /bp transfer <jugador>."
+    timed: "Acceso temporal"
+    timed_lore: "Mira un bloque y usa /bp timed <jugador> <segundos>."
+    hints: "Sugerencias de protección"
+    hints_lore: "Activa/desactiva sugerencias al colocar bloques."
+    hints_already: "Sugerencias ya gestionadas."
+    about: "Acerca de BlockProt"
+    about_lore: "Información del plugin."
+    close: "Cerrar"
+    close_lore: "Cerrar este menú."
+  admin_menu:
+    title: "[Admin] BlockProt"
+    reload: "Recargar config"
+    reload_lore: "Recarga config.yml y traducciones."
+    update: "Buscar actualizaciones"
+    update_lore: "Verifica si hay una nueva versión."
+    integrations: "Integraciones activas"
+    integrations_lore: "Lista integraciones activas en el chat."
+    stats: "Estadísticas"
+    stats_lore: "Abre el menú de estadísticas globales."
+    debug: "Diagnóstico (debug)"
+    debug_lore: "Ejecuta pruebas internas y escribe en el log."
+    info: "Info de bloque"
+    info_lore: "Cierra y usa /bp info <jugador> para ver sus bloques."
+    close: "Cerrar"
+    close_lore: "Cerrar este menú."
   # ─────────────────────────────────────────────────────────────────────────
 messages:
   permission_granted: Protegido.
@@ -116,6 +167,24 @@ messages:
   admin_info_usage: "§cUso: /bp info <jugador>"
   admin_info_player_not_found: "§cJugador no encontrado: {player}"
   admin_info_no_blocks: "§7{player} no tiene bloques bloqueados."
+  no_permission_tp: "§c[✗] Sin permiso: blockprot.blocks.tp"
+  remote_unlock_warning: "§e⚠ Desproteger remotamente.\n§7Haz clic de nuevo para confirmar."
+  admin_reload_done: "§a[BP Admin] Config y traducciones recargadas."
+  admin_integrations: "§7[BP Admin] Integraciones ({count}): {integrations}"
+  admin_info_hint: "§7[BP Admin] Usa §f/bp info <jugador>§7 para ver sus bloques protegidos."
+  admin_debug_hint: "§7[BP Admin] Ejecutando diagnósticos..."
+  copy_done: "§aConfiguración copiada."
+  paste_done: "§aConfiguración pegada."
+  hints_disabled: "§aSugerencias de protección desactivadas."
+  hints_already: "§7Sugerencias ya gestionadas. Adjústalas en Mis ajustes."
+  transfer_self_gui: "§cNo puedes transferir un bloque a ti mismo."
+  transfer_not_owner_gui: "§cNo eres el dueño de ese bloque."
+  transfer_failed: "§cNo se pudo transferir el bloque."
+  timed_access_granted: "§aAcceso temporal concedido por §f{duration}§a."
+  timed_access_over_max: "§cLa duración supera el máximo configurado ({duration})."
+  timed_access_invalid_state: "§cEl acceso temporal solo está disponible para amigos en un bloque específico."
+  user_transfer_hint: "§7Mira un bloque tuyo y usa: §f/bp transfer <jugador>"
+  user_timed_hint: "§7Mira un bloque tuyo y usa: §f/bp timed <jugador> <segundos>"
 console:
   config_change_detected: "Cambio detectado en la configuración; recargando..."
   config_reloaded: "Configuración recargada automáticamente."

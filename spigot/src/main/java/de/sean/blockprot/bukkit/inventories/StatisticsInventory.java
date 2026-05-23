@@ -71,21 +71,21 @@ public final class StatisticsInventory extends BlockProtInventory {
                 }
                 break;
             case BLACK_STAINED_GLASS_PANE:
-                // Back: if opened from a block-lock context return there;
-                // otherwise return to the User or Admin menu.
-                if (state.getBlock() != null) {
-                    closeAndOpen(event.getWhoClicked(), null);
-                } else if (event.getWhoClicked() instanceof Player player) {
-                    player.openInventory(new UserMenuInventory().fill(player));
+                if (event.getWhoClicked() instanceof Player player) {
+                    goBack(player, state);
                 } else {
                     closeAndOpen(event.getWhoClicked(), null);
                 }
                 break;
             default:
-                BukkitStatistic<?> stat = state.currentPageIndex == 0
-                    ? playerStatistics.get(event.getSlot())
-                    : serverStatistics.get(event.getSlot());
-                openStatInventory(stat, (Player) event.getWhoClicked());
+                List<BukkitStatistic<?>> page = state.currentPageIndex == 0
+                    ? playerStatistics
+                    : serverStatistics;
+                int slot = event.getSlot();
+                if (slot >= 0 && slot < page.size()) {
+                    state.origin = InventoryState.MenuOrigin.STATISTICS;
+                    openStatInventory(page.get(slot), (Player) event.getWhoClicked());
+                }
                 break;
         }
         event.setCancelled(true);

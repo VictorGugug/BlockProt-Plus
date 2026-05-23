@@ -258,6 +258,20 @@ public final class StatHandler extends NBTHandler<NBTCompound> {
         }
     }
 
+    /**
+     * Load a PLAYER statistic using any UUID — works for offline players too.
+     * Reads directly from the NBT file without requiring an online {@link Player}.
+     *
+     * @param statistic the statistic to populate (must be {@link StatisticType#PLAYER})
+     * @param uuid      the player UUID
+     */
+    public static void getStatisticByUuid(@NotNull BukkitStatistic<?> statistic,
+                                          @NotNull java.util.UUID uuid) {
+        if (statistic.getType() != StatisticType.PLAYER
+                && statistic.getType() != StatisticType.ALL) return;
+        getStatsForPlayer(uuid.toString()).ifPresent(h -> h.updateStatistic(statistic));
+    }
+
     private static @NotNull Stream<StatHandler> getPlayerStats() {
         if (nbtFile == null) throw new RuntimeException("nbtFile was null.");
         if (!nbtFile.hasKey(PLAYER_SUB_KEY)) return Stream.empty();

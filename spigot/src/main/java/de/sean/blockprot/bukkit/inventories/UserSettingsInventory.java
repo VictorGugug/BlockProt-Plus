@@ -84,10 +84,11 @@ public class UserSettingsInventory extends BlockProtInventory {
             }
             case PLAYER_HEAD -> {
                 state.friendSearchState = InventoryState.FriendSearchState.DEFAULT_FRIEND_SEARCH;
+                state.origin = InventoryState.MenuOrigin.USER_SETTINGS;
                 closeAndOpen(player, new FriendManageInventory().fill(player));
             }
             case BLACK_STAINED_GLASS_PANE -> {
-                // Back → re-open the User Menu
+                state.origin = InventoryState.MenuOrigin.USER_SETTINGS;
                 player.openInventory(new UserMenuInventory().fill(player));
             }
             default -> closeAndOpen(player, null);

@@ -71,7 +71,7 @@ public final class FriendDetailInventory extends BlockProtInventory {
         if (item == null) return;
 
         switch (item.getType()) {
-            case BLACK_STAINED_GLASS_PANE -> closeAndOpen(player, new FriendManageInventory().fill(player));
+            case BLACK_STAINED_GLASS_PANE -> goBack(player, state);
             case RED_STAINED_GLASS_PANE -> {
                 final var friend = state.currentFriend;
                 assert friend != null;

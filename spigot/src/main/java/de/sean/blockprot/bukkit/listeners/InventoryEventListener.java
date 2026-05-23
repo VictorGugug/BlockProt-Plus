@@ -110,8 +110,7 @@ public class InventoryEventListener implements Listener {
                             event.setCancelled(true);
                         }
                     } else if (handler.isProtected()) {
-                        // Owner interacting with their own block — log item action.
-                        logItemAction(player, blockHolder.getBlock(), event.getAction());
+                        // Owner interacting — do NOT log (owner actions are excluded from audit)
                     }
                 }
             } catch (ClassCastException e) {
@@ -205,8 +204,8 @@ public class InventoryEventListener implements Listener {
                         if (audit != null && handler.isProtected()) {
                             audit.log(player.getUniqueId(), player.getName(), block.getLocation(), AuditLogger.Action.ACCESS_DENIED);
                         }
-                    } else if (handler.isProtected()) {
-                        // Log successful open.
+                    } else if (handler.isProtected() && !handler.isOwner(playerUuid)) {
+                        // Non-owner allowed friend — log OPENED (owners are never logged)
                         AuditLogger audit = BlockProt.getAuditLogger();
                         if (audit != null) {
                             audit.log(player.getUniqueId(), player.getName(), block.getLocation(), AuditLogger.Action.OPENED);

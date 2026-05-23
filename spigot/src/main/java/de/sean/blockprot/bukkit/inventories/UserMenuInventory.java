@@ -17,10 +17,8 @@ import java.util.List;
 
 /**
  * GUI for regular user operations. Opened via /bp user.
- * Items centred on row 1 (slots 9–17 of a triple-line inventory).
  *
- * Removed: Transfer and Timed (accessible via /bp transfer and /bp timed).
- * Hints toggle is now only in My Settings.
+ * Layout (tripleLine = 27 slots, items centred row 1 slots 11-14).
  */
 public class UserMenuInventory extends BlockProtInventory {
 
@@ -55,6 +53,12 @@ public class UserMenuInventory extends BlockProtInventory {
             Translator.get(TranslationKey.INVENTORIES__USER_MENU__ABOUT),
             Translator.get(TranslationKey.INVENTORIES__USER_MENU__ABOUT_LORE)));
 
+        // Back button if opened from another menu (not standalone via command)
+        InventoryState state = InventoryState.get(player.getUniqueId());
+        if (state != null && state.origin != InventoryState.MenuOrigin.NONE) {
+            setBackButton(getSize() - 1);
+        }
+
         return inventory;
     }
 
@@ -68,23 +72,28 @@ public class UserMenuInventory extends BlockProtInventory {
         if (slot == SLOT_SETTINGS) {
             InventoryState newState = new InventoryState(null);
             newState.friendSearchState = InventoryState.FriendSearchState.DEFAULT_FRIEND_SEARCH;
+            newState.origin = InventoryState.MenuOrigin.USER_MENU;
             InventoryState.set(player.getUniqueId(), newState);
             player.openInventory(new UserSettingsInventory().fill(player));
             new PlayerSettingsHandler(player).setHasPlayerInteractedWithMenu(true);
         } else if (slot == SLOT_FRIENDS) {
             InventoryState newState = new InventoryState(null);
             newState.friendSearchState = InventoryState.FriendSearchState.DEFAULT_FRIEND_SEARCH;
+            newState.origin = InventoryState.MenuOrigin.USER_MENU;
             InventoryState.set(player.getUniqueId(), newState);
             var inv = new FriendManageInventory().fill(player);
             if (inv != null) player.openInventory(inv);
         } else if (slot == SLOT_STATS) {
             InventoryState newState = new InventoryState(null);
             newState.friendSearchState = InventoryState.FriendSearchState.DEFAULT_FRIEND_SEARCH;
+            newState.origin = InventoryState.MenuOrigin.USER_MENU;
             InventoryState.set(player.getUniqueId(), newState);
             player.openInventory(new StatisticsInventory().fill(player));
         } else if (slot == SLOT_ABOUT) {
             player.closeInventory();
             player.performCommand("blockprot about");
+        } else if (slot == getSize() - 1) {
+            goBack(player, state);
         }
     }
 

@@ -16,9 +16,6 @@ permissions:
   blockprot.bypass:
     default: false
     description: Allows a player to bypass any protection, effectively having access to every block.
-  blockprot.remote.access:
-    default: op
-    description: Allows opening a block's lock menu remotely from the statistics list (right-click).
   blockprot.blocks.tp:
     default: op
     description: Allows teleporting to a block from the statistics list (left-click).

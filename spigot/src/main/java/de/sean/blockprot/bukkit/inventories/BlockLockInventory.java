@@ -36,6 +36,9 @@ import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.Collections;
+import java.util.List;
+
 
 public class BlockLockInventory extends BlockProtInventory {
     @Override
@@ -58,32 +61,42 @@ public class BlockLockInventory extends BlockProtInventory {
 
         Player player = (Player) event.getWhoClicked();
         if (BlockProt.getDefaultConfig().isLockable(block.getType()) && event.getSlot() == 0) {
-            applyChanges(
-                player,
-                (handler) -> handler.lockBlock(player),
-                null
-            );
-            closeAndOpen(player, null);
+            boolean isRemote = state.friendSearchState == InventoryState.FriendSearchState.FRIEND_SEARCH;
+            var handler = getNbtHandlerOrNull(block);
+            boolean willUnlock = handler != null && !handler.isNotProtected();
+            if (isRemote && willUnlock) {
+                InventoryState pending = InventoryState.get(player.getUniqueId());
+                if (pending != null && pending.remoteLockPendingConfirm) {
+                    pending.remoteLockPendingConfirm = false;
+                    applyChanges(player, (h) -> h.lockBlock(player), null);
+                    closeAndOpen(player, null);
+                } else {
+                    if (pending != null) pending.remoteLockPendingConfirm = true;
+                    player.sendActionBar(LegacyComponentSerializer.legacySection().deserialize(
+                        Translator.get(TranslationKey.MESSAGES__REMOTE_UNLOCK_WARNING)));
+                }
+            } else {
+                applyChanges(player, (h) -> h.lockBlock(player), null);
+                closeAndOpen(player, null);
+            }
         } else {
             switch (item.getType()) {
-                case PLAYER_HEAD -> closeAndOpen(
-                    player,
-                    new FriendManageInventory().fill(player)
-                );
+                case PLAYER_HEAD -> {
+                    state.origin = InventoryState.MenuOrigin.BLOCK_LOCK;
+                    closeAndOpen(player, new FriendManageInventory().fill(player));
+                }
                 case REDSTONE -> {
+                    state.origin = InventoryState.MenuOrigin.BLOCK_LOCK;
                     var handler = getNbtHandlerOrNull(block);
-                    closeAndOpen(
-                        player,
-                        handler == null
-                            ? null
-                            : new RedstoneSettingsInventory().fill(player, state)
-                    );
+                    closeAndOpen(player, handler == null ? null : new RedstoneSettingsInventory().fill(player, state));
                 }
-                case OAK_SIGN -> {
-                    // Block info removed from chest menu — accessible via other means.
+                case COMPASS -> {
+                    state.origin = InventoryState.MenuOrigin.BLOCK_LOCK;
+                    var handler = getNbtHandlerOrNull(block);
+                    if (handler != null) closeAndOpen(player, new BlockInfoInventory().fill(player, handler));
                 }
+                case OAK_SIGN -> {}
                 case KNOWLEDGE_BOOK -> {
-                    // Paste
                     var handler = getNbtHandlerOrNull(block);
                     var container = PlayerInventoryClipboard.get(player.getUniqueId().toString());
                     if (handler != null && container != null) {
@@ -93,59 +106,41 @@ public class BlockLockInventory extends BlockProtInventory {
                     }
                 }
                 case PAPER -> {
-                    // Copy
                     var handler = getNbtHandlerOrNull(block);
                     if (handler != null) {
                         PlayerInventoryClipboard.set(player.getUniqueId().toString(), handler.getNbtCopy());
                         player.sendActionBar(LegacyComponentSerializer.legacySection().deserialize(
                             Translator.get(TranslationKey.MESSAGES__COPY_DONE)));
-                        // The player probably doesn't want to paste the data onto the same container.
                         closeAndOpen(player, null);
                     }
                 }
                 case NAME_TAG -> {
                     player.closeInventory();
                     var currentName = new BlockNBTHandler(block).getName();
-                    AnvilInput.open(
-                        player,
-                        BlockProt.getInstance(),
-                        currentName,
+                    AnvilInput.open(player, BlockProt.getInstance(), currentName,
                         Translator.get(TranslationKey.INVENTORIES__SET_BLOCK_NAME),
                         text -> {
                             var invState = InventoryState.get(player.getUniqueId());
                             if (invState != null && invState.getBlock() != null) {
                                 new BlockNBTHandler(invState.getBlock()).setName(text);
                                 Inventory inventory = new BlockLockInventory().fill(player, block.getType(), new BlockNBTHandler(block));
-                                if (inventory != null) {
-                                    player.openInventory(inventory);
-                                }
+                                if (inventory != null) player.openInventory(inventory);
                             }
-                        }
-                    );
+                        });
                 }
                 case ENDER_PEARL -> {
-                    // Open transfer-search GUI: pick a player to transfer ownership to
                     player.closeInventory();
                     TransferSearchInventory.openSearch(player);
                 }
-                case SPYGLASS -> closeAndOpen(player, new BlockInspectContentsInventory(player).fill());
-                case CLOCK -> closeAndOpen(player, new AuditInventory().fill(player));
-                case WRITABLE_BOOK -> {
-                    // Open user menu from chest
-                    InventoryState menuState = new InventoryState(null);
-                    menuState.friendSearchState = InventoryState.FriendSearchState.DEFAULT_FRIEND_SEARCH;
-                    InventoryState.set(player.getUniqueId(), menuState);
-                    player.openInventory(new UserMenuInventory().fill(player));
+                case SPYGLASS -> {
+                    state.origin = InventoryState.MenuOrigin.BLOCK_LOCK;
+                    closeAndOpen(player, new BlockInspectContentsInventory(player).fill());
                 }
-                case COMMAND_BLOCK -> {
-                    // Open admin menu from chest (admin only)
-                    if (player.hasPermission(Permissions.ADMIN.key())) {
-                        InventoryState menuState = new InventoryState(null);
-                        menuState.friendSearchState = InventoryState.FriendSearchState.DEFAULT_FRIEND_SEARCH;
-                        InventoryState.set(player.getUniqueId(), menuState);
-                        player.openInventory(new AdminMenuInventory().fill(player));
-                    }
+                case CLOCK -> {
+                    state.origin = InventoryState.MenuOrigin.BLOCK_LOCK;
+                    closeAndOpen(player, new AuditInventory().fill(player));
                 }
+                case BARRIER -> closeAndOpen(player, null);
             }
         }
         event.setCancelled(true);
@@ -157,106 +152,61 @@ public class BlockLockInventory extends BlockProtInventory {
 
     public Inventory fill(@NotNull Player player, Material material, BlockNBTHandler handler) {
         final InventoryState state = InventoryState.get(player.getUniqueId());
-        if (state == null) {
-            return inventory;
-        }
+        if (state == null) return inventory;
 
         var isNotProtected = handler.isNotProtected();
-        // This means the user only has INFO permissions but the block is not locked and can
-        // therefore not provide any information.
         if (isNotProtected && state.menuPermissions.size() == 1
             && state.menuPermissions.contains(BlockAccessMenuEvent.MenuPermission.INFO)) {
             return null;
         }
 
-        if (state.menuPermissions.contains(BlockAccessMenuEvent.MenuPermission.LOCK)) {
-            setItemStack(
-                0,
-                getProperMaterial(material),
-                isNotProtected
-                    ? TranslationKey.INVENTORIES__LOCK
-                    : TranslationKey.INVENTORIES__UNLOCK
-            );
-        }
-
-        // ── Fixed bottom-row layout (slots 9-17, second row of doubleLine inventory) ──
-        // Slot 17: back
-        // Slot 16: User Menu  (always)
-        // Slot 15: Admin Menu (only if player has admin permission)
-        // Slot 14: Copy Configuration (only if manager)
-        // Slot 13: Paste Configuration (only if manager + has clipboard)
-        // Slot 12: Inspect Contents (only if spyglass applies)
-        // Slot 11: Audit Log (only if owner/admin + logger active)
-        setBackButton(); // slot 17
-
         boolean isAdmin = player.hasPermission(Permissions.ADMIN.key());
-        // User Menu — slot 16, always visible ("above the back button")
-        setItemStack(getSize() - 2, Material.WRITABLE_BOOK,
-            Translator.get(TranslationKey.INVENTORIES__USER_MENU__TITLE));
-        // Admin Menu — slot 15, only for admins
-        if (isAdmin) {
-            setItemStack(getSize() - 3, Material.COMMAND_BLOCK,
-                Translator.get(TranslationKey.INVENTORIES__ADMIN_MENU__TITLE));
+
+        // Slot 0: lock / unlock button — no lore, always clean
+        if (state.menuPermissions.contains(BlockAccessMenuEvent.MenuPermission.LOCK)) {
+            setItemStack(0, getProperMaterial(material),
+                isNotProtected
+                    ? Translator.get(TranslationKey.INVENTORIES__LOCK)
+                    : Translator.get(TranslationKey.INVENTORIES__UNLOCK),
+                Collections.emptyList());
         }
 
+        // ── Row 1: manager items slots 1-4 ───────────────────────────────────
+        // Layout (photo): Lock(0) | Redstone(1) | Friends(2) | Name(3) | Transfer(4)
         if (!isNotProtected && state.menuPermissions.contains(BlockAccessMenuEvent.MenuPermission.MANAGER)) {
             fillManagerItems(state, player);
         }
 
-        // Inspect contents — slot 12 (admin, non-owner, inventory holder block)
+        // ── Row 2 layout: Inspect(9) | ... | Log(13) | Paste(14) | Copy(15) | Info(16) | Back(17) ──
+        boolean isOwnerOrAdmin = handler.isOwner(player.getUniqueId()) || isAdmin;
         boolean showInspect = !isNotProtected && !handler.isOwner(player.getUniqueId())
             && (state.getBlock().getState() instanceof InventoryHolder)
             && isAdmin;
         if (showInspect) {
-            setItemStack(getSize() - 6, Material.SPYGLASS, TranslationKey.INVENTORIES__INSPECT_CONTENTS);
+            setItemStack(9, Material.SPYGLASS, TranslationKey.INVENTORIES__INSPECT_CONTENTS);
         }
-
-        // Audit — slot 11 (owner or admin, logger active)
-        boolean isOwnerOrAdmin = handler.isOwner(player.getUniqueId()) || isAdmin;
         if (!isNotProtected && isOwnerOrAdmin && BlockProt.getAuditLogger() != null) {
-            setItemStack(getSize() - 7, Material.CLOCK, TranslationKey.INVENTORIES__AUDIT__OPEN);
+            setItemStack(13, Material.CLOCK, TranslationKey.INVENTORIES__AUDIT__OPEN);
         }
+        if (!isNotProtected && state.menuPermissions.contains(BlockAccessMenuEvent.MenuPermission.MANAGER)) {
+            if (PlayerInventoryClipboard.contains(player.getUniqueId().toString())) {
+                setItemStack(14, Material.KNOWLEDGE_BOOK, TranslationKey.INVENTORIES__PASTE_CONFIGURATION);
+            }
+            setItemStack(15, Material.PAPER, TranslationKey.INVENTORIES__COPY_CONFIGURATION);
+            setItemStack(16, Material.COMPASS, TranslationKey.INVENTORIES__BLOCK_INFO);
+        }
+        // Slot 17: BARRIER as back button
+        setItemStack(17, Material.BARRIER, TranslationKey.INVENTORIES__BACK);
         return inventory;
     }
 
     private void fillManagerItems(@NotNull InventoryState state, @NotNull Player player) {
-        // First row items (manager actions): slots 1..4
-        var offset = 1;
-        setItemStack(
-            offset++,
-            Material.REDSTONE,
-            TranslationKey.INVENTORIES__REDSTONE__SETTINGS
-        );
+        int offset = 1;
+        setItemStack(offset++, Material.REDSTONE, TranslationKey.INVENTORIES__REDSTONE__SETTINGS);
         if (!BlockProt.getDefaultConfig().isFriendFunctionalityDisabled()) {
-            setItemStack(
-                offset++,
-                Material.PLAYER_HEAD,
-                TranslationKey.INVENTORIES__FRIENDS__MANAGE
-            );
+            setItemStack(offset++, Material.PLAYER_HEAD, TranslationKey.INVENTORIES__FRIENDS__MANAGE);
         }
-        setItemStack(
-            offset++,
-            Material.NAME_TAG,
-            TranslationKey.INVENTORIES__SET_BLOCK_NAME
-        );
-        // Transfer block ownership to another player
-        setItemStack(
-            offset,
-            Material.ENDER_PEARL,
-            TranslationKey.INVENTORIES__TRANSFER__BUTTON
-        );
-        // Copy/paste — fixed bottom-row slots 14 (copy) and 13 (paste)
-        setItemStack(
-            getSize() - 4,
-            Material.PAPER,
-            TranslationKey.INVENTORIES__COPY_CONFIGURATION
-        );
-        if (PlayerInventoryClipboard.contains(player.getUniqueId().toString())) {
-            setItemStack(
-                getSize() - 5,
-                Material.KNOWLEDGE_BOOK,
-                TranslationKey.INVENTORIES__PASTE_CONFIGURATION
-            );
-        }
+        setItemStack(offset++, Material.NAME_TAG, TranslationKey.INVENTORIES__SET_BLOCK_NAME);
+        setItemStack(offset, Material.ENDER_PEARL, TranslationKey.INVENTORIES__TRANSFER__BUTTON);
     }
 }

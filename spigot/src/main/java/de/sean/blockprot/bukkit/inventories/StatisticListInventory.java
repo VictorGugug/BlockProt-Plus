@@ -22,14 +22,12 @@ import de.sean.blockprot.bukkit.BlockProt;
 import de.sean.blockprot.bukkit.Permissions;
 import de.sean.blockprot.bukkit.TranslationKey;
 import de.sean.blockprot.bukkit.Translator;
-import de.sean.blockprot.bukkit.nbt.BlockNBTHandler;
 import de.sean.blockprot.bukkit.nbt.stats.BukkitListStatistic;
 import de.sean.blockprot.bukkit.nbt.stats.LocationListEntry;
 import de.sean.blockprot.nbt.stats.ListStatisticItem;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
-import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.inventory.Inventory;
@@ -71,8 +69,8 @@ public final class StatisticListInventory extends BlockProtInventory {
                 state.currentPageIndex++;
                 closeAndOpen(player, fill(player, null));
             }
-            case BLACK_STAINED_GLASS_PANE ->
-                closeAndOpen(player, new StatisticsInventory().fill(player));
+            case BARRIER -> goBack(player, state);
+            case BLACK_STAINED_GLASS_PANE -> goBack(player, state);
             default -> handleBlockItemClick(event, player, state);
         }
     }
@@ -90,36 +88,15 @@ public final class StatisticListInventory extends BlockProtInventory {
         Location loc = locEntry.get();
         if (loc.getWorld() == null) return;
 
-        boolean leftClick  = event.getClick() == ClickType.LEFT || event.getClick() == ClickType.SHIFT_LEFT;
-        boolean rightClick = event.getClick() == ClickType.RIGHT || event.getClick() == ClickType.SHIFT_RIGHT;
-
-        if (leftClick) {
-            // TP — requires blockprot.blocks.tp
-            if (!player.hasPermission(Permissions.BLOCKS_TP.key())) {
-                player.sendActionBar(net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer
-                    .legacySection().deserialize(Translator.get(TranslationKey.MESSAGES__NO_PERMISSION_TP)));
-                return;
-            }
-            player.closeInventory();
-            player.teleport(loc.clone().add(0.5, 1.0, 0.5));
-            InventoryState.remove(player.getUniqueId());
-        } else if (rightClick) {
-            // Remote access — requires blockprot.remote.access
-            if (!player.hasPermission(Permissions.REMOTE_ACCESS.key())) {
-                player.sendActionBar(net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer
-                    .legacySection().deserialize(Translator.get(TranslationKey.MESSAGES__NO_PERMISSION_REMOTE)));
-                return;
-            }
-            // Open BlockLockInventory for the target block remotely
-            var block = loc.getBlock();
-            if (!BlockProt.getDefaultConfig().isLockable(block.getType())) return;
-            var handler = new BlockNBTHandler(block);
-            InventoryState remoteState = new InventoryState(block);
-            remoteState.friendSearchState = InventoryState.FriendSearchState.FRIEND_SEARCH;
-            InventoryState.set(player.getUniqueId(), remoteState);
-            var lockInv = new BlockLockInventory().fill(player, block.getType(), handler);
-            if (lockInv != null) player.openInventory(lockInv);
+        // Only TP is available (left OR right click)
+        if (!player.hasPermission(Permissions.BLOCKS_TP.key())) {
+            player.sendActionBar(net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer
+                .legacySection().deserialize(Translator.get(TranslationKey.MESSAGES__NO_PERMISSION_TP)));
+            return;
         }
+        player.closeInventory();
+        player.teleport(loc.clone().add(0.5, 1.0, 0.5));
+        InventoryState.remove(player.getUniqueId());
     }
 
     @Override
@@ -137,17 +114,13 @@ public final class StatisticListInventory extends BlockProtInventory {
         final int max = this.getSize() - 3;
         int offset = max * state.currentPageIndex;
 
-        boolean canTp     = player.hasPermission(Permissions.BLOCKS_TP.key());
-        boolean canRemote = player.hasPermission(Permissions.REMOTE_ACCESS.key());
-
-        String loreTP     = Translator.get(canTp     ? TranslationKey.INVENTORIES__STATS__LORE_TP
-                                                     : TranslationKey.INVENTORIES__STATS__LORE_NO_TP);
-        String loreRemote = Translator.get(canRemote ? TranslationKey.INVENTORIES__STATS__LORE_REMOTE
-                                                     : TranslationKey.INVENTORIES__STATS__LORE_NO_REMOTE);
+        boolean canTp = player.hasPermission(Permissions.BLOCKS_TP.key());
+        String loreTP = Translator.get(canTp ? TranslationKey.INVENTORIES__STATS__LORE_TP
+                                             : TranslationKey.INVENTORIES__STATS__LORE_NO_TP);
 
         for (int i = 0; i < Math.min(list.size() - offset, max); ++i) {
             final ListStatisticItem<?, Material> entry = list.get(offset + i);
-            setItemStackWithLore(i, entry.getItemType(), entry.getTitle(), loreTP, loreRemote);
+            setItemStackWithLore(i, resolveDisplayMaterial(entry.getItemType()), entry.getTitle(), loreTP);
         }
 
         if (list.size() - offset > max) {
@@ -161,12 +134,23 @@ public final class StatisticListInventory extends BlockProtInventory {
     private List<ListStatisticItem<?, Material>> getFilteredList() {
         return statistic.get()
             .stream()
-            .filter(i -> BlockProt.getDefaultConfig().isLockable(i.getItemType()))
+            // Skip stale entries where the block no longer exists
+            .filter(e -> {
+                if (e instanceof LocationListEntry loc) {
+                    try { return loc.get().getBlock().getType() != Material.AIR; }
+                    catch (Exception ignored) { return false; }
+                }
+                return true;
+            })
             .collect(Collectors.toList());
     }
 
-    private void setItemStackWithLore(int index, Material material, String name,
-                                      String loreTp, String loreRemote) {
+    private Material resolveDisplayMaterial(Material raw) {
+        if (raw == null || raw == Material.AIR) return Material.CHEST;
+        return raw;
+    }
+
+    private void setItemStackWithLore(int index, Material material, String name, String loreTp) {
         ItemStack stack = new ItemStack(material, 1);
         ItemMeta meta = stack.getItemMeta();
         if (meta == null) {
@@ -176,7 +160,6 @@ public final class StatisticListInventory extends BlockProtInventory {
         meta.setDisplayName(name);
         List<String> lore = new ArrayList<>();
         lore.add(loreTp);
-        lore.add(loreRemote);
         meta.setLore(lore);
         stack.setItemMeta(meta);
         inventory.setItem(index, stack);

@@ -101,14 +101,22 @@ public final class DefaultConfig extends BlockProtConfig {
                     File parent = blocksFile.getParentFile();
                     if (parent != null && !parent.exists()) parent.mkdirs();
                     try {
-                        File backupsDir = new File(dataFolder, "backups");
-                        if (!backupsDir.exists()) backupsDir.mkdirs();
-                        File source = new File(dataFolder, "config.yml");
-                        if (source.exists()) {
-                            String name = "config-backup-" + LocalDateTime.now().format(BACKUP_FMT) + ".yml";
-                            Path target = new File(backupsDir, name).toPath();
-                            Files.copy(source.toPath(), target, StandardCopyOption.COPY_ATTRIBUTES);
-                            BlockProtLogger.log("config-migration", "Created backup: " + target);
+                        // Only back up when the plugin version has changed (fresh install or upgrade)
+                        String storedVersion = config.getString("last_known_version", "");
+                        String currentVersion = de.sean.blockprot.bukkit.BlockProt.getInstance() != null
+                            ? de.sean.blockprot.bukkit.BlockProt.getInstance().getDescription().getVersion()
+                            : "";
+                        boolean versionChanged = !storedVersion.equals(currentVersion) && !currentVersion.isEmpty();
+                        if (versionChanged) {
+                            File backupsDir = new File(dataFolder, "backups");
+                            if (!backupsDir.exists()) backupsDir.mkdirs();
+                            File source = new File(dataFolder, "config.yml");
+                            if (source.exists()) {
+                                String name = "config-backup-" + LocalDateTime.now().format(BACKUP_FMT) + ".yml";
+                                Path target = new File(backupsDir, name).toPath();
+                                Files.copy(source.toPath(), target, StandardCopyOption.COPY_ATTRIBUTES);
+                                BlockProtLogger.log("config-migration", "Version changed " + storedVersion + " -> " + currentVersion + ", backup: " + target);
+                            }
                         }
                     } catch (IOException ioe) {
                         BlockProtLogger.warn("Failed to create config backup: " + ioe.getMessage());
@@ -291,8 +299,15 @@ public final class DefaultConfig extends BlockProtConfig {
         return config.contains("lock_hint_cooldown_in_seconds") ? config.getLong("lock_hint_cooldown_in_seconds") : 10;
     }
 
+    /**
+     * When {@code use_menus=true} in config, extra CLI commands are disabled and the
+     * user menu is the primary interface. When {@code use_menus=false} (default), all
+     * extra commands (stats, transfer, timed, etc.) are active.
+     */
     public boolean areExtraCommandsEnabled() {
-        return config.getBoolean("commands_enabled", false);
+        // use_menus=true  → commands disabled → return false
+        // use_menus=false → commands enabled  → return true (default)
+        return !config.getBoolean("use_menus", false);
     }
 
     public boolean shouldEnableAllOptionalFeatures() { return config.getBoolean("optional_features_enable_all", false); }

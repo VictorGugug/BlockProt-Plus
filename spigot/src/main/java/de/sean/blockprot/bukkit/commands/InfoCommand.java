@@ -22,6 +22,8 @@ import de.sean.blockprot.bukkit.BlockProt;
 import de.sean.blockprot.bukkit.Permissions;
 import de.sean.blockprot.bukkit.TranslationKey;
 import de.sean.blockprot.bukkit.Translator;
+import de.sean.blockprot.bukkit.inventories.AdminBlockListInventory;
+import de.sean.blockprot.bukkit.inventories.InventoryState;
 import de.sean.blockprot.bukkit.nbt.BlockNBTHandler;
 import de.sean.blockprot.bukkit.nbt.StatHandler;
 import de.sean.blockprot.bukkit.nbt.stats.LocationListEntry;
@@ -73,7 +75,7 @@ public final class InfoCommand implements CommandExecutor {
         final String targetName = args[1];
 
         Bukkit.getScheduler().runTaskAsynchronously(BlockProt.getInstance(), () -> {
-            // Try resolving the player.
+            // Resolve the target player
             OfflinePlayer offlineTarget = PlayerNameResolver.findOfflinePlayer(targetName);
             if (offlineTarget == null) {
                 @SuppressWarnings("deprecation")
@@ -89,18 +91,23 @@ public final class InfoCommand implements CommandExecutor {
                 return;
             }
 
-            final OfflinePlayer finalTarget = offlineTarget;
-            final String displayName = finalTarget.getName() != null ? finalTarget.getName() : targetName;
-
-            // Stats can only be read for online players (StatHandler requires a Player instance).
-            final Player onlineTarget = finalTarget.getPlayer();
+            final OfflinePlayer finalTarget   = offlineTarget;
+            final String        displayName   = finalTarget.getName() != null ? finalTarget.getName() : targetName;
 
             Bukkit.getScheduler().runTask(BlockProt.getInstance(), () -> {
-                final PlayerBlocksStatistic stat = new PlayerBlocksStatistic();
-                if (onlineTarget != null) {
-                    StatHandler.getStatistic(stat, onlineTarget);
+                PlayerBlocksStatistic stat = new PlayerBlocksStatistic();
+                StatHandler.getStatisticByUuid(stat, finalTarget.getUniqueId());
+
+                // ── GUI for Player senders ────────────────────────────────
+                if (sender instanceof Player player) {
+                    InventoryState ns = new InventoryState(null);
+                    ns.currentPageIndex = 0;
+                    InventoryState.set(player.getUniqueId(), ns);
+                    player.openInventory(new AdminBlockListInventory().fill(player, displayName, stat));
+                    return;
                 }
 
+                // ── Chat output for Console senders ───────────────────────
                 List<LocationListEntry> entries = stat.get();
                 if (entries.isEmpty()) {
                     sender.sendMessage(LegacyComponentSerializer.legacySection().deserialize(
@@ -117,22 +124,18 @@ public final class InfoCommand implements CommandExecutor {
                 for (LocationListEntry entry : entries) {
                     Location loc = entry.get();
                     if (loc.getWorld() == null) continue;
-
-                    // Verify the block is still actually owned by this player.
                     try {
-                        var block = loc.getWorld().getBlockAt(loc);
-                        if (!BlockProt.getDefaultConfig().isLockable(block.getType())) continue;
+                        var block   = loc.getWorld().getBlockAt(loc);
                         var handler = new BlockNBTHandler(block);
+                        if (!BlockProt.getDefaultConfig().isLockable(block.getType())) continue;
                         if (!handler.isOwner(finalTarget.getUniqueId())) continue;
-                    } catch (RuntimeException ignored) {
-                        continue;
-                    }
+                    } catch (RuntimeException ignored) { continue; }
 
                     String line = entryTemplate
                         .replace("{world}", loc.getWorld().getName())
-                        .replace("{x}", String.valueOf(loc.getBlockX()))
-                        .replace("{y}", String.valueOf(loc.getBlockY()))
-                        .replace("{z}", String.valueOf(loc.getBlockZ()));
+                        .replace("{x}",     String.valueOf(loc.getBlockX()))
+                        .replace("{y}",     String.valueOf(loc.getBlockY()))
+                        .replace("{z}",     String.valueOf(loc.getBlockZ()));
                     sender.sendMessage(LegacyComponentSerializer.legacySection().deserialize(line));
                 }
             });

@@ -62,27 +62,20 @@ public final class FriendManageInventory extends BlockProtInventory {
      * @param state  The {@code player}'s state.
      */
     public void exitModifyInventory(@NotNull final Player player, @NotNull final InventoryState state) {
-        Inventory newInventory;
         switch (state.friendSearchState) {
             case FRIEND_SEARCH -> {
+                // Came from a block — return to BlockLockInventory.
                 if (state.getBlock() == null) return;
                 BlockNBTHandler handler = getNbtHandlerOrNull(state.getBlock());
-                if (handler == null) {
-                    newInventory = null;
-                } else {
-                    newInventory = new BlockLockInventory()
-                            .fill(
-                                player,
-                                state.getBlock().getState().getType(),
-                                handler);
-                }
+                closeAndOpen(player, handler == null ? null
+                    : new BlockLockInventory().fill(player, state.getBlock().getState().getType(), handler));
             }
-            case DEFAULT_FRIEND_SEARCH -> newInventory = new UserSettingsInventory().fill(player);
-            default -> {
-                return;
+            case DEFAULT_FRIEND_SEARCH -> {
+                // Use origin to know exactly which menu to return to.
+                goBack(player, state);
             }
+            default -> closeAndOpen(player, null);
         }
-        closeAndOpen(player, newInventory);
     }
 
     @Override
@@ -114,10 +107,10 @@ public final class FriendManageInventory extends BlockProtInventory {
                 }
             }
             case SKELETON_SKULL, PLAYER_HEAD -> {
-                // Get the clicked player head and open the detail inventory.
                 final var index = findItemIndex(item);
                 if (index >= 0 && index < state.friendResultCache.size()) {
                     state.currentFriend = state.friendResultCache.get(index);
+                    state.origin = InventoryState.MenuOrigin.FRIEND_MANAGE;
                     var inv = new FriendDetailInventory().fill(player);
                     closeAndOpen(player, inv);
                 }

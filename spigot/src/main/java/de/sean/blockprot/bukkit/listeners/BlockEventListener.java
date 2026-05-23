@@ -113,6 +113,9 @@ public class BlockEventListener implements Listener {
         }
 
         if (handler.isOwner(event.getPlayer().getUniqueId().toString()) && (!event.isCancelled() && event.isDropItems() && event.getPlayer().getGameMode() != GameMode.CREATIVE)) {
+            // Remove from stats before the block becomes AIR
+            StatHandler.removeContainer(event.getPlayer(), event.getBlock());
+            HopperEventListener.invalidate(event.getBlock());
             event.setDropItems(false);
             Collection<ItemStack> itemsToDrop = event.getBlock().getDrops();
             if (itemsToDrop.isEmpty()) return;

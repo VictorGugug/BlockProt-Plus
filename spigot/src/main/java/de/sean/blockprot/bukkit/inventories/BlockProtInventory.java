@@ -306,6 +306,7 @@ public abstract class BlockProtInventory implements InventoryHolder {
 
     /**
      * Sets the back button to the [index] in the inventory.
+     * In BlockLockInventory the back button uses BARRIER instead of BLACK_STAINED_GLASS_PANE.
      *
      * @param index The index of the back button inside this inventory.
      * @since 0.2.3
@@ -528,6 +529,33 @@ public abstract class BlockProtInventory implements InventoryHolder {
             // SkinsRestorer not installed, wrong version, or API changed — fall through.
         }
         return null;
+    }
+
+    /**
+     * Navigates back to the menu that opened this one, using state.origin.
+     * Falls back to closing the inventory if no origin is set or block is gone.
+     */
+    protected void goBack(@NotNull final Player player, @NotNull final InventoryState state) {
+        switch (state.origin) {
+            case BLOCK_LOCK -> {
+                var block = state.getBlock();
+                var handler = getNbtHandlerOrNull(block);
+                if (handler != null) {
+                    player.openInventory(new BlockLockInventory().fill(player, block.getType(), handler));
+                } else {
+                    closeAndOpen(player, null);
+                }
+            }
+            case USER_MENU -> player.openInventory(new UserMenuInventory().fill(player));
+            case ADMIN_MENU -> player.openInventory(new AdminMenuInventory().fill(player));
+            case FRIEND_MANAGE -> {
+                var inv = new FriendManageInventory().fill(player);
+                closeAndOpen(player, inv);
+            }
+            case STATISTICS -> player.openInventory(new StatisticsInventory().fill(player));
+            case USER_SETTINGS -> player.openInventory(new UserSettingsInventory().fill(player));
+            default -> closeAndOpen(player, null);
+        }
     }
 
     /**

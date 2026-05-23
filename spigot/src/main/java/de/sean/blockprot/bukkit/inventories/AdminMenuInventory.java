@@ -2,11 +2,17 @@ package de.sean.blockprot.bukkit.inventories;
 
 import de.sean.blockprot.bukkit.BlockProt;
 import de.sean.blockprot.bukkit.BlockProtAPI;
+import de.sean.blockprot.bukkit.Permissions;
 import de.sean.blockprot.bukkit.TranslationKey;
 import de.sean.blockprot.bukkit.Translator;
+import de.sean.blockprot.bukkit.nbt.StatHandler;
+import de.sean.blockprot.bukkit.nbt.stats.PlayerBlocksStatistic;
 import de.sean.blockprot.bukkit.tasks.UpdateChecker;
+import de.sean.blockprot.bukkit.util.AnvilInput;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
@@ -21,23 +27,21 @@ import java.util.List;
 /**
  * GUI for admin-only operations. Opened via /bp admin.
  * Requires blockprot.user.admin or OP.
+ *
+ * Layout (tripleLine = 27 slots, items centred row 1 slots 11-15).
  */
 public class AdminMenuInventory extends BlockProtInventory {
 
-    // Items centred in row 1 of a triple-line inventory (slots 10-16).
-    private static final int SLOT_RELOAD       = 10;
-    private static final int SLOT_UPDATE       = 11;
-    private static final int SLOT_INTEGRATIONS = 12;
-    private static final int SLOT_STATS        = 13;
-    private static final int SLOT_DEBUG        = 14;
-    private static final int SLOT_INFO         = 15;
+    private static final int SLOT_RELOAD       = 11;
+    private static final int SLOT_UPDATE       = 12;
+    private static final int SLOT_INTEGRATIONS = 13;
+    private static final int SLOT_STATS        = 14;
+    private static final int SLOT_DEBUG        = 15;
+    private static final int SLOT_INFO         = 16;
 
-    public AdminMenuInventory() {
-        super(false);
-    }
+    public AdminMenuInventory() { super(false); }
 
-    @Override
-    int getSize() { return InventoryConstants.tripleLine; }
+    @Override int getSize() { return InventoryConstants.tripleLine; }
 
     @Override
     String getTranslatedInventoryName() {
@@ -63,9 +67,15 @@ public class AdminMenuInventory extends BlockProtInventory {
         inventory.setItem(SLOT_DEBUG, item(Material.COMMAND_BLOCK,
             Translator.get(TranslationKey.INVENTORIES__ADMIN_MENU__DEBUG),
             Translator.get(TranslationKey.INVENTORIES__ADMIN_MENU__DEBUG_LORE)));
-        inventory.setItem(SLOT_INFO, item(Material.GRASS_BLOCK,
+        inventory.setItem(SLOT_INFO, item(Material.PLAYER_HEAD,
             Translator.get(TranslationKey.INVENTORIES__ADMIN_MENU__INFO),
             Translator.get(TranslationKey.INVENTORIES__ADMIN_MENU__INFO_LORE)));
+
+        // Back button if opened from another menu (not standalone via command)
+        InventoryState state = InventoryState.get(player.getUniqueId());
+        if (state != null && state.origin != InventoryState.MenuOrigin.NONE) {
+            setBackButton(getSize() - 1);
+        }
 
         return inventory;
     }
@@ -82,9 +92,12 @@ public class AdminMenuInventory extends BlockProtInventory {
             new de.sean.blockprot.bukkit.tasks.BackupTask(
                 BlockProt.getInstance().getDataFolder(), true).run();
             BlockProt.getInstance().reloadConfigAndTranslations();
-            player.sendMessage(Translator.get(TranslationKey.MESSAGES__ADMIN_RELOAD_DONE));
+            player.sendActionBar(LegacyComponentSerializer.legacySection().deserialize(
+                Translator.get(TranslationKey.MESSAGES__ADMIN_RELOAD_DONE)));
         } else if (slot == SLOT_UPDATE) {
             player.closeInventory();
+            player.sendActionBar(LegacyComponentSerializer.legacySection().deserialize(
+                Translator.get(TranslationKey.INVENTORIES__ADMIN_MENU__UPDATE_LORE)));
             Bukkit.getScheduler().runTaskAsynchronously(BlockProt.getInstance(),
                 new UpdateChecker(BlockProt.getInstance().getDescription(),
                     new ArrayList<>(Bukkit.getOnlinePlayers())));
@@ -97,19 +110,54 @@ public class AdminMenuInventory extends BlockProtInventory {
             String msg = Translator.get(TranslationKey.MESSAGES__ADMIN_INTEGRATIONS)
                 .replace("{count}", String.valueOf(list.size()))
                 .replace("{integrations}", names);
-            player.sendMessage(msg);
+            player.sendActionBar(LegacyComponentSerializer.legacySection().deserialize(msg));
         } else if (slot == SLOT_STATS) {
             InventoryState newState = new InventoryState(null);
             newState.friendSearchState = InventoryState.FriendSearchState.DEFAULT_FRIEND_SEARCH;
+            newState.origin = InventoryState.MenuOrigin.ADMIN_MENU;
             InventoryState.set(player.getUniqueId(), newState);
             player.openInventory(new StatisticsInventory().fill(player));
         } else if (slot == SLOT_DEBUG) {
             player.closeInventory();
-            player.sendMessage(Translator.get(TranslationKey.MESSAGES__ADMIN_DEBUG_HINT));
+            player.sendActionBar(LegacyComponentSerializer.legacySection().deserialize(
+                Translator.get(TranslationKey.MESSAGES__ADMIN_DEBUG_HINT)));
             player.performCommand("blockprot debug run");
         } else if (slot == SLOT_INFO) {
             player.closeInventory();
-            player.sendMessage(Translator.get(TranslationKey.MESSAGES__ADMIN_INFO_HINT));
+            AnvilInput.open(player, BlockProt.getInstance(), "",
+                Translator.get(TranslationKey.INVENTORIES__ADMIN_MENU__INFO),
+                inputName -> {
+                    if (inputName == null || inputName.isBlank()) return;
+                    Bukkit.getScheduler().runTaskAsynchronously(BlockProt.getInstance(), () -> {
+                        @SuppressWarnings("deprecation")
+                        OfflinePlayer target = Bukkit.getOfflinePlayerIfCached(inputName);
+                        if (target == null) {
+                            @SuppressWarnings("deprecation")
+                            OfflinePlayer fallback = Bukkit.getOfflinePlayer(inputName);
+                            if (fallback.hasPlayedBefore()) target = fallback;
+                        }
+                        final OfflinePlayer finalTarget = target;
+                        Bukkit.getScheduler().runTask(BlockProt.getInstance(), () -> {
+                            if (finalTarget == null || finalTarget.getUniqueId() == null) {
+                                player.sendActionBar(LegacyComponentSerializer.legacySection()
+                                    .deserialize(Translator.get(TranslationKey.MESSAGES__ADMIN_INFO_PLAYER_NOT_FOUND)
+                                    .replace("{player}", inputName)));
+                                return;
+                            }
+                            String displayName = finalTarget.getName() != null ? finalTarget.getName() : inputName;
+                            PlayerBlocksStatistic stat = new PlayerBlocksStatistic();
+                            StatHandler.getStatisticByUuid(stat, finalTarget.getUniqueId());
+
+                            InventoryState ns = new InventoryState(null);
+                            ns.currentPageIndex = 0;
+                            ns.origin = InventoryState.MenuOrigin.ADMIN_MENU;
+                            InventoryState.set(player.getUniqueId(), ns);
+                            player.openInventory(new AdminBlockListInventory().fill(player, displayName, stat));
+                        });
+                    });
+                });
+        } else if (slot == getSize() - 1) {
+            goBack(player, state);
         }
     }
 

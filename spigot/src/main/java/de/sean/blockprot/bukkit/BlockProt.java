@@ -142,6 +142,11 @@ public final class BlockProt extends JavaPlugin {
         saveResourceSilent("blocks.yml", false);
         saveResourceSilent("mysql/mysql.yml", false);
         this.reloadConfigAndTranslations();
+        // Persist current version so DefaultConfig can detect upgrades on next boot
+        if (!getDescription().getVersion().equals(getConfig().getString("last_known_version", ""))) {
+            getConfig().set("last_known_version", getDescription().getVersion());
+            saveConfig();
+        }
         VersionValidator.validateStartup();
 
         boolean hasUpgradeData = BackupTask.hasPriorData(this.getDataFolder());

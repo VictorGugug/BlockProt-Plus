@@ -91,6 +91,14 @@ public final class InventoryState {
     @NotNull
     public Set<BlockAccessMenuEvent.MenuPermission> menuPermissions = new HashSet<>();
 
+    public boolean remoteLockPendingConfirm = false;
+
+    /**
+     * Tracks which menu opened the current one, so the back button can return correctly.
+     */
+    @NotNull
+    public MenuOrigin origin = MenuOrigin.NONE;
+
     public InventoryState(@Nullable Block block) {
         this.block = block;
     }
@@ -177,5 +185,16 @@ public final class InventoryState {
         FRIEND_SEARCH,
         /** This search is currently for the default friends of a player. @since 0.1.9 */
         DEFAULT_FRIEND_SEARCH,
+    }
+
+    /** Identifies which menu opened the current one, driving back-button behaviour. */
+    public enum MenuOrigin {
+        NONE,
+        BLOCK_LOCK,       // opened from BlockLockInventory (shift+right-click block)
+        USER_MENU,        // opened from UserMenuInventory
+        ADMIN_MENU,       // opened from AdminMenuInventory
+        FRIEND_MANAGE,    // opened from FriendManageInventory
+        STATISTICS,       // opened from StatisticsInventory
+        USER_SETTINGS,    // opened from UserSettingsInventory
     }
 }

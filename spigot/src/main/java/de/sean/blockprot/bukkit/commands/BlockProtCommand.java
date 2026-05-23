@@ -57,7 +57,7 @@ public final class BlockProtCommand implements TabExecutor {
         register(true,  "admin",        new AdminMenuCommand());
 
         // ── Legacy commands (hidden from tab-complete, still functional) ─────
-        register(false, "stats",        new StatisticsCommand(), "statistics");
+        register(false, "stats",        new StatisticsCommand());
         register(false, "settings",     new SettingsCommand());
         register(false, "about",        new AboutCommand());
         register(false, "update",       new UpdateCommand());
@@ -76,7 +76,8 @@ public final class BlockProtCommand implements TabExecutor {
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command,
                              @NotNull String label, @NotNull String[] args) {
         if (args.length == 0) {
-            // Default: open the appropriate GUI
+            // Default: open the appropriate GUI only when use_menus=true
+            if (BlockProt.getDefaultConfig().areExtraCommandsEnabled()) return false;
             if (sender.isOp() || sender.hasPermission(Permissions.USER_ADMIN.key())) {
                 return allExecutors.get("admin").onCommand(sender, command, label, args);
             }
@@ -84,10 +85,8 @@ public final class BlockProtCommand implements TabExecutor {
         }
 
         String sub = args[0].toLowerCase(Locale.ROOT);
-        // When commands_enabled=false, only "user" and "admin" are allowed
         boolean extraEnabled = BlockProt.getDefaultConfig().areExtraCommandsEnabled();
-        if (!extraEnabled && !sub.equals("user") && !sub.equals("admin")
-                && !sub.equals("usuario") && !sub.equals("administrador")) {
+        if (!extraEnabled && !sub.equals("user") && !sub.equals("admin")) {
             return false;
         }
 
@@ -132,28 +131,6 @@ public final class BlockProtCommand implements TabExecutor {
         allExecutors.put(canonical, executor);
         for (String alias : aliases) {
             allExecutors.put(alias.toLowerCase(Locale.ROOT), executor);
-        }
-        // Spanish localized aliases for public commands
-        addSpanishAliases(canonical, executor);
-    }
-
-    private static void addSpanishAliases(@NotNull String canonical, @NotNull CommandExecutor executor) {
-        switch (canonical) {
-            case "user"  -> allExecutors.put("usuario",       executor);
-            case "admin" -> allExecutors.put("administrador", executor);
-            // Legacy
-            case "stats"        -> allExecutors.put("estadisticas",          executor);
-            case "settings"     -> { allExecutors.put("ajustes", executor); allExecutors.put("configuracion", executor); }
-            case "about"        -> allExecutors.put("acerca",                executor);
-            case "update"       -> allExecutors.put("actualizar",            executor);
-            case "reload"       -> allExecutors.put("recargar",              executor);
-            case "integrations" -> allExecutors.put("integraciones",         executor);
-            case "debug"        -> allExecutors.put("depurar",               executor);
-            case "disablehints" -> allExecutors.put("desactivarsugerencias", executor);
-            case "friends"      -> allExecutors.put("amigos",                executor);
-            case "transfer"     -> allExecutors.put("transferir",            executor);
-            case "timed"        -> allExecutors.put("temporal",              executor);
-            case "help"         -> allExecutors.put("ayuda",                 executor);
         }
     }
 }

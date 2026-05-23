@@ -1,5 +1,6 @@
 package de.sean.blockprot.bukkit.commands;
 
+import de.sean.blockprot.bukkit.BlockProt;
 import de.sean.blockprot.bukkit.Permissions;
 import de.sean.blockprot.bukkit.TranslationKey;
 import de.sean.blockprot.bukkit.Translator;
@@ -33,6 +34,8 @@ public final class AdminMenuCommand implements CommandExecutor {
             player.sendMessage(Translator.get(TranslationKey.MESSAGES__NO_PERMISSION));
             return true;
         }
+        // Menus only active when use_menus=true
+        if (BlockProt.getDefaultConfig().areExtraCommandsEnabled()) return false;
 
         InventoryState state = new InventoryState(null);
         state.friendSearchState = InventoryState.FriendSearchState.DEFAULT_FRIEND_SEARCH;

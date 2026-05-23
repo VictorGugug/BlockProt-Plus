@@ -27,33 +27,102 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.StringJoiner;
 
+/**
+ * Resolves the correct display material for a block location.
+ * Distinguishes shulker boxes, copper chests, barrels, trapped chests, etc.
+ * so the stats list shows the right icon instead of always CHEST.
+ */
+
 public class LocationListEntry extends ListStatisticItem<Location, Material> {
     public LocationListEntry(@NotNull Location value) {
         super(value);
     }
 
     public @NotNull Block getBlock() {
-        return this.get().getBlock();
+        Location loc = this.get();
+        if (loc.getWorld() == null) throw new IllegalStateException("World is not loaded");
+        return loc.getBlock();
     }
 
     @Override
     public @NotNull Material getItemType() {
-        return this.get().getBlock().getType();
+        try {
+            Location loc = this.get();
+            if (loc.getWorld() == null) return Material.CHEST;
+            Material type = loc.getBlock().getType();
+            return resolveDisplayMaterial(type);
+        } catch (Exception e) {
+            return Material.CHEST;
+        }
     }
 
-    @Override
-    public String toString() {
-        return null;
+    /**
+     * Maps the real block material to the best representative item material.
+     * For wall variants and similar, falls back to the placeable item form.
+     */
+    private static @NotNull Material resolveDisplayMaterial(@NotNull Material type) {
+        if (type == Material.AIR) return Material.CHEST;
+        String name = type.name();
+        // Shulker boxes — keep their colour; all coloured variants are valid ItemStack materials.
+        // The generic SHULKER_BOX (no colour prefix) may not be a real block in all MC versions;
+        // map it to the purple one which is always safe.
+        if (name.equals("SHULKER_BOX")) return Material.PURPLE_SHULKER_BOX;
+        if (name.endsWith("_SHULKER_BOX")) return type;
+        // Copper chests (1.21+)
+        if (name.contains("COPPER_CHEST") || name.contains("COPPER_TRAPPED_CHEST")) return type;
+        // Wall signs → sign item (wall variants aren’t placeable as items)
+        if (name.endsWith("_WALL_SIGN")) {
+            Material m = Material.matchMaterial(name.replace("_WALL_SIGN", "_SIGN"));
+            return m != null ? m : type;
+        }
+        if (name.endsWith("_WALL_HANGING_SIGN")) {
+            Material m = Material.matchMaterial(name.replace("_WALL_HANGING_SIGN", "_HANGING_SIGN"));
+            return m != null ? m : type;
+        }
+        return type;
     }
 
     @Override
     public String getTitle() {
-        var name = new BlockNBTHandler(getBlock()).getName();
         var coordinates = new StringJoiner(", ", "[", "]")
             .add(String.valueOf(this.value.getBlockX()))
             .add(String.valueOf(this.value.getBlockY()))
             .add(String.valueOf(this.value.getBlockZ()))
             .toString();
-        return name + " " + coordinates;
+        try {
+            // Use the live block type as the display name so it always reflects
+            // the actual block (shulker, chest, barrel, etc.) regardless of
+            // what name was stored in NBT when the block was first protected.
+            Location loc = this.get();
+            if (loc.getWorld() != null) {
+                Material liveMat = loc.getBlock().getType();
+                Material displayMat = resolveDisplayMaterial(liveMat);
+                String typeName = toHumanReadable(displayMat);
+                // Append the custom NBT name only if the owner set one
+                try {
+                    String nbtName = new BlockNBTHandler(loc.getBlock()).getName();
+                    String defaultName = toHumanReadable(liveMat);
+                    // Only append the custom name when it differs from the default
+                    if (nbtName != null && !nbtName.isEmpty() && !nbtName.equals(defaultName)) {
+                        return typeName + " \"§f" + nbtName + "§7\" " + coordinates;
+                    }
+                } catch (RuntimeException ignored) {}
+                return typeName + " " + coordinates;
+            }
+        } catch (Exception ignored) {}
+        return coordinates;
+    }
+
+    /** Converts a Material name like WHITE_SHULKER_BOX to §7White Shulker Box */
+    private static String toHumanReadable(@NotNull Material mat) {
+        String raw = mat.name().replace('_', ' ');
+        StringBuilder sb = new StringBuilder("§7");
+        boolean cap = true;
+        for (char c : raw.toCharArray()) {
+            if (c == ' ') { sb.append(c); cap = true; }
+            else if (cap) { sb.append(Character.toUpperCase(c)); cap = false; }
+            else { sb.append(Character.toLowerCase(c)); }
+        }
+        return sb.toString();
     }
 }
