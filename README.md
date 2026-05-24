@@ -1,7 +1,5 @@
 <div align="center">
 
-<img src="https://raw.githubusercontent.com/VictorGugug/BlockProt-Reloaded/main/images/BP.png" alt="BlockProt Reloaded" width="520"/>
-
 # BlockProt Reloaded
 
 [![CI](https://img.shields.io/github/actions/workflow/status/VictorGugug/BlockProt-Reloaded/ci.yml?branch=main&style=flat-square&label=CI)](https://github.com/VictorGugug/BlockProt-Reloaded/actions)
