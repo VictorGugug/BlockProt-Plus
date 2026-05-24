@@ -184,16 +184,16 @@ Broken blocks (AIR at that location) are automatically filtered from the list.
 
 ### User menu (`/bp user`, requires `use_menus: true`)
 
-Three-row inventory. Items in the middle row:
+Three-row inventory. Items span slots 10–16 of the middle row (27-slot inventory):
 
-| Item | Material | Action |
-|---|---|---|
-| My Settings | Writable Book | Lock-on-place, hints, global friends |
-| Friends | Player Head | Default friend list |
-| Statistics | Book | Block statistics |
-| Transfer block | Ender Pearl | Hint: use `/bp transfer <player>` |
-| Timed access | Clock | Hint: use `/bp timed <player> <seconds>` |
-| About | Nether Star | Plugin/fork info |
+| Slot | Item | Material | Action |
+|---|---|---|---|
+| 10 | My Settings | Writable Book | Lock-on-place, hints, global friends |
+| 11 | Friends | Player Head | Default friend list |
+| 12 | Statistics | Book | Block statistics |
+| 13 | Transfer block | Ender Pearl | Sends chat hint: look at a block → `/bp transfer <player>` |
+| 14 | Timed access | Clock | Sends chat hint: look at a block → `/bp timed <player> <seconds>` |
+| 16 | About | Nether Star | Plugin/fork info |
 
 ### Admin menu (`/bp admin`, requires `use_menus: true` + `blockprot.user.admin`)
 
@@ -218,23 +218,23 @@ Requires `blockprot.user.admin`.
 
 ## Commands
 
-Extra commands are **disabled by default** when `use_menus: false`.
-Set `use_menus: true` in `config.yml` to activate the GUI menus (`/bp`, `/bp user`, `/bp admin`) and disable the CLI subcommands.
+Extra commands are **disabled by default** when `use_menus: true`.
+Set `use_menus: true` in `config.yml` to activate the GUI menus (`/bp user`, `/bp admin`) and disable the CLI subcommands.
 
 | Command | Permission | Available when |
 |---|---|---|
 | `/bp user` | `blockprot.user` | `use_menus: true` |
 | `/bp admin` | `blockprot.user.admin` | `use_menus: true` |
-| `/bp transfer <player>` | `blockprot.user` | Always; menu hint when `use_menus: true` |
-| `/bp timed <player> <seconds>` | `blockprot.user` | Always; menu hint when `use_menus: true` |
-| `/bp friends addall <player>` | `blockprot.user` | Always |
-| `/bp stats` | `blockprot.user` | Always |
-| `/bp info <player>` | `blockprot.user.admin` | Always |
-| `/bp reload` | `blockprot.user.admin` | Always |
-| `/bp update` | `blockprot.user.admin` | Always |
-| `/bp integrations` | `blockprot.user.admin` | Always |
-| `/bp debug <run\|...>` | `blockprot.user.admin` | Always |
-| `/bp disablehints` | `blockprot.user` | Always |
+| `/bp transfer <player>` | `blockprot.user` | `use_menus: false` |
+| `/bp timed <player> <seconds>` | `blockprot.user` | `use_menus: false` |
+| `/bp friends addall <player>` | `blockprot.user` | `use_menus: false` |
+| `/bp stats` | `blockprot.user` | `use_menus: false` |
+| `/bp info <player>` | `blockprot.user.admin` | `use_menus: false` |
+| `/bp reload` | `blockprot.user.admin` | `use_menus: false` |
+| `/bp update` | `blockprot.user.admin` | `use_menus: false` |
+| `/bp integrations` | `blockprot.user.admin` | `use_menus: false` |
+| `/bp debug <run\|...>` | `blockprot.user.admin` | `use_menus: false` |
+| `/bp disablehints` | `blockprot.user` | `use_menus: false` |
 | `/bp about` | any | Always |
 | `/bp help` | any | Always |
 
@@ -394,10 +394,10 @@ When a shulker box or any protected block is broken by its owner, the entry is i
 use_menus: false   # default
 ```
 
-| `use_menus` | `/bp`, `/bp user`, `/bp admin` | Extra CLI commands |
-|---|---|---|
-| `false` (default) | ❌ Disabled | ✅ Active |
-| `true` | ✅ Active | ❌ Disabled |
+| `use_menus` | `/bp user`, `/bp admin` (GUI) | Extra CLI commands (transfer, timed, stats, etc.) | Tab-complete shows |
+|---|---|---|---|
+| `false` (default) | ❌ Hidden from tab-complete and disabled | ✅ Active | CLI subcommands |
+| `true` | ✅ Active | ❌ Hidden from tab-complete and disabled | `user` / `admin` |
 
 #### 25. Sign Editor Input (zero NMS)
 
