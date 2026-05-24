@@ -67,7 +67,7 @@ public final class BlockProt extends JavaPlugin {
      * The original BlockProt used ID 9999 — this fork must use a different
      * ID so stats appear under the correct project on bstats.org.
      */
-    public static final int pluginId = 25808; // BlockProt Reloaded — replace with your bStats project ID
+    public static final int pluginId = 31548; // BlockProt Reloaded on bStats
     public static final String defaultLanguageFile = "translations_en.yml";
 
     @Nullable private static BlockProt instance;
