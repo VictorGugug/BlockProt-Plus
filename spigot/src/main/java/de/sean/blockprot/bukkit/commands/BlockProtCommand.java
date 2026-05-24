@@ -103,17 +103,17 @@ public final class BlockProtCommand implements TabExecutor {
         if (args.length <= 1) {
             final var list = new ArrayList<String>();
             boolean extraEnabled = BlockProt.getDefaultConfig().areExtraCommandsEnabled();
-            Map<String, CommandExecutor> source = extraEnabled ? allExecutors : publicExecutors;
-            for (var entry : source.entrySet()) {
+            // When use_menus=false (extraCommands active): show all CLI commands, hide user/admin GUI.
+            // When use_menus=true  (menus active):         show user/admin GUI only.
+            for (var entry : allExecutors.entrySet()) {
+                String sub = entry.getKey();
+                if (extraEnabled && (sub.equals("user") || sub.equals("admin"))) continue;
+                if (!extraEnabled && !publicExecutors.containsKey(sub)) continue;
                 if (entry.getValue().canUseCommand(sender))
-                    list.add(entry.getKey());
+                    list.add(sub);
             }
             String partial = args.length == 1 ? args[0].toLowerCase(Locale.ROOT) : "";
             list.removeIf(s -> !s.startsWith(partial));
-            // If extras disabled, still only show public ones in tab-complete
-            if (!extraEnabled) {
-                list.removeIf(s -> !publicExecutors.containsKey(s));
-            }
             return list;
         }
 
