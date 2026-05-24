@@ -58,13 +58,17 @@ public final class DefaultConfig extends BlockProtConfig {
     private final ArrayList<InventoryType> lockableInventories = new ArrayList<>(Arrays.asList(
         InventoryType.CHEST, InventoryType.FURNACE, InventoryType.SMOKER, InventoryType.BLAST_FURNACE,
         InventoryType.HOPPER, InventoryType.BARREL, InventoryType.BREWING, InventoryType.SHULKER_BOX,
-        InventoryType.ANVIL, InventoryType.DISPENSER, InventoryType.DROPPER, InventoryType.LECTERN
+        InventoryType.ANVIL, InventoryType.DISPENSER, InventoryType.DROPPER, InventoryType.LECTERN,
+        InventoryType.GRINDSTONE, InventoryType.STONECUTTER, InventoryType.LOOM,
+        InventoryType.CARTOGRAPHY, InventoryType.SMITHING
     ));
 
     private final HashSet<Material> knownGoodTileEntities = new HashSet<>(Arrays.asList(
-        Material.CHEST, Material.TRAPPED_CHEST, Material.FURNACE, Material.SMOKER, Material.BLAST_FURNACE,
+        Material.CHEST, Material.TRAPPED_CHEST, Material.ENDER_CHEST,
+        Material.FURNACE, Material.SMOKER, Material.BLAST_FURNACE,
         Material.HOPPER, Material.BARREL, Material.BREWING_STAND, Material.DISPENSER, Material.DROPPER,
         Material.LECTERN, Material.BEEHIVE, Material.BEE_NEST,
+        Material.JUKEBOX,
         Material.OAK_SIGN, Material.OAK_WALL_SIGN,
         Material.SPRUCE_SIGN, Material.SPRUCE_WALL_SIGN,
         Material.BIRCH_SIGN, Material.BIRCH_WALL_SIGN,
@@ -206,7 +210,7 @@ public final class DefaultConfig extends BlockProtConfig {
         if (MinecraftVersion.isAtLeastVersion(MinecraftVersion.MC1_19_R1))
             addMaterialIfExists(knownGoodTileEntities, "MANGROVE_SIGN", "MANGROVE_WALL_SIGN");
         if (MinecraftVersion.isAtLeastVersion(MinecraftVersion.MC1_20_R1)) {
-            addMaterialIfExists(knownGoodTileEntities, "CHISELED_BOOKSHELF");
+            addMaterialIfExists(knownGoodTileEntities, "CHISELED_BOOKSHELF", "DECORATED_POT");
             addMaterialIfExists(knownGoodTileEntities,
                 "OAK_WALL_HANGING_SIGN", "OAK_HANGING_SIGN",
                 "SPRUCE_WALL_HANGING_SIGN", "SPRUCE_HANGING_SIGN",
@@ -220,10 +224,48 @@ public final class DefaultConfig extends BlockProtConfig {
                 "CHERRY_SIGN", "CHERRY_WALL_SIGN", "CHERRY_HANGING_SIGN", "CHERRY_WALL_HANGING_SIGN",
                 "BAMBOO_SIGN", "BAMBOO_WALL_SIGN", "BAMBOO_HANGING_SIGN", "BAMBOO_WALL_HANGING_SIGN");
         }
-        loadBlockListFromConfig("lockable_tile_entities", lockableTileEntities, Material.values(), knownGoodTileEntities::contains);
+        // 1.21+: Crafter (automated crafting block)
+        addMaterialIfExists(knownGoodTileEntities, "CRAFTER");
+        // The Copper Age (1.21.9 / 26.1+): copper chests + shelves
+        addMaterialIfExists(knownGoodTileEntities,
+            "COPPER_CHEST", "EXPOSED_COPPER_CHEST", "WEATHERED_COPPER_CHEST", "OXIDIZED_COPPER_CHEST",
+            "WAXED_COPPER_CHEST", "WAXED_EXPOSED_COPPER_CHEST", "WAXED_WEATHERED_COPPER_CHEST", "WAXED_OXIDIZED_COPPER_CHEST",
+            "COPPER_TRAPPED_CHEST", "EXPOSED_COPPER_TRAPPED_CHEST", "WEATHERED_COPPER_TRAPPED_CHEST", "OXIDIZED_COPPER_TRAPPED_CHEST",
+            "WAXED_COPPER_TRAPPED_CHEST", "WAXED_EXPOSED_COPPER_TRAPPED_CHEST", "WAXED_WEATHERED_COPPER_TRAPPED_CHEST", "WAXED_OXIDIZED_COPPER_TRAPPED_CHEST",
+            "OAK_SHELF", "SPRUCE_SHELF", "BIRCH_SHELF", "JUNGLE_SHELF", "ACACIA_SHELF",
+            "DARK_OAK_SHELF", "MANGROVE_SHELF", "CHERRY_SHELF", "PALE_OAK_SHELF",
+            "BAMBOO_SHELF", "CRIMSON_SHELF", "WARPED_SHELF");
+
+        // Validator: accepts any block in knownGoodTileEntities OR any copper chest/shelf name pattern
+        java.util.function.Function<Material, Boolean> tileEntityValidator = m -> {
+            String name = m.name();
+            if (knownGoodTileEntities.contains(m)) return true;
+            if (name.contains("COPPER_CHEST") || name.contains("COPPER_TRAPPED_CHEST")) return true;
+            if (name.endsWith("_SHELF")) return true;
+            if (name.equals("DECORATED_POT") || name.equals("CHISELED_BOOKSHELF") || name.equals("CRAFTER")) return true;
+            if (name.equals("JUKEBOX")) return true;
+            return false;
+        };
+
+        loadBlockListFromConfig("lockable_tile_entities", lockableTileEntities, Material.values(), tileEntityValidator);
         loadBlockListFromConfig("lockable_shulker_boxes", shulkerBoxes, Material.values(), m -> m.toString().contains("SHULKER_BOX"));
         if (MinecraftVersion.isAtLeastVersion(MinecraftVersion.MC1_16_R3)) {
-            loadBlockListFromConfig("lockable_blocks", lockableBlocks, Material.values(), m -> !knownGoodTileEntities.contains(m));
+            // Validator for lockable_blocks: anything not a tile entity, plus specific interactive blocks
+            java.util.function.Function<Material, Boolean> blockValidator = m -> {
+                if (knownGoodTileEntities.contains(m)) return false; // already a tile entity
+                String name = m.name();
+                // Allow interactive/utility blocks explicitly
+                if (name.equals("DRAGON_EGG")) return true;
+                if (name.equals("COMPOSTER") || name.equals("BELL") || name.equals("NOTE_BLOCK")) return true;
+                if (name.equals("GRINDSTONE") || name.equals("STONECUTTER") || name.equals("LOOM")) return true;
+                if (name.equals("CARTOGRAPHY_TABLE") || name.equals("SMITHING_TABLE") || name.equals("ENCHANTING_TABLE")) return true;
+                if (name.contains("CAULDRON")) return true;
+                if (name.contains("ANVIL")) return true;
+                if (name.contains("FENCE_GATE")) return true;
+                if (name.contains("TRAPDOOR")) return true;
+                return false;
+            };
+            loadBlockListFromConfig("lockable_blocks", lockableBlocks, Material.values(), blockValidator);
             loadBlockListFromConfig("lockable_doors", lockableDoors, Material.values(), m -> m.toString().contains("DOOR"));
             lockableBlocks.addAll(lockableDoors);
         }
@@ -310,7 +352,7 @@ public final class DefaultConfig extends BlockProtConfig {
         return !config.getBoolean("use_menus", false);
     }
 
-    public boolean shouldEnableAllOptionalFeatures() { return config.getBoolean("optional_features_enable_all", false); }
+    public boolean shouldEnableAllOptionalFeatures() { return false; } // removed — each feature now has its own config key
     public boolean isLocalizedCommandAliasesEnabled() { return config.getBoolean("localized_command_aliases", true); }
 
     /**
@@ -361,7 +403,7 @@ public final class DefaultConfig extends BlockProtConfig {
         return !config.contains("block_protected_block_piston_movement") || config.getBoolean("block_protected_block_piston_movement");
     }
     public boolean isWorldEditPasteAutolockEnabled() {
-        return shouldEnableAllOptionalFeatures() || config.getBoolean("worldedit_paste_autolock.enabled", false);
+        return config.getBoolean("worldedit_paste_autolock.enabled", false);
     }
     public int    getWorldEditPasteAutolockRadius()       { return Math.max(1, config.getInt("worldedit_paste_autolock.radius", 24)); }
     public int    getWorldEditPasteAutolockMaxBlocks()    { return Math.max(1, config.getInt("worldedit_paste_autolock.max_blocks_per_paste", 5000)); }
@@ -385,18 +427,57 @@ public final class DefaultConfig extends BlockProtConfig {
     public boolean isLockEffectEnabled()                   { return !config.contains("block_lock_effects") || config.getBoolean("block_lock_effects"); }
     public boolean isLockSoundEnabled()                    { return !config.contains("block_lock_sounds") || config.getBoolean("block_lock_sounds"); }
 
+    // ── Auto-drop to inventory ────────────────────────────────────────────────
+
+    /** Whether the auto-drop-to-inventory feature is enabled globally. */
+    public boolean isAutoDropToInventoryEnabled() {
+        if (blocksConfig != null) return blocksConfig.getBoolean("auto_drop_to_inventory.enabled", true);
+        return config.getBoolean("auto_drop_to_inventory.enabled", true);
+    }
+
+    /** The set of materials that should be delivered to the breaker's inventory. */
+    @NotNull
+    public Set<Material> getAutoDropToInventoryBlocks() {
+        List<?> raw = null;
+        if (blocksConfig != null && blocksConfig.contains("auto_drop_to_inventory.blocks"))
+            raw = blocksConfig.getList("auto_drop_to_inventory.blocks");
+        if (raw == null) raw = config.getList("auto_drop_to_inventory.blocks");
+        if (raw == null) return Set.of();
+        Set<Material> result = new HashSet<>();
+        for (Object o : raw) {
+            if (o instanceof String s) {
+                Material m = Material.matchMaterial(s);
+                if (m != null) result.add(m);
+            }
+        }
+        return result;
+    }
+
+    /** True if the given material should auto-drop to the breaker's inventory. */
+    public boolean isAutoDropToInventory(@NotNull Material type) {
+        return isAutoDropToInventoryEnabled() && getAutoDropToInventoryBlocks().contains(type);
+    }
+
+    /** Per-world override: true if the world has auto-drop enabled (defaults to global setting). */
+    public boolean isAutoDropToInventoryEnabled(@NotNull World world) {
+        WorldsConfig wc = BlockProt.getWorldsConfig();
+        if (isWorldsConfigEnabled() && wc != null && wc.hasWorldConfig(world))
+            return wc.isAutoDropToInventoryEnabled(world);
+        return isAutoDropToInventoryEnabled();
+    }
+
     public String getConsolePrefixColor() { return "§x§8§0§4§0§0§0"; }
     public String getConsoleInfoColor()   { return "§x§D§2§B§4§8§C"; }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // PET PROTECTION — new in SP26-ZV
+    // PET PROTECTION — BlockProt Reloaded (BPR)
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
      * Master switch for the entire pet protection system.
      * Config key: {@code pet_protection.enabled}  (default: {@code true})
      *
-     * @since SP26-ZV
+     * @since 1.3.0
      */
     public boolean isPetProtectionEnabled() {
         return config.getBoolean("pet_protection.enabled", true);
@@ -407,7 +488,7 @@ public final class DefaultConfig extends BlockProtConfig {
      * without the player needing to open the pet settings menu.
      * Config key: {@code pet_protection.auto_protect_on_tame}  (default: {@code true})
      *
-     * @since SP26-ZV
+     * @since 1.3.0
      */
     public boolean isPetAutoProtectOnTame() {
         return config.getBoolean("pet_protection.auto_protect_on_tame", true);
@@ -418,7 +499,7 @@ public final class DefaultConfig extends BlockProtConfig {
      * by right-clicking a tamed animal they own.
      * Config key: {@code pet_protection.menu_item}  (default: {@code STICK})
      *
-     * @since SP26-ZV
+     * @since 1.3.0
      */
     @NotNull
     public Material getPetMenuItem() {
@@ -432,7 +513,7 @@ public final class DefaultConfig extends BlockProtConfig {
      * they do not own.
      * Config key: {@code pet_protection.denied_message}
      *
-     * @since SP26-ZV
+     * @since 1.3.0
      */
     @NotNull
     public String getPetDeniedMessage() {

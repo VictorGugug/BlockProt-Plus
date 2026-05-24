@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 - 2025 spnda / SP26 fork
+ * Copyright (C) 2021 - 2025 spnda / BlockProt Reloaded (BPR)
  * This file is part of BlockProt <https://github.com/spnda/BlockProt>.
  *
  * BlockProt is free software: you can redistribute it and/or modify
@@ -18,6 +18,7 @@
 
 package de.sean.blockprot.bukkit;
 
+import de.sean.blockprot.bukkit.BlockProtLogger;
 import org.bukkit.Bukkit;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -63,18 +64,19 @@ public final class BlockProtConsole {
     }
 
     /**
-     * Prints a simple startup summary, then clears the buffer so subsequent calls
-     * print immediately.
-     *
-     * @param version The plugin version string.
+     * Prints a single success line to console and flushes the startup buffer
+     * to the session log only. Call at the end of {@code onEnable}.
      */
     public static void printStartupBanner(@NotNull String version) {
         List<String> lines = startupBuffer != null ? startupBuffer : new ArrayList<>();
-        startupBuffer = null; // exit buffering mode
+        startupBuffer = null;
 
-        log("BlockProt v" + version + " enabled successfully.");
+        // Single console line
+        log("BlockProt v" + version + " enabled.");
+
+        // Everything else goes to the session log only
         for (String line : lines) {
-            log(line);
+            BlockProtLogger.log("startup", line);
         }
     }
 

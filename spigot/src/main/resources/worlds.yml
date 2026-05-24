@@ -15,6 +15,10 @@
 #
 # world:
 #   enabled: true
+#
+#   # Set to false to disable auto-drop-to-inventory in this world only.
+#   auto_drop_to_inventory_enabled: true
+#
 #   lockable_tile_entities:
 #     - CHEST
 #     - TRAPPED_CHEST

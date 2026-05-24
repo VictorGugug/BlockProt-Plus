@@ -48,7 +48,16 @@ public final class TransferSearchInventory extends BlockProtInventory {
     }
 
     /** Opens a text-input prompt, then fills the result GUI. */
-    public static void openSearch(@NotNull Player player) {
+    public static void openSearch(@NotNull Player player, @NotNull org.bukkit.block.Block block) {
+        // Persist the block into the state BEFORE opening the input, so the callback
+        // always has a valid block even if InventoryCloseEvent cleared the previous state.
+        InventoryState preserved = new InventoryState(block);
+        preserved.friendSearchState = InventoryState.FriendSearchState.FRIEND_SEARCH;
+        // Copy menu permissions from the existing state if present
+        InventoryState existing = InventoryState.get(player.getUniqueId());
+        if (existing != null) preserved.menuPermissions = existing.menuPermissions;
+        InventoryState.set(player.getUniqueId(), preserved);
+
         String prompt = Translator.get(TranslationKey.INVENTORIES__TRANSFER__SEARCH_PROMPT);
         if (VersionCompat.isPaper()) {
             ChatInput.open(player, BlockProt.getInstance(),
@@ -58,6 +67,15 @@ public final class TransferSearchInventory extends BlockProtInventory {
                 prompt, prompt,
                 text -> openResult(player, text));
         }
+    }
+
+    /** @deprecated Use {@link #openSearch(Player, org.bukkit.block.Block)} instead. */
+    @Deprecated
+    public static void openSearch(@NotNull Player player) {
+        InventoryState state = InventoryState.get(player.getUniqueId());
+        org.bukkit.block.Block block = state != null ? state.getBlock() : null;
+        if (block == null) return;
+        openSearch(player, block);
     }
 
     private static void openResult(@NotNull Player player, @Nullable String text) {
@@ -205,14 +223,15 @@ public final class TransferSearchInventory extends BlockProtInventory {
         @Override
         public void run() {
             try {
-                var uuids = Arrays.stream(Bukkit.getOfflinePlayers())
-                    .map(OfflinePlayer::getUniqueId)
-                    .filter(u -> u.version() == 3 || u.version() == 4 || u.version() == 0)
-                    .toList();
+                final var offlinePlayers = Bukkit.getOfflinePlayers();
 
-                BlockProt.getProfileService().findAllByUuid(uuids).stream()
-                    .filter(Objects::nonNull)
-                    .filter(p -> p.getName() != null && !p.getUniqueId().equals(player.getUniqueId()))
+                Arrays.stream(offlinePlayers)
+                    .filter(op -> op.getName() != null && !op.getUniqueId().equals(player.getUniqueId()))
+                    .filter(op -> {
+                        java.util.UUID uuid = op.getUniqueId();
+                        return uuid != null && (uuid.version() == 3 || uuid.version() == 4 || uuid.version() == 0);
+                    })
+                    .map(op -> new org.enginehub.squirrelid.Profile(op.getUniqueId(), op.getName()))
                     .map(p -> new org.apache.commons.lang3.tuple.ImmutablePair<>(p, similarity(p.getName(), query)))
                     .filter(pair -> pair.right >= minSimilarity)
                     .sorted((a, b) -> b.right.compareTo(a.right))

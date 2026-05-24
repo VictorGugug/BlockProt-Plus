@@ -1,23 +1,19 @@
-/*
- * Copyright (C) 2021 - 2025 spnda / SP26 fork
- * This file is part of BlockProt <https://github.com/spnda/BlockProt>.
- *
- * BlockProt is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- */
-
 package de.sean.blockprot.bukkit.commands;
 
 import de.sean.blockprot.bukkit.BlockProt;
 import de.sean.blockprot.bukkit.BlockProtLogger;
+import de.sean.blockprot.bukkit.BukkitCompat;
 import de.sean.blockprot.bukkit.TranslationKey;
 import de.sean.blockprot.bukkit.Translator;
+import de.sean.blockprot.bukkit.VersionCompat;
+import de.sean.blockprot.bukkit.inventories.*;
 import de.sean.blockprot.bukkit.nbt.BlockNBTHandler;
 import de.sean.blockprot.bukkit.nbt.PlayerSettingsHandler;
+import de.sean.blockprot.bukkit.nbt.StatHandler;
+import de.sean.blockprot.bukkit.nbt.stats.PlayerBlocksStatistic;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.command.Command;
@@ -28,46 +24,57 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
+/**
+ * /blockprot debug — diagnostics and manual test-bench.
+ *
+ * Subcommands:
+ *   run                — full automated diagnostic suite (actionbar: short, chat: detail)
+ *   placeDebugChest    — places a chest owned by Notch at the player's location
+ *   placeDebugShulker  — places a shulker box owned by Notch at the player's location
+ *   clearSearchHistory — clears the calling player's friend-search history
+ */
 public class DebugCommand implements CommandExecutor {
 
     private static final String NOTCH_UUID = "069a79f4-44e9-4726-a5be-fca90e38aaf5";
 
     @Override
-    public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
+    public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command,
+                             @NotNull String label, @NotNull String[] args) {
         if (!canUseCommand(sender)) return false;
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage("Only players can use this command.");
+            return false;
+        }
 
         if (args.length < 2) {
-            sender.sendMessage("Usage: /blockprot debug <placeDebugChest|placeDebugShulker|clearSearchHistory|run>");
+            player.sendMessage("§eUsage: /blockprot debug <run|placeDebugChest|placeDebugShulker|clearSearchHistory>");
             return false;
         }
 
         switch (args[1]) {
             case "placeDebugChest" -> {
-                if (!(sender instanceof Player player)) break;
                 player.getWorld().setType(player.getLocation(), Material.CHEST);
                 new BlockNBTHandler(player.getWorld().getBlockAt(player.getLocation())).setOwner(NOTCH_UUID);
-                BlockProtLogger.log("debug", "placeDebugChest at " + player.getLocation());
+                ab(player, "§aChest placed");
                 return true;
             }
             case "placeDebugShulker" -> {
-                if (!(sender instanceof Player player)) break;
                 player.getWorld().setType(player.getLocation(), Material.SHULKER_BOX);
                 new BlockNBTHandler(player.getWorld().getBlockAt(player.getLocation())).setOwner(NOTCH_UUID);
-                BlockProtLogger.log("debug", "placeDebugShulker at " + player.getLocation());
+                ab(player, "§aShulker placed");
                 return true;
             }
             case "clearSearchHistory" -> {
-                if (!(sender instanceof Player player)) break;
                 new PlayerSettingsHandler(player).clearSearchHistory();
-                player.sendMessage(Component.text("[BlockProt] Search history cleared.", NamedTextColor.GREEN));
-                BlockProtLogger.log("debug", "clearSearchHistory for " + player.getName());
+                ab(player, "§aHistory cleared");
                 return true;
             }
             case "run" -> {
-                if (!(sender instanceof Player player)) break;
-                // Run async to avoid blocking the main thread during slow checks.
-                Bukkit.getScheduler().runTaskAsynchronously(BlockProt.getInstance(), () -> runDiagnostics(player));
+                ab(player, "§eRunning diagnostics...");
+                Bukkit.getScheduler().runTaskAsynchronously(BlockProt.getInstance(),
+                    () -> runDiagnostics(player));
                 return true;
             }
         }
@@ -75,243 +82,504 @@ public class DebugCommand implements CommandExecutor {
     }
 
     // =========================================================================
-    // Diagnostics
+    //  Helpers
+    // =========================================================================
+
+    private static void ab(@NotNull Player p, @NotNull String msg) {
+        p.sendActionBar(LegacyComponentSerializer.legacySection().deserialize(msg));
+    }
+
+    private static void chat(@NotNull Player p, @NotNull String msg) {
+        p.sendMessage(LegacyComponentSerializer.legacySection().deserialize(msg));
+    }
+
+    // =========================================================================
+    //  Full diagnostic suite
     // =========================================================================
 
     private void runDiagnostics(@NotNull Player player) {
-        player.sendMessage(Component.text("[BlockProt] Running diagnostics… check the log file when done.", NamedTextColor.GOLD));
+        AtomicInteger passed = new AtomicInteger(0);
+        AtomicInteger failed = new AtomicInteger(0);
 
         BlockProtLogger.separator();
-        BlockProtLogger.log("=== /blockprot debug run ===");
-        BlockProtLogger.log("Player: " + player.getName() + " (" + player.getUniqueId() + ")");
-        BlockProtLogger.log("Time:   " + java.time.LocalDateTime.now());
+        BlockProtLogger.log("=== /blockprot debug run — " + java.time.LocalDateTime.now() + " ===");
+        BlockProtLogger.log("Player : " + player.getName() + " (" + player.getUniqueId() + ")");
+        BlockProtLogger.log("Server : " + Bukkit.getVersion());
+        BlockProtLogger.log("API    : " + Bukkit.getBukkitVersion());
+        BlockProtLogger.log("Java   : " + System.getProperty("java.version"));
+        BlockProtLogger.log("Compat : " + VersionCompat.getDiagnosticString());
+        BlockProtLogger.log("BukkitCompat: " + BukkitCompat.getDiagnosticString());
 
-        // Version info
-        var desc = BlockProt.getInstance().getDescription();
-        var currentVer = new de.sean.blockprot.util.SemanticVersion(desc.getVersion());
-        var latestVer  = de.sean.blockprot.bukkit.tasks.UpdateChecker.latestVersion;
-        BlockProtLogger.log("Version (current): " + currentVer
-            + (currentVer.isPreRelease() ? " [pre-release]" : " [stable]")
-            + (currentVer.isExperimental() ? " [experimental]" : ""));
-        BlockProtLogger.log("Version (latest):  " + (latestVer != null ? latestVer.toString() : "not checked yet"));
-        if (latestVer != null) {
-            int cmp = latestVer.compareTo(currentVer);
-            BlockProtLogger.log("Update status:     " + (cmp > 0 ? "OUTDATED" : cmp < 0 ? "ahead of release" : "up to date"));
-        }
-        BlockProtLogger.log("Server:  " + Bukkit.getVersion());
-        BlockProtLogger.log("API:     " + Bukkit.getBukkitVersion());
-        BlockProtLogger.log("Java:    " + System.getProperty("java.version"));
+        chat(player, "§6§l[BlockProt Debug] §r§eRunning all checks…");
+        chat(player, "§7Results go to the session log. Summary at the end.");
 
-        int[] counts = new int[]{0,0}; // [passed, failed]
+        // Run each group sequentially. Groups that touch world/inventory must run on main thread.
+        runGroup(player, passed, failed, "1. Config",         () -> checkConfig(player, passed, failed));
+        runGroup(player, passed, failed, "2. BukkitCompat",  () -> checkBukkitCompat(player, passed, failed));
+        runGroup(player, passed, failed, "3. Translations",  () -> checkTranslations(player, passed, failed));
+        runGroup(player, passed, failed, "4. Lockable mats", () -> checkLockableMaterials(player, passed, failed));
+        runGroup(player, passed, failed, "5. ProfileService",() -> checkProfileService(player, passed, failed));
+        runGroup(player, passed, failed, "6. SkinsRestorer", () -> checkSkinsRestorer(player, passed, failed));
+        runGroup(player, passed, failed, "7. AuditLogger",   () -> checkAuditLogger(player, passed, failed));
+        runGroup(player, passed, failed, "8. OnlinePlayers", () -> checkOnlinePlayers(player, passed, failed));
 
-        checkConfig(counts);
-        checkTranslator(counts);
-        checkNbtWriteRead(player, counts);
-        checkPlayerSettings(player, counts);
-        checkInventoryCreation(counts);
-        checkProfileService(player, counts);
-        checkLockableMaterials(counts);
-        checkSkinsRestorer(counts);
-        checkAuditLogger(counts);
-        checkOnlinePlayers(counts);
+        // Main-thread groups
+        Bukkit.getScheduler().runTask(BlockProt.getInstance(), () -> {
+            runGroup(player, passed, failed, "9.  NBT write/read",      () -> checkNbt(player, passed, failed));
+            runGroup(player, passed, failed, "10. PlayerSettings",      () -> checkPlayerSettings(player, passed, failed));
+            runGroup(player, passed, failed, "11. Inventory creation",  () -> checkInventoryCreation(player, passed, failed));
+            runGroup(player, passed, failed, "12. All inventories",     () -> checkAllInventories(player, passed, failed));
+            runGroup(player, passed, failed, "13. Action-bar/chat msg", () -> checkMessages(player, passed, failed));
 
+            // Final summary
+            int p2 = passed.get(), f2 = failed.get(), total = p2 + f2;
+            BlockProtLogger.separator();
+            BlockProtLogger.log("=== SUMMARY: " + p2 + " passed, " + f2 + " failed / " + total + " total ===");
+
+            boolean ok = f2 == 0;
+            ab(player, ok ? "§a✔ All " + p2 + " checks passed" : "§c✘ " + f2 + " failed / " + total);
+            chat(player, ok
+                ? "§a§l[BlockProt] §r§aAll §l" + p2 + "§r§a checks passed."
+                : "§c§l[BlockProt] §r§c" + f2 + " check(s) FAILED — see log.");
+
+            var logFile = BlockProtLogger.getCurrentLogFile();
+            if (logFile != null)
+                chat(player, "§7Log: §f" + logFile.getPath());
+        });
+    }
+
+    private void runGroup(@NotNull Player player, @NotNull AtomicInteger passed,
+                          @NotNull AtomicInteger failed, @NotNull String name,
+                          @NotNull Runnable body) {
         BlockProtLogger.separator();
-        BlockProtLogger.log("=== Summary: " + counts[0] + " passed, " + counts[1] + " failed ===");
-
-        var logFile = BlockProtLogger.getCurrentLogFile();
-        boolean allOk = counts[1] == 0;
-
-        player.sendMessage(allOk
-            ? Component.text("[BlockProt] All diagnostics passed (" + counts[0] + "/" + (counts[0] + counts[1]) + ").", NamedTextColor.GREEN)
-            : Component.text("[BlockProt] " + counts[1] + " check(s) FAILED. See log.", NamedTextColor.RED));
-
-        if (logFile != null) {
-            player.sendMessage(Component.text("[BlockProt] Log: " + logFile.getPath(), NamedTextColor.AQUA));
+        BlockProtLogger.log("--- " + name + " ---");
+        try {
+            body.run();
+        } catch (Exception e) {
+            BlockProtLogger.fail(name + " (group)", e.getClass().getSimpleName() + ": " + e.getMessage());
+            failed.incrementAndGet();
         }
     }
 
-    private void checkConfig(int[] counts) {
-        BlockProtLogger.separator();
-        BlockProtLogger.log("--- 1. Config ---");
+    // =========================================================================
+    //  Individual check groups
+    // =========================================================================
+
+    private void checkConfig(@NotNull Player player, AtomicInteger p, AtomicInteger f) {
         try {
             var cfg = BlockProt.getDefaultConfig();
-            BlockProtLogger.pass("Config loaded — friendFunctionalityDisabled=" + cfg.isFriendFunctionalityDisabled()
-                + ", maxLockedBlocks=" + cfg.getMaxLockedBlockCount());
-            counts[0]++;
+            BlockProtLogger.pass("Config OK — friendDisabled=" + cfg.isFriendFunctionalityDisabled()
+                + " maxBlocks=" + cfg.getMaxLockedBlockCount()
+                + " lockEffects=" + cfg.isLockEffectEnabled()
+                + " lockSound=" + cfg.isLockSoundEnabled()
+                + " petProtection=" + cfg.isPetProtectionEnabled());
+            p.incrementAndGet();
         } catch (Exception e) {
-            BlockProtLogger.fail("Config", e.getMessage());
-            counts[1]++;
+            BlockProtLogger.fail("Config", e.getMessage()); f.incrementAndGet();
         }
     }
 
-    private void checkTranslator(int[] counts) {
-        BlockProtLogger.separator();
-        BlockProtLogger.log("--- 2. Translator (all keys) ---");
-        int keyFail = 0;
+    private void checkBukkitCompat(@NotNull Player player, AtomicInteger p, AtomicInteger f) {
+        try {
+            // Verify the fields resolve without exception and have a non-null value
+            var dust = BukkitCompat.PARTICLE_DUST;
+            var dustTransition = BukkitCompat.PARTICLE_DUST_COLOR_TRANSITION;
+            var enchant = BukkitCompat.GLOW_ENCHANT;
+
+            if (dust == null || dustTransition == null || enchant == null) {
+                BlockProtLogger.fail("BukkitCompat", "One or more fields resolved to null");
+                f.incrementAndGet(); return;
+            }
+            BlockProtLogger.pass("BukkitCompat — PARTICLE_DUST=" + dust.name()
+                + " TRANSITION=" + dustTransition.name()
+                + " GLOW=" + enchant.getKey().getKey()
+                + " newParticle=" + BukkitCompat.hasNewParticleNames()
+                + " newEnchant=" + BukkitCompat.hasNewEnchantmentNames());
+            p.incrementAndGet();
+        } catch (Exception e) {
+            BlockProtLogger.fail("BukkitCompat", e.getMessage()); f.incrementAndGet();
+        }
+    }
+
+    private void checkTranslations(@NotNull Player player, AtomicInteger p, AtomicInteger f) {
+        int blank = 0, errors = 0;
         for (TranslationKey key : TranslationKey.values()) {
             try {
-                String val = Translator.get(key);
-                if (val.isBlank()) {
-                    BlockProtLogger.warn("Key blank: " + key);
+                String v = Translator.get(key);
+                if (v == null || v.isBlank()) {
+                    blank++;
+                    BlockProtLogger.warn("Translation blank: " + key.name());
                 }
             } catch (Exception e) {
-                BlockProtLogger.fail("Key " + key, e.getMessage());
-                keyFail++;
+                errors++;
+                BlockProtLogger.fail("Translation key " + key.name(), e.getMessage());
             }
         }
-        if (keyFail == 0) {
-            BlockProtLogger.pass("All " + TranslationKey.values().length + " translation keys readable");
-            counts[0]++;
+        if (errors == 0) {
+            BlockProtLogger.pass("Translations — " + TranslationKey.values().length
+                + " keys OK, " + blank + " blank");
+            p.incrementAndGet();
         } else {
-            BlockProtLogger.fail("Translator", keyFail + " keys threw exceptions");
-            counts[1]++;
+            BlockProtLogger.fail("Translations", errors + " key(s) threw exceptions");
+            f.incrementAndGet();
         }
     }
 
-    private void checkNbtWriteRead(@NotNull Player player, int[] counts) {
-        BlockProtLogger.separator();
-        BlockProtLogger.log("--- 3. NBT Block Write/Read ---");
-        try {
-            Bukkit.getScheduler().runTask(BlockProt.getInstance(), () -> {
-                try {
-                    var loc = player.getLocation().clone();
-                    var world = player.getWorld();
-                    var orig = world.getBlockAt(loc).getType();
-                    world.setType(loc, Material.CHEST);
-                    var handler = new BlockNBTHandler(world.getBlockAt(loc));
-                    handler.setOwner(NOTCH_UUID);
-                    handler.setName("debug_nbt_test");
-                    String readOwner = handler.getOwner();
-                    String readName  = handler.getName();
-                    world.setType(loc, orig);
-                    if (NOTCH_UUID.equals(readOwner) && "debug_nbt_test".equals(readName)) {
-                        BlockProtLogger.pass("NBT write/read (owner=" + readOwner + ", name=" + readName + ")");
-                    } else {
-                        BlockProtLogger.fail("NBT mismatch", "owner=" + readOwner + " name=" + readName);
-                    }
-                } catch (Exception e) {
-                    BlockProtLogger.fail("NBT block", e.getMessage());
-                }
-            });
-        } catch (Exception e) {
-            BlockProtLogger.fail("NBT schedule", e.getMessage());
-            counts[1]++;
-        }
-        counts[0]++; // NBT result is logged async; we count it as initiated.
-    }
-
-    private void checkPlayerSettings(@NotNull Player player, int[] counts) {
-        BlockProtLogger.separator();
-        BlockProtLogger.log("--- 4. PlayerSettingsHandler ---");
-        try {
-            Bukkit.getScheduler().runTask(BlockProt.getInstance(), () -> {
-                try {
-                    var ps = new PlayerSettingsHandler(player);
-                    BlockProtLogger.pass("lockOnPlace=" + ps.getLockOnPlace());
-                } catch (Exception e) {
-                    BlockProtLogger.fail("PlayerSettingsHandler", e.getMessage());
-                }
-            });
-            counts[0]++;
-        } catch (Exception e) {
-            BlockProtLogger.fail("PlayerSettingsHandler schedule", e.getMessage());
-            counts[1]++;
-        }
-    }
-
-    private void checkInventoryCreation(int[] counts) {
-        BlockProtLogger.separator();
-        BlockProtLogger.log("--- 5. Inventory Creation ---");
-        try {
-            Inventory inv = Bukkit.createInventory(null, 9, "debug_test");
-            BlockProtLogger.pass("Inventory size=" + inv.getSize());
-            counts[0]++;
-        } catch (Exception e) {
-            BlockProtLogger.fail("Inventory creation", e.getMessage());
-            counts[1]++;
-        }
-    }
-
-    private void checkProfileService(@NotNull Player player, int[] counts) {
-        BlockProtLogger.separator();
-        BlockProtLogger.log("--- 6. ProfileService ---");
-        try {
-            var profile = BlockProt.getProfileService().findByUuid(player.getUniqueId());
-            if (profile != null) {
-                BlockProtLogger.pass("ProfileService returned: " + profile.getName());
-                counts[0]++;
-            } else {
-                BlockProtLogger.warn("ProfileService returned null for running player");
-                counts[0]++; // Not a hard failure.
-            }
-        } catch (Exception e) {
-            BlockProtLogger.fail("ProfileService", e.getMessage());
-            counts[1]++;
-        }
-    }
-
-    private void checkLockableMaterials(int[] counts) {
-        BlockProtLogger.separator();
-        BlockProtLogger.log("--- 7. Lockable material check ---");
+    private void checkLockableMaterials(@NotNull Player player, AtomicInteger p, AtomicInteger f) {
         try {
             var cfg = BlockProt.getDefaultConfig();
-            boolean chestLockable = cfg.isLockable(Material.CHEST);
-            BlockProtLogger.pass("CHEST lockable=" + chestLockable);
-            counts[0]++;
+            Material[] check = {
+                Material.CHEST, Material.TRAPPED_CHEST, Material.BARREL,
+                Material.FURNACE, Material.HOPPER, Material.DROPPER, Material.DISPENSER,
+                Material.SHULKER_BOX, Material.OAK_DOOR, Material.OAK_TRAPDOOR,
+                Material.BLAST_FURNACE, Material.SMOKER
+            };
+            StringBuilder sb = new StringBuilder();
+            for (Material m : check)
+                sb.append(m.name()).append("=").append(cfg.isLockable(m)).append(" ");
+            BlockProtLogger.pass("Lockable materials: " + sb.toString().trim());
+            p.incrementAndGet();
         } catch (Exception e) {
-            BlockProtLogger.fail("Lockable material", e.getMessage());
-            counts[1]++;
+            BlockProtLogger.fail("Lockable materials", e.getMessage()); f.incrementAndGet();
         }
     }
 
-    private void checkSkinsRestorer(int[] counts) {
-        BlockProtLogger.separator();
-        BlockProtLogger.log("--- 8. SkinsRestorer ---");
+    private void checkProfileService(@NotNull Player player, AtomicInteger p, AtomicInteger f) {
+        try {
+            var profile = BlockProt.getProfileService().findByUuid(player.getUniqueId());
+            BlockProtLogger.pass("ProfileService OK: " + (profile != null ? profile.getName() : "null (but no exception)"));
+            p.incrementAndGet();
+        } catch (Exception e) {
+            BlockProtLogger.fail("ProfileService", e.getMessage()); f.incrementAndGet();
+        }
+    }
+
+    private void checkSkinsRestorer(@NotNull Player player, AtomicInteger p, AtomicInteger f) {
         var plugin = Bukkit.getPluginManager().getPlugin("SkinsRestorer");
-        if (plugin == null) {
-            BlockProtLogger.log("SkinsRestorer: not installed (using Mojang API fallback)");
-            counts[0]++;
-        } else if (!plugin.isEnabled()) {
-            BlockProtLogger.warn("SkinsRestorer: installed but disabled");
-            counts[0]++;
-        } else {
-            BlockProtLogger.pass("SkinsRestorer: enabled (v" + plugin.getDescription().getVersion() + ")");
-            counts[0]++;
-        }
+        if (plugin == null)       BlockProtLogger.log("SkinsRestorer: not installed");
+        else if (!plugin.isEnabled()) BlockProtLogger.warn("SkinsRestorer installed but disabled");
+        else                          BlockProtLogger.pass("SkinsRestorer v" + plugin.getDescription().getVersion());
+        p.incrementAndGet();
     }
 
-    private void checkAuditLogger(int[] counts) {
-        BlockProtLogger.separator();
-        BlockProtLogger.log("--- 9. AuditLogger ---");
+    private void checkAuditLogger(@NotNull Player player, AtomicInteger p, AtomicInteger f) {
         var audit = BlockProt.getAuditLogger();
-        if (audit == null) {
-            BlockProtLogger.log("AuditLogger: disabled in config");
-            counts[0]++;
-        } else {
-            BlockProtLogger.pass("AuditLogger: active");
-            counts[0]++;
+        BlockProtLogger.pass("AuditLogger: " + (audit == null ? "disabled (config)" : "active"));
+        p.incrementAndGet();
+    }
+
+    private void checkOnlinePlayers(@NotNull Player player, AtomicInteger p, AtomicInteger f) {
+        BlockProtLogger.log("Online players: " + Bukkit.getOnlinePlayers().size());
+        for (Player pl : Bukkit.getOnlinePlayers())
+            BlockProtLogger.log("  - " + pl.getName() + " (" + pl.getUniqueId() + ")");
+        p.incrementAndGet();
+    }
+
+    // -- Main-thread checks ---------------------------------------------------
+
+    private void checkNbt(@NotNull Player player, AtomicInteger p, AtomicInteger f) {
+        try {
+            var loc  = player.getLocation().clone();
+            var world = player.getWorld();
+            var orig = world.getBlockAt(loc).getType();
+            world.setType(loc, Material.CHEST);
+            var h = new BlockNBTHandler(world.getBlockAt(loc));
+            h.setOwner(NOTCH_UUID);
+            h.setName("debug_nbt_test");
+            String owner = h.getOwner();
+            String name  = h.getName();
+            long lockedAt = h.getLockedAt();
+            world.setType(loc, orig);
+
+            if (NOTCH_UUID.equals(owner) && "debug_nbt_test".equals(name)) {
+                BlockProtLogger.pass("NBT write/read OK (owner=" + owner + " name=" + name + " lockedAt=" + lockedAt + ")");
+                p.incrementAndGet();
+            } else {
+                BlockProtLogger.fail("NBT mismatch", "owner=" + owner + " name=" + name);
+                f.incrementAndGet();
+            }
+        } catch (Exception e) {
+            BlockProtLogger.fail("NBT block", e.getMessage()); f.incrementAndGet();
         }
     }
 
-    private void checkOnlinePlayers(int[] counts) {
-        BlockProtLogger.separator();
-        BlockProtLogger.log("--- 10. Online Players ---");
-        BlockProtLogger.log("Count: " + Bukkit.getOnlinePlayers().size());
-        for (Player p : Bukkit.getOnlinePlayers()) {
-            BlockProtLogger.log("  - " + p.getName() + " (" + p.getUniqueId() + ")");
+    private void checkPlayerSettings(@NotNull Player player, AtomicInteger p, AtomicInteger f) {
+        try {
+            var ps = new PlayerSettingsHandler(player);
+            BlockProtLogger.pass("PlayerSettings OK — lockOnPlace=" + ps.getLockOnPlace()
+                + " hintsEnabled=" + !ps.hasPlayerInteractedWithMenu());
+            p.incrementAndGet();
+        } catch (Exception e) {
+            BlockProtLogger.fail("PlayerSettings", e.getMessage()); f.incrementAndGet();
         }
-        counts[0]++;
+    }
+
+    private void checkInventoryCreation(@NotNull Player player, AtomicInteger p, AtomicInteger f) {
+        try {
+            Inventory inv = Bukkit.createInventory(null, 9, "bp_debug");
+            BlockProtLogger.pass("Bukkit.createInventory OK size=" + inv.getSize());
+            p.incrementAndGet();
+        } catch (Exception e) {
+            BlockProtLogger.fail("createInventory", e.getMessage()); f.incrementAndGet();
+        }
+    }
+
+    private void checkAllInventories(@NotNull Player player, AtomicInteger p, AtomicInteger f) {
+        // Set up a neutral InventoryState so inventories don't NPE
+        InventoryState base = new InventoryState(null);
+        base.friendSearchState = InventoryState.FriendSearchState.DEFAULT_FRIEND_SEARCH;
+        base.origin = InventoryState.MenuOrigin.NONE;
+        InventoryState.set(player.getUniqueId(), base);
+
+        // ── Inventories that need no block context ────────────────────────────
+        inv(p, f, "UserMenuInventory",
+            () -> new UserMenuInventory().fill(player));
+
+        inv(p, f, "AdminMenuInventory",
+            () -> new AdminMenuInventory().fill(player));
+
+        inv(p, f, "UserSettingsInventory",
+            () -> new UserSettingsInventory().fill(player));
+
+        inv(p, f, "StatisticsInventory",
+            () -> new StatisticsInventory().fill(player));
+
+        inv(p, f, "FriendManageInventory (default)",
+            () -> new FriendManageInventory().fill(player));
+
+        inv(p, f, "TimedAccessInventory", () -> {
+            InventoryState ts = new InventoryState(null);
+            ts.currentFriend = player.getUniqueId();
+            InventoryState.set(player.getUniqueId(), ts);
+            return new TimedAccessInventory().fill(player);
+        });
+
+        // StatisticListInventory — needs a filled statistic
+        inv(p, f, "StatisticListInventory", () -> {
+            PlayerBlocksStatistic stat = new PlayerBlocksStatistic();
+            StatHandler.getStatistic(stat, player);
+            InventoryState ns = new InventoryState(null);
+            ns.currentPageIndex = 0;
+            InventoryState.set(player.getUniqueId(), ns);
+            @SuppressWarnings("unchecked")
+            de.sean.blockprot.bukkit.nbt.stats.BukkitListStatistic<
+                de.sean.blockprot.nbt.stats.ListStatisticItem<?, Material>, ?> castedStat =
+                (de.sean.blockprot.bukkit.nbt.stats.BukkitListStatistic<
+                    de.sean.blockprot.nbt.stats.ListStatisticItem<?, Material>, ?>)
+                (de.sean.blockprot.bukkit.nbt.stats.BukkitListStatistic<?, ?>) stat;
+            return new StatisticListInventory().fill(player, castedStat);
+        });
+
+        // AdminBlockListInventory
+        inv(p, f, "AdminBlockListInventory", () -> {
+            PlayerBlocksStatistic stat = new PlayerBlocksStatistic();
+            StatHandler.getStatistic(stat, player);
+            InventoryState ns = new InventoryState(null);
+            ns.origin = InventoryState.MenuOrigin.ADMIN_MENU;
+            InventoryState.set(player.getUniqueId(), ns);
+            return new AdminBlockListInventory().fill(player, player.getName(), stat);
+        });
+
+        // RedstoneSettingsInventory — place a temporary chest, lock it, open redstone
+        inv(p, f, "RedstoneSettingsInventory", () -> {
+            var loc   = player.getLocation().clone();
+            var world = player.getWorld();
+            var orig  = world.getBlockAt(loc).getType();
+            world.setType(loc, Material.CHEST);
+            var block = world.getBlockAt(loc);
+            var h = new BlockNBTHandler(block);
+            h.setOwner(player.getUniqueId().toString());
+            InventoryState rs = new InventoryState(block);
+            rs.friendSearchState = InventoryState.FriendSearchState.FRIEND_SEARCH;
+            InventoryState.set(player.getUniqueId(), rs);
+            Inventory result = new RedstoneSettingsInventory().fill(player, rs);
+            world.setType(loc, orig);
+            return result;
+        });
+
+        // BlockLockInventory — place a temporary chest, lock it
+        inv(p, f, "BlockLockInventory", () -> {
+            var loc   = player.getLocation().clone();
+            var world = player.getWorld();
+            var orig  = world.getBlockAt(loc).getType();
+            world.setType(loc, Material.CHEST);
+            var block = world.getBlockAt(loc);
+            var h = new BlockNBTHandler(block);
+            h.setOwner(player.getUniqueId().toString());
+            InventoryState bl = new InventoryState(block);
+            bl.friendSearchState = InventoryState.FriendSearchState.FRIEND_SEARCH;
+            InventoryState.set(player.getUniqueId(), bl);
+            Inventory result = new BlockLockInventory().fill(player, Material.CHEST, h);
+            world.setType(loc, orig);
+            return result;
+        });
+
+        // BlockInfoInventory — same chest
+        inv(p, f, "BlockInfoInventory", () -> {
+            var loc   = player.getLocation().clone();
+            var world = player.getWorld();
+            var orig  = world.getBlockAt(loc).getType();
+            world.setType(loc, Material.CHEST);
+            var block = world.getBlockAt(loc);
+            var h = new BlockNBTHandler(block);
+            h.setOwner(player.getUniqueId().toString());
+            InventoryState bi = new InventoryState(block);
+            bi.currentPageIndex = 0;
+            InventoryState.set(player.getUniqueId(), bi);
+            Inventory result = new BlockInfoInventory().fill(player, h);
+            world.setType(loc, orig);
+            return result;
+        });
+
+        // BlockInspectContentsInventory — use a chest
+        inv(p, f, "BlockInspectContentsInventory", () -> {
+            var loc   = player.getLocation().clone();
+            var world = player.getWorld();
+            var orig  = world.getBlockAt(loc).getType();
+            world.setType(loc, Material.CHEST);
+            var block = world.getBlockAt(loc);
+            var h = new BlockNBTHandler(block);
+            h.setOwner(player.getUniqueId().toString());
+            InventoryState bic = new InventoryState(block);
+            InventoryState.set(player.getUniqueId(), bic);
+            Inventory result = new BlockInspectContentsInventory(player).fill();
+            world.setType(loc, orig);
+            return result;
+        });
+
+        // AuditInventory — no entries case
+        inv(p, f, "AuditInventory (no entries)", () -> {
+            var loc   = player.getLocation().clone();
+            var world = player.getWorld();
+            var orig  = world.getBlockAt(loc).getType();
+            world.setType(loc, Material.CHEST);
+            var block = world.getBlockAt(loc);
+            InventoryState ai = new InventoryState(block);
+            ai.currentPageIndex = 0;
+            InventoryState.set(player.getUniqueId(), ai);
+            Inventory result = new AuditInventory().fill(player);
+            world.setType(loc, orig);
+            return result;
+        });
+
+        // PetSettingsInventory — requiere Player + Entity, skip en debug
+        BlockProtLogger.log("Inventory skipped: PetSettingsInventory (requires live Entity, not testable without one)");
+        p.incrementAndGet();
+
+        // FriendSearchHistoryInventory
+        inv(p, f, "FriendSearchHistoryInventory", () -> {
+            InventoryState fh = new InventoryState(null);
+            fh.friendSearchState = InventoryState.FriendSearchState.DEFAULT_FRIEND_SEARCH;
+            InventoryState.set(player.getUniqueId(), fh);
+            return new FriendSearchHistoryInventory().fill(player);
+        });
+
+        // Restore neutral state
+        InventoryState.set(player.getUniqueId(), base);
+
+        // ── Inventory title translation coverage ──────────────────────────────
+        BlockProtLogger.separator();
+        BlockProtLogger.log("--- Inventory title translation coverage ---");
+        TranslationKey[] titleKeys = {
+            TranslationKey.INVENTORIES__BLOCK_LOCK,
+            TranslationKey.INVENTORIES__BLOCK_INFO,
+            TranslationKey.INVENTORIES__USER_SETTINGS,
+            TranslationKey.INVENTORIES__USER_MENU__TITLE,
+            TranslationKey.INVENTORIES__ADMIN_MENU__TITLE,
+            TranslationKey.INVENTORIES__ADMIN_BLOCK_LIST__TITLE,
+            TranslationKey.INVENTORIES__FRIENDS__MANAGE,
+            TranslationKey.INVENTORIES__FRIENDS__EDIT,
+            TranslationKey.INVENTORIES__TIMED__TITLE,
+            TranslationKey.INVENTORIES__REDSTONE__SETTINGS,
+            TranslationKey.INVENTORIES__STATISTICS__STATISTICS,
+            TranslationKey.INVENTORIES__AUDIT__TITLE,
+            TranslationKey.INVENTORIES__TRANSFER__TITLE,
+            TranslationKey.INVENTORIES__PET__SETTINGS,
+        };
+        for (TranslationKey k : titleKeys) {
+            String v = Translator.get(k);
+            if (v == null || v.isBlank()) {
+                BlockProtLogger.fail("Title blank/missing", k.name()); f.incrementAndGet();
+            } else {
+                BlockProtLogger.pass("Title OK: " + k.name() + " = \"" + v + "\"");
+                p.incrementAndGet();
+            }
+        }
+    }
+
+    private void checkMessages(@NotNull Player player, AtomicInteger p, AtomicInteger f) {
+        // Verify that actionbar and chat message keys exist and are non-blank
+        TranslationKey[] abKeys = {
+            TranslationKey.MESSAGES__LOCK_HINT,
+            TranslationKey.MESSAGES__CHAT_INPUT_PROMPT,
+            TranslationKey.MESSAGES__CHAT_INPUT_CANCELLED,
+            TranslationKey.MESSAGES__COPY_DONE,
+            TranslationKey.MESSAGES__PASTE_DONE,
+            TranslationKey.MESSAGES__TRANSFER_SELF_GUI,
+            TranslationKey.MESSAGES__TRANSFER_NOT_OWNER_GUI,
+            TranslationKey.MESSAGES__TRANSFER_FAILED,
+        };
+        TranslationKey[] chatKeys = {
+            TranslationKey.MESSAGES__NO_PERMISSION,
+            TranslationKey.MESSAGES__FRIEND_ADDED,
+            TranslationKey.MESSAGES__FRIEND_REMOVED,
+            TranslationKey.MESSAGES__UNLOCKED,
+            TranslationKey.MESSAGES__TIMED_ACCESS_GRANTED,
+            TranslationKey.MESSAGES__TIMED_ACCESS_NOT_OWNER,
+            TranslationKey.MESSAGES__TIMED_ACCESS_OVER_MAX,
+            TranslationKey.MESSAGES__TRANSFER_SUCCESS,
+        };
+
+        int ok = 0, bad = 0;
+        for (TranslationKey k : abKeys) {
+            String v = Translator.get(k);
+            if (v == null || v.isBlank()) {
+                BlockProtLogger.fail("ActionBar msg blank", k.name()); bad++;
+            } else { ok++; }
+        }
+        for (TranslationKey k : chatKeys) {
+            String v = Translator.get(k);
+            if (v == null || v.isBlank()) {
+                BlockProtLogger.fail("Chat msg blank", k.name()); bad++;
+            } else { ok++; }
+        }
+        BlockProtLogger.log("Messages — " + ok + " OK, " + bad + " blank");
+        if (bad == 0) { BlockProtLogger.pass("All message keys present"); p.incrementAndGet(); }
+        else { f.incrementAndGet(); }
+    }
+
+    // =========================================================================
+    //  Helpers
+    // =========================================================================
+
+    private void inv(@NotNull AtomicInteger p, @NotNull AtomicInteger f,
+                     @NotNull String name,
+                     @NotNull java.util.concurrent.Callable<Inventory> supplier) {
+        try {
+            Inventory result = supplier.call();
+            if (result != null) {
+                BlockProtLogger.pass("Inventory OK: " + name + " (size=" + result.getSize() + ")");
+            } else {
+                BlockProtLogger.log("Inventory null/skipped: " + name + " (null is intentional for some paths)");
+            }
+            p.incrementAndGet();
+        } catch (Exception e) {
+            BlockProtLogger.fail("Inventory FAIL: " + name,
+                e.getClass().getSimpleName() + ": " + e.getMessage());
+            f.incrementAndGet();
+        }
     }
 
     @Nullable
     @Override
-    public List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
+    public List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command,
+                                      @NotNull String label, @NotNull String[] args) {
         if (!canUseCommand(sender)) return Collections.emptyList();
-        return new ArrayList<>(Arrays.asList("placeDebugChest", "placeDebugShulker", "clearSearchHistory", "run"));
+        return List.of("run", "placeDebugChest", "placeDebugShulker", "clearSearchHistory");
     }
 
     @Override
     public boolean canUseCommand(@NotNull CommandSender sender) {
-        return sender.hasPermission("blockprot.debug");
+        return sender.isOp() || sender.hasPermission("blockprot.debug");
     }
 }

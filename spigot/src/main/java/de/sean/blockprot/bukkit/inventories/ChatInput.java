@@ -18,6 +18,7 @@
 
 package de.sean.blockprot.bukkit.inventories;
 
+import de.sean.blockprot.bukkit.BlockProt;
 import de.sean.blockprot.bukkit.TranslationKey;
 import de.sean.blockprot.bukkit.Translator;
 import io.papermc.paper.event.player.AsyncChatEvent;
@@ -75,7 +76,7 @@ public final class ChatInput implements Listener {
         player.sendActionBar(component);
 
         // Schedule expiry after 15 seconds (300 ticks).
-        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+        BlockProt.getFoliaLib().getScheduler().runLater(() -> {
             if (!consumed) {
                 unregister();
             }
@@ -107,7 +108,7 @@ public final class ChatInput implements Listener {
 
         unregister();
 
-        Bukkit.getScheduler().runTask(plugin, () -> {
+        BlockProt.getFoliaLib().getScheduler().runNextTick(task -> {
             if (onConfirm != null) onConfirm.accept(text);
         });
     }

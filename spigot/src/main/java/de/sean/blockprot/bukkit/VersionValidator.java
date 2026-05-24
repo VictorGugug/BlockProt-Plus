@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 - 2025 spnda / SP26 fork
+ * Copyright (C) 2021 - 2025 spnda / BlockProt Reloaded (BPR)
  * This file is part of BlockProt <https://github.com/spnda/BlockProt>.
  *
  * BlockProt is free software: you can redistribute it and/or modify
@@ -65,13 +65,13 @@ public final class VersionValidator {
                 "Falling back to anvil GUI.");
         }
 
-        if (!hasTypedViews && VersionCompat.isAtLeast(1, 21, 0)) {
+        if (!hasTypedViews && VersionCompat.isAtLeast(1, 20, 0)) {
             warn(Translator.get(TranslationKey.CONSOLE__TYPED_VIEWS_FALLBACK));
             BlockProtLogger.warn("Typed inventory views unavailable (1.21.0–1.21.3). Using fallback methods.");
         }
 
         // ── Happy-path summary (session log only, no console noise) ──────────
-        if (javaMajor >= 21 && isPaper && (hasTypedViews || !VersionCompat.isAtLeast(1, 21, 0))) {
+        if (javaMajor >= 21 && isPaper && (hasTypedViews || !VersionCompat.isAtLeast(1, 20, 0))) {
             BlockProtLogger.log("startup-checks",
                 "Java " + javaVersion + " OK | Paper OK | TypedViews " + (hasTypedViews ? "OK" : "N/A"));
         }

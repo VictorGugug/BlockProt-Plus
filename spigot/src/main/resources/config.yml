@@ -7,10 +7,12 @@
 # │   3. Safety & Protection Behavior                               │
 # │   4. Pet Protection                                             │
 # │   5. Effects                                                    │
-# │   6. Optional Features                                          │
+# │   6. Timed Access                                               │
+# │   7. WorldEdit Integration                                      │
+# │   8. Menus & Commands                                           │
 # │                                                                 │
 # │  MySQL / Storage  →  mysql/mysql.yml                            │
-# │  Block definitions  →  blocks.yml  (generated on first start)   │
+# │  Block definitions + auto-drop  →  blocks.yml                   │
 # └─────────────────────────────────────────────────────────────────┘
 
 # ════════════════════════════════════════════════════════════════════
@@ -138,24 +140,33 @@ block_lock_sounds: true
 
 
 # ════════════════════════════════════════════════════════════════════
-# ─────────────── 6. OPTIONAL FEATURES ──────────────────────────────
+# ─────────────────── 6. TIMED ACCESS ───────────────────────────────
 # ════════════════════════════════════════════════════════════════════
-
-# Enable ALL optional features at once regardless of their individual settings.
-optional_features_enable_all: false
-
-# When true, all commands (stats, transfer, timed, debug, etc.) are hidden and the
-# /bp user menu is used instead. When false (default), all extra commands are active.
-# Changing this requires a /bp reload.
-use_menus: false
 
 # Maximum duration (in days) that timed block access can be granted via the GUI.
 # 0 or negative = no limit. Default is 90 (3 months).
 timed_access_max_duration_days: 90
 
-# Automatically lock blocks placed via a WorldEdit paste operation.
+
+# ════════════════════════════════════════════════════════════════════
+# ──────────── 7. WORLDEDIT INTEGRATION ─────────────────────────────
+# ════════════════════════════════════════════════════════════════════
+#
+# Automatically lock blocks placed by a WorldEdit paste operation.
+# Requires WorldEdit or FastAsyncWorldEdit to be installed.
+
 worldedit_paste_autolock:
   enabled: false
   radius: 24
   max_blocks_per_paste: 5000
   delay_ticks: 20
+
+
+# ════════════════════════════════════════════════════════════════════
+# ──────────── 8. MENUS & COMMANDS ──────────────────────────────────
+# ════════════════════════════════════════════════════════════════════
+
+# When true, all commands (stats, transfer, timed, debug, etc.) are hidden and the
+# /bp user menu is used instead. When false (default), all extra commands are active.
+# Changing this requires a /bp reload.
+use_menus: false

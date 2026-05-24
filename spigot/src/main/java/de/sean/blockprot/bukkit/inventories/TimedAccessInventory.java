@@ -97,7 +97,8 @@ public final class TimedAccessInventory extends BlockProtInventory {
         }
         inventory.setItem(26, item(Material.NETHER_STAR, Translator.get(TranslationKey.INVENTORIES__TIMED__INFO), infoLore));
 
-        setBackButton();
+        // Back button at slot 18 (first slot of bottom row)
+        setItemStack(18, Material.BLACK_STAINED_GLASS_PANE, TranslationKey.INVENTORIES__BACK);
         return inventory;
     }
 
@@ -109,8 +110,8 @@ public final class TimedAccessInventory extends BlockProtInventory {
         int slot = event.getRawSlot();
         if (slot < 0 || slot >= getSize()) return;
 
-        // Back button: slot 18
-        if (slot == getSize() - 9) {
+        // Back button: slot 18 (first slot of row 2)
+        if (slot == 18) {
             closeAndOpen(player, new FriendDetailInventory().fill(player));
             return;
         }

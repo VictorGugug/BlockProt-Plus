@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 - 2025 spnda / SP26 fork
+ * Copyright (C) 2021 - 2025 spnda / BlockProt Reloaded (BPR)
  * This file is part of BlockProt <https://github.com/spnda/BlockProt>.
  *
  * BlockProt is free software: you can redistribute it and/or modify
@@ -42,12 +42,12 @@ public final class VersionCompat {
     // -------------------------------------------------------------------------
 
     /**
-     * Whether the server is running the new year-based version scheme (26.x, 27.x, …).
+     * Returns true if the server is running the new year-based version scheme (26.x, 27.x, …).
      * Under the new scheme the first segment is a two-digit year (≥ 26), not "1".
      */
     public static final boolean NEW_SCHEME;
 
-    /** Major segment of the version (1 for 1.21.x, 26 for 26.1.x). */
+    /** Major segment of the version (1 for 1.21.x, 26 for 26.1.x, 27 for 27.x.x). */
     public static final int MAJOR;
     /** Minor segment (21 for 1.21.x, 1 for 26.1.x). */
     public static final int MINOR;
@@ -148,13 +148,13 @@ public final class VersionCompat {
 
     /**
      * Returns a one-line diagnostic string suitable for logging.
-     * Example: "MC 26.1.2 (26.x family, Paper)"
+     * Example: "MC 26.1.2 (year-based 26.x, Paper)"
      */
     @NotNull
     public static String getDiagnosticString() {
         return String.format("MC %s (%s, %s)",
             getVersionString(),
-            NEW_SCHEME ? "26.x year-based family" : "1.x classic",
+            NEW_SCHEME ? "year-based " + MAJOR + ".x" : "classic 1.x",
             isPaper() ? "Paper" : "Spigot"
         );
     }

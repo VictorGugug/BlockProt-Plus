@@ -19,9 +19,8 @@
 package de.sean.blockprot.bukkit.nbt;
 
 import de.sean.blockprot.bukkit.BlockProt;
-import org.bukkit.Bukkit;
+import com.tcoded.folialib.wrapper.task.WrappedTask;
 import org.bukkit.Location;
-import org.bukkit.scheduler.BukkitTask;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -47,7 +46,7 @@ import java.util.UUID;
 public final class TimedAccessManager {
 
     /** Key = "world:x,y,z:guestUuid" -&gt; running expiry task. */
-    private static final Map<String, BukkitTask> tasks = new HashMap<>();
+    private static final Map<String, WrappedTask> tasks = new HashMap<>();
 
     private TimedAccessManager() {}
 
@@ -85,16 +84,16 @@ public final class TimedAccessManager {
 
         // Cancel any existing timer for this pair before scheduling a new one.
         String key = buildKey(location, guestUuid);
-        @Nullable BukkitTask old = tasks.remove(key);
+        @Nullable WrappedTask old = tasks.remove(key);
         if (old != null) old.cancel();
 
         long ticks = durationSeconds * 20L;
-        BukkitTask task = Bukkit.getScheduler().runTaskLater(BlockProt.getInstance(), () -> {
+        WrappedTask future = BlockProt.getFoliaLib().getScheduler().runLater(() -> {
             tasks.remove(key);
             revokeSilently(location, guestUuid);
         }, ticks);
 
-        tasks.put(key, task);
+        tasks.put(key, future);
         return true;
     }
 
@@ -107,7 +106,7 @@ public final class TimedAccessManager {
      */
     public static void revoke(@NotNull Location location, @NotNull UUID guestUuid) {
         String key = buildKey(location, guestUuid);
-        @Nullable BukkitTask task = tasks.remove(key);
+        @Nullable WrappedTask task = tasks.remove(key);
         if (task != null) task.cancel();
         revokeSilently(location, guestUuid);
     }
@@ -125,7 +124,7 @@ public final class TimedAccessManager {
      * Should be called during plugin disable so no stale tasks linger.
      */
     public static void cancelAll() {
-        tasks.values().forEach(BukkitTask::cancel);
+        tasks.values().forEach(WrappedTask::cancel);
         tasks.clear();
     }
 

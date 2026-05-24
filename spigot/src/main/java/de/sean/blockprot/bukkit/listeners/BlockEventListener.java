@@ -29,6 +29,8 @@ import de.sean.blockprot.bukkit.integrations.PluginIntegration;
 import de.sean.blockprot.bukkit.nbt.BlockNBTHandler;
 import de.sean.blockprot.bukkit.nbt.PlayerSettingsHandler;
 import de.sean.blockprot.bukkit.nbt.StatHandler;
+import de.sean.blockprot.bukkit.nbt.stats.BlockCountStatistic;
+import de.sean.blockprot.bukkit.nbt.stats.PlayerBlocksStatistic;
 import de.sean.blockprot.bukkit.util.BlockUtil;
 import de.sean.blockprot.nbt.LockReturnValue;
 import de.tr7zw.changeme.nbtapi.NBT;
@@ -38,8 +40,10 @@ import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockState;
+import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -85,18 +89,57 @@ public class BlockEventListener implements Listener {
         }
 
         if (!event.isCancelled()) {
-            StatHandler.removeContainer(event.getPlayer(), event.getBlock());
+            // Remove from the actual owner's stat, not from the breaking player's stat.
+            // When an admin breaks someone else's block the location must be cleared
+            // from the owner's list; otherwise it becomes a permanent ghost entry.
+            String ownerUuid = handler.getOwner();
+            if (!ownerUuid.isBlank()) {
+                OfflinePlayer owner = Bukkit.getOfflinePlayer(UUID.fromString(ownerUuid));
+                if (owner.isOnline() && owner.getPlayer() != null) {
+                    StatHandler.removeContainer(owner.getPlayer(), event.getBlock());
+                } else {
+                    // Owner is offline: remove the location directly from their NBT stat entry.
+                    PlayerBlocksStatistic stat = new PlayerBlocksStatistic();
+                    StatHandler.getStatisticByUuid(stat, UUID.fromString(ownerUuid));
+                    stat.remove(event.getBlock().getLocation());
+                    // Decrement global counter
+                    BlockCountStatistic countStat = new BlockCountStatistic();
+                    StatHandler.getStatistic(countStat);
+                    countStat.decrement();
+                }
+            }
             HopperEventListener.invalidate(event.getBlock());
             handler.clear();
         }
     }
 
-    /**
-     * We need to catch shulker box breaks separately with the lowest priority possible,
-     * as otherwise other plugins might have cancelled it and a player could dupe the box.
-     */
-    @EventHandler(priority = EventPriority.LOWEST)
-    public void onShulkerBoxBreak(BlockBreakEvent event) {
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onAutoDropBlockBreak(BlockBreakEvent event) {
+        if (!BlockProt.getDefaultConfig().isAutoDropToInventory(event.getBlock().getType())) return;
+        if (!BlockProt.getDefaultConfig().isAutoDropToInventoryEnabled(event.getBlock().getWorld())) return;
+        // Shulker boxes have their own dedicated handler (onShulkerBoxBreak) that already
+        // places the item in inventory; skip here to avoid double-drops.
+        if (BlockProt.getDefaultConfig().isLockableShulkerBox(event.getBlock().getType())) return;
+        // Admins and bypass-holders get normal drops — no forced delivery.
+        Player player = event.getPlayer();
+        if (player.isOp() || player.hasPermission(de.sean.blockprot.bukkit.Permissions.BYPASS.key())) return;
+        if (player.getGameMode() == GameMode.CREATIVE) return;
+
+        java.util.Collection<ItemStack> drops = event.getBlock().getDrops(player.getInventory().getItemInMainHand());
+        if (drops.isEmpty()) return;
+
+        event.setDropItems(false);
+        for (ItemStack drop : drops) {
+            java.util.HashMap<Integer, ItemStack> leftover = player.getInventory().addItem(drop);
+            // If inventory is full, drop on the ground at the player's feet instead
+            for (ItemStack overflow : leftover.values()) {
+                player.getWorld().dropItemNaturally(player.getLocation(), overflow);
+            }
+        }
+    }
+
+    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
+    public void onShulkerAutoDropBlockBreak(BlockBreakEvent event) {
         if (BlockProt.getDefaultConfig().isWorldExcluded(event.getBlock().getWorld())) return;
         if (!BlockProt.getDefaultConfig().isLockableShulkerBox(event.getBlock().getType(), event.getBlock().getWorld())) return;
 
@@ -124,6 +167,7 @@ public class BlockEventListener implements Listener {
             if (item == null) return;
 
             boolean clearProtection = BlockProt.getDefaultConfig().shouldClearProtectionOnShulkerBreak();
+            boolean autoDropEnabled = BlockProt.getDefaultConfig().isAutoDropToInventoryEnabled(event.getBlock().getWorld());
 
             if (!clearProtection) {
                 if (MinecraftVersion.isAtLeastVersion(MinecraftVersion.MC1_20_R4)) {
@@ -144,9 +188,18 @@ public class BlockEventListener implements Listener {
                 }
             }
 
-            event.getPlayer().getWorld().dropItemNaturally(event.getBlock().getLocation(), item);
             event.getBlock().setType(Material.AIR);
             event.setCancelled(true);
+
+            // Deliver to inventory when auto-drop is enabled; otherwise drop on the ground.
+            if (autoDropEnabled) {
+                java.util.HashMap<Integer, ItemStack> leftover = event.getPlayer().getInventory().addItem(item);
+                for (ItemStack overflow : leftover.values()) {
+                    event.getPlayer().getWorld().dropItemNaturally(event.getPlayer().getLocation(), overflow);
+                }
+            } else {
+                event.getPlayer().getWorld().dropItemNaturally(event.getBlock().getLocation(), item);
+            }
         }
     }
 

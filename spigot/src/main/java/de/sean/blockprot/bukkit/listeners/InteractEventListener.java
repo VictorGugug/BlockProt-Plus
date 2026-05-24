@@ -60,7 +60,7 @@ public class InteractEventListener implements Listener {
             if (accessEvent.isCancelled()) {
                 event.setCancelled(true);
                 sendMessage(player, Translator.get(TranslationKey.MESSAGES__NO_PERMISSION));
-            } else {
+            } else if (!accessEvent.shouldBypassProtections()) {
                 BlockNBTHandler handler = new BlockNBTHandler(event.getClickedBlock());
                 if (!(handler.canAccess(player.getUniqueId().toString()) || player.hasPermission(Permissions.BYPASS.key()))) {
                     event.setCancelled(true);
@@ -71,36 +71,47 @@ public class InteractEventListener implements Listener {
                         audit.log(player.getUniqueId(), player.getName(), event.getClickedBlock().getLocation(),
                             de.sean.blockprot.bukkit.audit.AuditLogger.Action.ACCESS_DENIED);
                     }
-                } else if (event.getClickedBlock().getType() == Material.LECTERN && !handler.isOwner(player.getUniqueId())) {
-                    // With Lecterns you place the books by interacting with the block. canAccess will return true because the
-                    // player has the READ permission, but this should not be allowed in this case. In the case that the player
-                    // wants to take the book from the lectern (hasBook returns true) we already listen for PlayerTakeLecternBookEvent.
-                    final var lectern = (Lectern)event.getClickedBlock().getBlockData();
-                    if (!lectern.hasBook()) {
-                        final var friend = handler.getFriend(player.getUniqueId().toString());
-                        if (friend.isEmpty() || !friend.get().canWrite()) {
-                            // The player cannot write and therefore is not allowed to place books into the Lectern.
-                            event.setCancelled(true);
-                            sendMessage(player, Translator.get(TranslationKey.MESSAGES__NO_PERMISSION));
+                } else {
+                    // Player has access — ensure the event is NOT cancelled regardless of what
+                    // lower-priority listeners (vanilla Paper included) may have set.
+                    event.setCancelled(false);
+                    if (event.getClickedBlock().getType() == Material.LECTERN && !handler.isOwner(player.getUniqueId())) {
+                        // With Lecterns you place the books by interacting with the block. canAccess will return true because the
+                        // player has the READ permission, but this should not be allowed in this case. In the case that the player
+                        // wants to take the book from the lectern (hasBook returns true) we already listen for PlayerTakeLecternBookEvent.
+                        final var lectern = (Lectern)event.getClickedBlock().getBlockData();
+                        if (!lectern.hasBook()) {
+                            final var friend = handler.getFriend(player.getUniqueId().toString());
+                            if (friend.isEmpty() || !friend.get().canWrite()) {
+                                // The player cannot write and therefore is not allowed to place books into the Lectern.
+                                event.setCancelled(true);
+                                sendMessage(player, Translator.get(TranslationKey.MESSAGES__NO_PERMISSION));
+                            }
                         }
-                    }
-                } else if (!(new PlayerSettingsHandler(player).hasPlayerInteractedWithMenu())) {
-                    Long timestamp = LockHintMessageCooldown.getTimestamp(player);
-                    if (timestamp == null || timestamp < System.currentTimeMillis() - (BlockProt.getDefaultConfig().getLockHintCooldown() * 1000)) { // 10 seconds in milliseconds
-                        // If they can access the block we'll notify them that they could
-                        // potentially lock their blocks.
-                        String message = Translator.get(TranslationKey.MESSAGES__LOCK_HINT);
-                        if (!message.isEmpty()) {
-                            LockHintMessageCooldown.setTimestamp(player);
-                            var tooltip = Translator.get(TranslationKey.MESSAGES__HINT_HOVER_TEXT);
-                            sendEventsMessage(player, message, true,
-                                "/blockprot disablehints", tooltip.isEmpty() ? null : tooltip);
+                    } else if (!(new PlayerSettingsHandler(player).hasPlayerInteractedWithMenu())) {
+                        Long timestamp = LockHintMessageCooldown.getTimestamp(player);
+                        if (timestamp == null || timestamp < System.currentTimeMillis() - (BlockProt.getDefaultConfig().getLockHintCooldown() * 1000)) { // 10 seconds in milliseconds
+                            // If they can access the block we'll notify them that they could
+                            // potentially lock their blocks.
+                            String message = Translator.get(TranslationKey.MESSAGES__LOCK_HINT);
+                            if (!message.isEmpty()) {
+                                LockHintMessageCooldown.setTimestamp(player);
+                                var tooltip = Translator.get(TranslationKey.MESSAGES__HINT_HOVER_TEXT);
+                                sendEventsMessage(player, message, true,
+                                    "/blockprot disablehints", tooltip.isEmpty() ? null : tooltip);
+                            }
                         }
                     }
                 }
+            } else {
+                // bypassProtections was set by an integration — always allow access
+                event.setCancelled(false);
             }
         } else {
             if (event.hasItem()) return; // Only enter the menu with an empty hand.
+            // Also skip if the off-hand holds a placeable block — the player is placing, not menu-opening.
+            var offHandItem = player.getInventory().getItemInOffHand();
+            if (!offHandItem.getType().isAir() && offHandItem.getType().isBlock()) return;
             event.setCancelled(true);
 
             if (!player.hasPermission(Permissions.LOCK.key())) {

@@ -36,15 +36,24 @@ public class FriendSearchInventory {
                 text -> handleResult(requestingPlayer, text)
             );
         } else {
-            // Spigot fallback — server-side anvil GUI.
+            // Spigot fallback — sign editor (1.20+) or anvil GUI.
             String prompt = Translator.get(TranslationKey.INVENTORIES__FRIENDS__SEARCH);
-            AnvilInput.open(
-                requestingPlayer,
-                BlockProt.getInstance(),
-                prompt,
-                prompt,
-                text -> handleResult(requestingPlayer, text)
-            );
+            if (SignInput.isSupported()) {
+                SignInput.open(
+                    requestingPlayer,
+                    BlockProt.getInstance(),
+                    prompt,
+                    text -> handleResult(requestingPlayer, text)
+                );
+            } else {
+                AnvilInput.open(
+                    requestingPlayer,
+                    BlockProt.getInstance(),
+                    prompt,
+                    prompt,
+                    text -> handleResult(requestingPlayer, text)
+                );
+            }
         }
     }
 

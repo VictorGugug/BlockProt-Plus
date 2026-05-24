@@ -34,25 +34,76 @@ import org.bukkit.event.inventory.PrepareAnvilEvent;
 import org.bukkit.inventory.InventoryView;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.inventory.view.AnvilView;
 import org.bukkit.plugin.Plugin;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.lang.reflect.Method;
 import java.util.UUID;
 import java.util.function.Consumer;
 
 /**
- * Opens a real server-side anvil (backed by AnvilMenu) so that
- * ServerboundRenameItemPacket is properly processed and
- * AnvilView.getRenameText() returns the text the player typed.
+ * Opens a real server-side anvil so the player can type text.
  *
- * Virtual inventories created via Bukkit.createInventory(null, ANVIL, ...)
- * do not have a backing AnvilMenu, so getRenameText() always returns null.
+ * Compatible with Paper/Spigot 1.20.x through 26.1.x.
+ *
+ * AnvilView (typed inventory views) was introduced in 1.21.4.
+ * On older servers we fall back to reading the output item display name.
+ * All access to AnvilView-specific methods uses reflection so this class
+ * compiles and loads cleanly on 1.20.x servers.
  */
 public final class AnvilInput implements Listener {
 
     private static final int OUTPUT_SLOT = 2;
+
+    // Resolved once per JVM start. Null on servers older than 1.21.4.
+    private static final Class<?> ANVIL_VIEW_CLASS;
+    private static final Method GET_RENAME_TEXT;
+    private static final Method SET_REPAIR_COST;
+
+    static {
+        Class<?> viewClass = null;
+        Method getRenameText = null;
+        Method setRepairCost = null;
+        try {
+            viewClass = Class.forName("org.bukkit.inventory.view.AnvilView");
+            getRenameText = viewClass.getMethod("getRenameText");
+            setRepairCost = viewClass.getMethod("setRepairCost", int.class);
+        } catch (ClassNotFoundException | NoSuchMethodException ignored) {
+            // Pre-1.21.4 server — typed views not available.
+        }
+        ANVIL_VIEW_CLASS = viewClass;
+        GET_RENAME_TEXT  = getRenameText;
+        SET_REPAIR_COST  = setRepairCost;
+    }
+
+    /** Returns true when the server supports typed AnvilView (1.21.4+). */
+    private static boolean hasTypedAnvilView() {
+        return ANVIL_VIEW_CLASS != null;
+    }
+
+    /** Calls AnvilView#setRepairCost(0) via reflection if available. */
+    private static void trySetRepairCost(@NotNull InventoryView view) {
+        if (SET_REPAIR_COST == null || ANVIL_VIEW_CLASS == null) return;
+        if (!ANVIL_VIEW_CLASS.isInstance(view)) return;
+        try {
+            SET_REPAIR_COST.invoke(view, 0);
+        } catch (Exception ignored) {}
+    }
+
+    /** Calls AnvilView#getRenameText() via reflection. Returns null if not available. */
+    @Nullable
+    private static String tryGetRenameText(@NotNull InventoryView view) {
+        if (GET_RENAME_TEXT == null || ANVIL_VIEW_CLASS == null) return null;
+        if (!ANVIL_VIEW_CLASS.isInstance(view)) return null;
+        try {
+            return (String) GET_RENAME_TEXT.invoke(view);
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    // -------------------------------------------------------------------------
 
     private final UUID playerUuid;
     private final @Nullable Consumer<String> onConfirm;
@@ -65,39 +116,33 @@ public final class AnvilInput implements Listener {
         @Nullable Consumer<String> onConfirm
     ) {
         this.playerUuid = player.getUniqueId();
-        this.onConfirm = onConfirm;
+        this.onConfirm  = onConfirm;
 
-        // Register before opening so PrepareAnvilEvent is caught immediately.
         Bukkit.getPluginManager().registerEvents(this, plugin);
 
-        // Open a REAL server-side anvil. This creates an AnvilMenu on the server
-        // so ServerboundRenameItemPacket is processed and getRenameText() works.
-        // openAnvil creates a real server-side AnvilMenu — required for getRenameText() to work.
+        // openAnvil exists since Bukkit 1.14 and returns InventoryView on all versions.
         InventoryView view = player.openAnvil(null, true);
-
-        if (view instanceof AnvilView anvilView) {
-            // Place paper in slot 0 — the client reads its display name as the
-            // pre-filled text in the rename field.
+        if (view != null) {
+            // Place paper in slot 0 so the client pre-fills the rename field.
             ItemStack paper = new ItemStack(Material.PAPER);
             ItemMeta meta = paper.getItemMeta();
             if (meta != null) {
                 meta.displayName(Component.text(initialText));
                 paper.setItemMeta(meta);
             }
-            anvilView.getTopInventory().setItem(0, paper);
-            // Set cost to 0 so any player can confirm regardless of XP level.
-            anvilView.setRepairCost(0);
+            view.getTopInventory().setItem(0, paper);
+            trySetRepairCost(view);
         }
     }
 
     /**
      * Opens an anvil text-input for the given player.
      *
-     * @param player      The player to open the anvil for.
-     * @param plugin      The owning plugin (for listener registration).
+     * @param player      Player to open the anvil for.
+     * @param plugin      Owning plugin (for listener registration).
      * @param initialText Text pre-filled in the rename field.
-     * @param title       Kept for API compatibility; not used (real anvil title is default).
-     * @param onConfirm   Called with the typed text when the player clicks the output slot.
+     * @param title       Kept for API compat; not used.
+     * @param onConfirm   Called with the typed text when the player confirms.
      */
     public static void open(
         @NotNull Player player,
@@ -114,14 +159,13 @@ public final class AnvilInput implements Listener {
     // -------------------------------------------------------------------------
 
     /**
-     * Keep repair cost at 0 so the output slot stays clickable regardless of
-     * the player's XP level. Paper recalculates cost on every item change, so
-     * we reset it here every time.
+     * Reset repair cost to 0 on every item change so the output stays clickable
+     * regardless of XP level. Paper recalculates cost on PrepareAnvilEvent.
      */
     @EventHandler(priority = EventPriority.HIGH)
     public void onPrepareAnvil(@NotNull PrepareAnvilEvent event) {
         if (event.getViewers().stream().noneMatch(v -> v.getUniqueId().equals(playerUuid))) return;
-        event.getView().setRepairCost(0);
+        trySetRepairCost(event.getView());
     }
 
     @EventHandler(priority = EventPriority.HIGH)
@@ -133,40 +177,30 @@ public final class AnvilInput implements Listener {
 
         if (event.getRawSlot() == OUTPUT_SLOT) {
             String text = extractRenameText(event);
-
-            // Clear slots before closing so items don't return to player inventory.
             event.getInventory().clear();
-
             unregister();
             event.getWhoClicked().closeInventory();
-
-            if (onConfirm != null) {
-                onConfirm.accept(text);
-            }
+            if (onConfirm != null) onConfirm.accept(text);
         }
     }
 
     /**
-     * Extracts the rename text from an anvil click event.
+     * Extracts the rename text from the anvil.
      *
-     * <p>Primary path: {@link AnvilView#getRenameText()} — available on Paper 1.21+
-     * with typed inventory views.
-     *
-     * <p>Fallback A: read the display name of the output item (slot 2) — Bukkit
-     * copies the rename text to the result item's display name.
-     *
-     * <p>Fallback B: read the display name of the input item (slot 0) which we
-     * placed ourselves as the pre-filled text.
+     * Priority:
+     *   1. AnvilView#getRenameText() via reflection (1.21.4+).
+     *   2. Output item (slot 2) display name — Bukkit copies rename text there.
+     *   3. Input item (slot 0) display name — what we pre-filled.
      */
     @NotNull
     private String extractRenameText(@NotNull InventoryClickEvent event) {
-        // Primary: typed AnvilView (Paper 1.21+)
-        if (event.getView() instanceof AnvilView anvilView) {
-            String renamed = anvilView.getRenameText();
+        // 1. Typed AnvilView — 1.21.4+ only, accessed via reflection.
+        if (hasTypedAnvilView()) {
+            String renamed = tryGetRenameText(event.getView());
             if (renamed != null && !renamed.isEmpty()) return renamed;
         }
 
-        // Fallback A: output slot item display name
+        // 2. Output slot display name.
         ItemStack output = event.getInventory().getItem(OUTPUT_SLOT);
         if (output != null && output.hasItemMeta()) {
             Component displayName = output.getItemMeta().displayName();
@@ -176,7 +210,7 @@ public final class AnvilInput implements Listener {
             }
         }
 
-        // Fallback B: input slot item display name (what we pre-filled)
+        // 3. Input slot display name (pre-filled by us).
         ItemStack input = event.getInventory().getItem(0);
         if (input != null && input.hasItemMeta()) {
             Component displayName = input.getItemMeta().displayName();
@@ -192,13 +226,10 @@ public final class AnvilInput implements Listener {
     public void onInventoryClose(@NotNull InventoryCloseEvent event) {
         if (!event.getPlayer().getUniqueId().equals(playerUuid)) return;
         if (event.getInventory().getType() != InventoryType.ANVIL) return;
-        // Clear in case player closed manually (pressed Escape) so paper doesn't drop.
         event.getInventory().clear();
         unregister();
     }
 
-    // -------------------------------------------------------------------------
-    // Internal
     // -------------------------------------------------------------------------
 
     private void unregister() {

@@ -19,6 +19,8 @@
 package de.sean.blockprot.bukkit.config;
 
 import de.sean.blockprot.bukkit.BlockProt;
+import de.sean.blockprot.bukkit.BlockProtLogger;
+import de.sean.blockprot.bukkit.VersionCompat;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.jetbrains.annotations.NotNull;
 
@@ -65,11 +67,15 @@ public abstract class BlockProtConfig {
     }
 
     /**
-     * Filter a list of enum values by a list of names. The enum values are filtered
-     * by {@code names}.
+     * Filter a list of enum values by a list of names.
+     *
+     * <p>Names that don't match any enum constant are silently routed to the session log
+     * rather than emitting a console WARNING. This is the expected behaviour when blocks.yml
+     * lists materials that were added in a newer MC version than the one currently running
+     * (e.g. COPPER_TRAPPED_CHEST listed for 26.1 but server is on 1.21.4).
      *
      * @param enumValues The list of enum values we want to filter.
-     * @param names      The list strings we want to filter by. Warning: This list will be modified.
+     * @param names      The list of strings we want to filter by. Warning: This list will be modified.
      * @param <T>        The enum class.
      * @return A set of all {@code <T>} enum values that we found.
      */
@@ -83,7 +89,11 @@ public abstract class BlockProtConfig {
             }
         }
         if (!names.isEmpty()) {
-            BlockProt.getInstance().getLogger().warning("Failed to map following values to enum: " + names);
+            // Route to session log only — these are blocks defined for a newer MC version
+            // than what is currently running, which is normal and expected.
+            BlockProtLogger.log("blocks-compat",
+                "Skipped " + names.size() + " material(s) not present in MC "
+                + VersionCompat.getVersionString() + ": " + names);
         }
         return ret;
     }

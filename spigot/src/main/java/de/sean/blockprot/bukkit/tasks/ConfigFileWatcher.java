@@ -3,7 +3,6 @@ package de.sean.blockprot.bukkit.tasks;
 import de.sean.blockprot.bukkit.BlockProt;
 import de.sean.blockprot.bukkit.TranslationKey;
 import de.sean.blockprot.bukkit.Translator;
-import org.bukkit.Bukkit;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
@@ -91,14 +90,12 @@ public final class ConfigFileWatcher implements Runnable {
         if (reloadScheduled) return;
         reloadScheduled = true;
 
-        Bukkit.getScheduler().runTaskLaterAsynchronously(plugin, () -> {
+        BlockProt.getFoliaLib().getScheduler().runLaterAsync(() -> {
             long timeSinceLastEvent = System.currentTimeMillis() - lastEventTime.get();
             if (timeSinceLastEvent >= DEBOUNCE_MS - 100) {
-                // Run backup on the async thread first so ZIP creation never
-                // stalls the main thread, then hand off the config reload.
                 plugin.getLogger().info(Translator.get(TranslationKey.CONSOLE__CONFIG_CHANGE_DETECTED));
                 new BackupTask(plugin.getDataFolder(), true).run();
-                Bukkit.getScheduler().runTask(plugin, () -> {
+                BlockProt.getFoliaLib().getScheduler().runNextTick(t -> {
                     plugin.reloadConfigAndTranslations();
                     plugin.getLogger().info(Translator.get(TranslationKey.CONSOLE__CONFIG_RELOADED));
                 });

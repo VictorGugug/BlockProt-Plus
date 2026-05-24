@@ -54,6 +54,7 @@ public final class BlockNBTHandler extends FriendSupportingHandler<NBTCompound> 
     static final String REDSTONE_ATTRIBUTE = "blockprot_redstone";
 
     static final String NAME_ATTRIBUTE = "blockprot_name";
+    static final String LOCKED_AT_ATTRIBUTE = "blockprot_locked_at";
 
     /**
      * The backing block this handler handles.
@@ -170,6 +171,12 @@ public final class BlockNBTHandler extends FriendSupportingHandler<NBTCompound> 
         container.setString(NAME_ATTRIBUTE, name);
     }
 
+    /** Returns the epoch-millis when this block was first locked, or -1 if not recorded. */
+    public long getLockedAt() {
+        if (!container.hasTag(LOCKED_AT_ATTRIBUTE)) return -1L;
+        return container.getLong(LOCKED_AT_ATTRIBUTE);
+    }
+
     /**
      * Checks whether given {@code player} can access this block. If possible, it's
      * always recommended to use {@link #canAccess(FriendHandler)}.
@@ -262,6 +269,7 @@ public final class BlockNBTHandler extends FriendSupportingHandler<NBTCompound> 
             }
 
             setOwner(playerUuid);
+            container.setLong(LOCKED_AT_ATTRIBUTE, System.currentTimeMillis());
             this.applyToOtherContainer();
             StatHandler.addBlock(player, block.getLocation());
             HybridDatabase hybridDatabase = BlockProt.getHybridDatabase();

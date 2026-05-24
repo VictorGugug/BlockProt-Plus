@@ -32,6 +32,7 @@ import de.sean.blockprot.bukkit.tasks.ConfigFileWatcher;
 import de.sean.blockprot.bukkit.tasks.BackupTask;
 import de.sean.blockprot.bukkit.tasks.InactivityCleanupTask;
 import de.sean.blockprot.bukkit.tasks.UpdateChecker;
+import com.tcoded.folialib.FoliaLib;
 import de.tr7zw.changeme.nbtapi.utils.MinecraftVersion;
 import org.bstats.bukkit.Metrics;
 import org.bukkit.Bukkit;
@@ -55,7 +56,18 @@ import java.util.Objects;
  * The main plugin instance of BlockProt.
  */
 public final class BlockProt extends JavaPlugin {
-    public static final int pluginId = 9999;
+    /**
+     * bStats plugin ID for BlockProt Reloaded.
+     *
+     * To get your own ID:
+     *  1. Go to https://bstats.org/getting-started
+     *  2. Register a new plugin named "BlockProt Reloaded" (Bukkit)
+     *  3. Replace the value below with the ID shown in your dashboard.
+     *
+     * The original BlockProt used ID 9999 — this fork must use a different
+     * ID so stats appear under the correct project on bstats.org.
+     */
+    public static final int pluginId = 25808; // BlockProt Reloaded — replace with your bStats project ID
     public static final String defaultLanguageFile = "translations_en.yml";
 
     @Nullable private static BlockProt instance;
@@ -70,7 +82,16 @@ public final class BlockProt extends JavaPlugin {
     @Nullable private static HybridDatabase hybridDatabase = null;
     @Nullable private ConfigFileWatcher fileWatcher = null;
 
+    /** Cross-platform scheduler (Spigot / Paper / Purpur / Pufferfish / Folia). */
+    @Nullable private static FoliaLib foliaLib = null;
+
     private Metrics metrics;
+
+    @NotNull
+    public static FoliaLib getFoliaLib() {
+        assert foliaLib != null;
+        return foliaLib;
+    }
 
     @NotNull
     public static BlockProt getInstance() {
@@ -119,7 +140,8 @@ public final class BlockProt extends JavaPlugin {
             return;
         }
 
-        Bukkit.getScheduler().runTaskAsynchronously(this, new UpdateChecker(this.getDescription()));
+        foliaLib = new FoliaLib(this);
+        foliaLib.getScheduler().runAsync(task -> new UpdateChecker(this.getDescription()).run());
         MinecraftVersion.disableUpdateCheck();
 
         new BlockProtAPI(this);
@@ -131,7 +153,7 @@ public final class BlockProt extends JavaPlugin {
         BlockProtLogger.log("Server: " + Bukkit.getVersion());
         BlockProtLogger.log("Runtime: " + VersionCompat.getDiagnosticString());
         if (VersionCompat.is26Family()) {
-            BlockProtLogger.log("Version scheme: 26.x year-based detected.");
+            BlockProtLogger.log("Version scheme: " + VersionCompat.MAJOR + ".x year-based detected.");
         }
 
         BlockProtConsole.beginStartup(this.getLogger());
@@ -142,7 +164,6 @@ public final class BlockProt extends JavaPlugin {
         saveResourceSilent("blocks.yml", false);
         saveResourceSilent("mysql/mysql.yml", false);
         this.reloadConfigAndTranslations();
-        // Persist current version so DefaultConfig can detect upgrades on next boot
         if (!getDescription().getVersion().equals(getConfig().getString("last_known_version", ""))) {
             getConfig().set("last_known_version", getDescription().getVersion());
             saveConfig();
@@ -166,7 +187,7 @@ public final class BlockProt extends JavaPlugin {
 
         try {
             auditLogger = new AuditLogger(this.getDataFolder());
-            BlockProtConsole.success(Translator.get(TranslationKey.CONSOLE__AUDIT_LOGGER_STARTED));
+            BlockProtLogger.log(Translator.get(TranslationKey.CONSOLE__AUDIT_LOGGER_STARTED));
         } catch (Exception e) {
             BlockProtConsole.warn(Translator.get(TranslationKey.CONSOLE__AUDIT_LOGGER_FAILED)
                 .replace("{error}", e.getMessage()));
@@ -177,7 +198,7 @@ public final class BlockProt extends JavaPlugin {
 
         int inactivityDays = this.getConfig().getInt("inactivity_cleanup_days", -1);
         if (inactivityDays > 0) {
-            Bukkit.getScheduler().runTaskAsynchronously(this, new InactivityCleanupTask(inactivityDays));
+            foliaLib.getScheduler().runAsync(task -> new InactivityCleanupTask(inactivityDays).run());
         }
 
         metrics = new Metrics(this, pluginId);
@@ -188,7 +209,6 @@ public final class BlockProt extends JavaPlugin {
             try {
                 integration.enable();
                 if (integration.isEnabled()) {
-                    BlockProtConsole.integrationEnabled(integration.name);
                     BlockProtLogger.log("integration", "Enabled: " + integration.name);
                 }
             } catch (NoClassDefFoundError ignored) {}
@@ -343,10 +363,9 @@ public final class BlockProt extends JavaPlugin {
         if (added > 0) {
             try {
                 diskConfig.save(diskFile);
-                getLogger().info(Translator.get(TranslationKey.CONSOLE__LANG_KEYS_UPDATED)
-                    .replace("{file}", resource).replace("{count}", String.valueOf(added)));
+                BlockProtLogger.log("lang-merge", resource + " — added " + added + " missing key(s).");
             } catch (IOException e) {
-                getLogger().warning(Translator.get(TranslationKey.CONSOLE__LANG_KEYS_SAVE_FAILED)
+                BlockProtConsole.warn(Translator.get(TranslationKey.CONSOLE__LANG_KEYS_SAVE_FAILED)
                     .replace("{file}", resource).replace("{error}", e.getMessage()));
             }
         }
@@ -416,9 +435,7 @@ public final class BlockProt extends JavaPlugin {
         if (added == 0) return;
         try {
             diskConfig.save(diskFile);
-            BlockProtConsole.info(Translator.get(TranslationKey.CONSOLE__CONFIG_KEYS_UPDATED)
-                .replace("{count}", String.valueOf(added)));
-            BlockProtLogger.log("config-merge", "config.yml merge complete — added " + added + " missing option(s).");
+            BlockProtLogger.log("config-merge", "config.yml — added " + added + " missing option(s).");
         } catch (IOException e) {
             BlockProtConsole.warn(Translator.get(TranslationKey.CONSOLE__CONFIG_KEYS_SAVE_FAILED)
                 .replace("{error}", e.getMessage()));

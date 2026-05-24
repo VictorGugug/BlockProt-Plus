@@ -111,14 +111,9 @@ public final class BackupTask implements Runnable {
             zos.write(meta.getBytes());
             zos.closeEntry();
 
-            BlockProtLogger.log("backup", "Pre-existing data detected. Backup created: "
-                + zipFile.getAbsolutePath());
-            BlockProtConsole.info(
-                Translator.get(TranslationKey.CONSOLE__BACKUP_CREATED)
-                    .replace("{file}", zipFile.getName()));
+            BlockProtLogger.log("backup", "Backup created: " + zipFile.getName());
             if (!forced) {
-                BlockProtConsole.info(
-                    Translator.get(TranslationKey.CONSOLE__BACKUP_REVIEW_CONFIG));
+                BlockProtLogger.log("backup", Translator.get(TranslationKey.CONSOLE__BACKUP_REVIEW_CONFIG));
             }
         } catch (IOException e) {
             BlockProt.getInstance().getLogger().warning(

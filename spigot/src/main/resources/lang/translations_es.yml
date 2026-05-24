@@ -66,7 +66,7 @@ inventories:
     action_opened: "§aAbrió"
     action_item_taken: "§eTomó artículo(s)"
     action_item_placed: "§2Colocó artículo(s)"
-  # ── Protección de mascotas (SP26-ZV) ─────────────────────────────────────
+  # ── Protección de mascotas ───────────────────────────────────────────────────
   pet:
     settings: "§dAjustes de Mascota"
     protect: "§dProtección de mascota"
@@ -152,7 +152,7 @@ messages:
   only_players: "Solo los jugadores pueden usar este comando."
   reload_done: "§aBlockProt se recargó correctamente."
   integrations_enabled: "§7Integraciones activas ({count}): {integrations}"
-  # ── Nuevos mensajes SP26 ─────────────────────────
+  # ── Mensajes nuevos BPR ───────────────────────────────
   transfer_success: "§aPropiedad transferida a §f{player}§a. Fuiste añadido como amigo."
   transfer_usage: "§cUso: /bp transfer <jugador>  (mira un bloque tuyo)"
   transfer_not_owner: "§cNo eres el dueño de ese bloque."
@@ -200,12 +200,12 @@ console:
   worlds_yml_save_failed: "No se pudo guardar worlds.yml: {error}"
   backup_dir_failed: "No se pudo crear la carpeta de respaldos. Se omitió el respaldo."
   backup_created: "Se detectaron datos existentes de BlockProt; respaldo de seguridad creado: backups/{file}"
-  backup_review_config: "Revisa config.yml antes de activar funciones SP26. Los detalles están en el log de sesión."
+  backup_review_config: "Revisa config.yml antes de activar nuevas funciones. Los detalles están en el log de sesión."
   backup_failed: "No se pudo crear el respaldo: {error}"
   config_language_missing: "El archivo de idioma configurado no existe: {file}"
   lang_keys_updated: "{file} actualizado con {count} clave(s) de traducción faltante(s)."
   lang_keys_save_failed: "No se pudo guardar el archivo de idioma combinado {file}: {error}"
-  config_keys_updated: "config.yml actualizado con {count} opción(es) faltante(s). Revísalo antes de activar funciones SP26."
+  config_keys_updated: "config.yml actualizado con {count} opción(es) faltante(s). Revísalo antes de activar nuevas funciones."
   config_keys_save_failed: "No se pudo guardar config.yml combinado: {error}"
   mysql_enabled: "Índice híbrido MySQL activado."
   mysql_disabled: "Índice híbrido MySQL desactivado: {error}"
@@ -214,7 +214,7 @@ console:
   mysql_cache_load_failed: "Falló la carga de caché de confianza MySQL: {error}"
   mysql_operation_failed: "Falló una operación MySQL: {error}"
   translations_incomplete: "Traducciones: {total} clave(s) incompleta(s) en {file}; {fallback} usando respaldo en inglés, {missing} ausente(s) en ambos archivos. Los detalles están en el log de sesión."
-  java_too_old: "Versión de Java demasiado antigua: {version} (BlockProt SP26 requiere Java 25+)"
+  java_too_old: "Versión de Java demasiado antigua: {version} (BlockProt Reloaded requiere Java 25+)"
   not_paper: "El servidor no está ejecutando Paper. La búsqueda por chat se desactiva y se usará la GUI de yunque. Se recomienda Paper."
   typed_views_fallback: "Servidor Paper/Spigot 1.21.0-1.21.3 detectado, sin vistas de inventario tipadas. Se usarán fallbacks de AnvilInput."
 worlds:

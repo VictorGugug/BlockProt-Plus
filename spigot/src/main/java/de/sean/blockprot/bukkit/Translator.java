@@ -33,7 +33,7 @@ import java.util.Locale;
 /**
  * Helper to quickly obtain translations from a config by a enum key.
  *
- * <h3>SP26 self-repair</h3>
+ * <h3>BPR self-repair</h3>
  * <p>When a key is missing from the active language file but exists in the
  * bundled English file, the English value is used silently. Console output is
  * limited to one localized summary line; the full details go to the session
@@ -89,7 +89,7 @@ public final class Translator {
     /**
      * Initialize the translations from given configuration and sets the internal locale.
      *
-     * <p><b>SP26 self-repair:</b> keys missing from {@code config} but present
+     * <p><b>BPR self-repair:</b> keys missing from {@code config} but present
      * in {@code defaultConfig} are filled from English. Only one summary is
      * printed to console; details are written to the session log.</p>
      *

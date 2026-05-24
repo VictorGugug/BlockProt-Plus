@@ -98,7 +98,7 @@ public final class InactivityCleanupTask implements Runnable {
         }
 
         final int freed = total.get();
-        Bukkit.getScheduler().runTask(BlockProt.getInstance(), () -> {
+        BlockProt.getFoliaLib().getScheduler().runNextTick(task -> {
             if (freed > 0) {
                 String msg = Translator.get(TranslationKey.MESSAGES__INACTIVITY_CLEANUP_DONE)
                     .replace("{count}", String.valueOf(freed));

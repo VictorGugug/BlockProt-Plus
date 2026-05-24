@@ -6,7 +6,7 @@ about:
   original_author: '§7Оригинальный автор: §fspnda'
   fork_maintainers: '§7Сопровождающие форка: §fVickey & Reim §8(псевдоним ZarZey)'
   report_original: §x§c§3§e§e§a§7Сообщить о проблеме (оригинальный плагин)
-  report_fork: §x§6§6§c§6§6§6Сообщить о проблеме (форк SP26)
+  report_fork: §x§6§6§c§6§6§6Сообщить о проблеме (BlockProt Reloaded)
 inventories:
   back: Назад
   last_page: Последняя страница
@@ -98,12 +98,12 @@ console:
   worlds_yml_save_failed: 'Не удалось сохранить worlds.yml: {error}'
   backup_dir_failed: Не удалось создать папку резервных копий. Резервное копирование пропущено.
   backup_created: 'Обнаружены существующие данные BlockProt; резервная копия создана: backups/{file}'
-  backup_review_config: Проверьте config.yml перед включением функций SP26. Подробности в журнале сеанса.
+  backup_review_config: Проверьте config.yml перед включением новых функций BPR. Подробности в журнале сеанса.
   backup_failed: 'Сбой резервного копирования: {error}'
   config_language_missing: 'Настроенный языковой файл не существует: {file}'
   lang_keys_updated: '{file} обновлён с {count} отсутствующим(и) ключом(и) перевода.'
   lang_keys_save_failed: 'Не удалось сохранить объединённый языковой файл {file}: {error}'
-  config_keys_updated: 'config.yml обновлён с {count} отсутствующим(и) параметром(ами). Проверьте перед включением функций SP26.'
+  config_keys_updated: 'config.yml обновлён с {count} отсутствующим(и) параметром(ами). Проверьте перед включением новых функций BPR.'
   config_keys_save_failed: 'Не удалось сохранить объединённый config.yml: {error}'
   mysql_enabled: Гибридный MySQL-индекс включён.
   mysql_disabled: 'Гибридный MySQL-индекс отключён: {error}'
@@ -112,7 +112,7 @@ console:
   mysql_cache_load_failed: 'Сбой загрузки кэша MySQL: {error}'
   mysql_operation_failed: 'Операция MySQL не удалась: {error}'
   translations_incomplete: 'Переводы: {total} неполных ключей в {file}; {fallback} используют английский запасной вариант, {missing} отсутствуют в обоих. Подробности в журнале сеанса.'
-  java_too_old: 'Слишком старая версия Java: {version} (BlockProt SP26 требует Java 25+)'
+  java_too_old: 'Слишком старая версия Java: {version} (BlockProt Reloaded требует Java 25+)'
   not_paper: Сервер не является Paper. Поиск игроков через чат отключён, будет использоваться GUI наковальни. Рекомендуется Paper.
   typed_views_fallback: Paper/Spigot 1.21.0-1.21.3 без типизированных видов инвентаря. Будут использоваться запасные AnvilInput.
 worlds:

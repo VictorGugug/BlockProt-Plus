@@ -33,7 +33,8 @@ import java.util.logging.Logger;
 public final class WorldsConfig {
 
     private record WorldEntry(boolean enabled, Set<Material> tileEntities,
-                              Set<Material> blocks, Set<Material> shulkerBoxes, Set<Material> doors) {}
+                              Set<Material> blocks, Set<Material> shulkerBoxes, Set<Material> doors,
+                              boolean autoDropEnabled) {}
 
     private final Map<String, WorldEntry> worlds = new HashMap<>();
 
@@ -55,7 +56,8 @@ public final class WorldsConfig {
                 loadMaterials(ws, "lockable_tile_entities"),
                 loadMaterials(ws, "lockable_blocks"),
                 loadMaterials(ws, "lockable_shulker_boxes"),
-                loadMaterials(ws, "lockable_doors")
+                loadMaterials(ws, "lockable_doors"),
+                ws.getBoolean("auto_drop_to_inventory_enabled", true)
             ));
         }
     }
@@ -125,6 +127,7 @@ public final class WorldsConfig {
 
             // Create the entry as enabled to avoid breaking the base block protection.
             disk.set(key + ".enabled", true);
+            disk.set(key + ".auto_drop_to_inventory_enabled", true);
 
             // Inherit lists from global config.yml as a starting point
             copyList(disk, globalConfig, key, "lockable_tile_entities");
@@ -221,6 +224,12 @@ public final class WorldsConfig {
     public boolean isLockableDoor(@NotNull World world, @NotNull Material type) {
         WorldEntry e = worlds.get(world.getName().toLowerCase());
         return e != null && e.enabled() && e.doors().contains(type);
+    }
+
+    /** Per-world auto-drop switch. Defaults to true when the world has no entry. */
+    public boolean isAutoDropToInventoryEnabled(@NotNull World world) {
+        WorldEntry e = worlds.get(world.getName().toLowerCase());
+        return e == null || e.autoDropEnabled();
     }
 
     // -------------------------------------------------------------------------

@@ -67,7 +67,7 @@ public enum TranslationKey {
     INVENTORIES__STATISTICS__CONTAINER_COUNT,
     INVENTORIES__STATISTICS__YOUR_BLOCKS,
 
-    // ── Pet protection (SP26-ZV) ──────────────────────────────────────────────
+    // ── Pet protection ────────────────────────────────────────────────────────
     /** Title of the pet settings inventory. */
     INVENTORIES__PET__SETTINGS,
     /** Main on/off toggle for pet protection. */

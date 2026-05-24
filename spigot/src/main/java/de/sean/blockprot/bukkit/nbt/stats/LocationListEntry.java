@@ -68,8 +68,9 @@ public class LocationListEntry extends ListStatisticItem<Location, Material> {
         // map it to the purple one which is always safe.
         if (name.equals("SHULKER_BOX")) return Material.PURPLE_SHULKER_BOX;
         if (name.endsWith("_SHULKER_BOX")) return type;
-        // Copper chests (1.21+)
+        // Copper chests and shelves (1.21.9+) — show their own variant
         if (name.contains("COPPER_CHEST") || name.contains("COPPER_TRAPPED_CHEST")) return type;
+        if (name.endsWith("_SHELF")) return type;
         // Wall signs → sign item (wall variants aren’t placeable as items)
         if (name.endsWith("_WALL_SIGN")) {
             Material m = Material.matchMaterial(name.replace("_WALL_SIGN", "_SIGN"));
@@ -124,5 +125,35 @@ public class LocationListEntry extends ListStatisticItem<Location, Material> {
             else { sb.append(Character.toLowerCase(c)); }
         }
         return sb.toString();
+    }
+
+    /**
+     * Returns a human-readable string describing how long ago this block was locked,
+     * e.g. "§8Locked 3 days ago" or "§8Locked just now".
+     * Returns an empty string if no timestamp is recorded.
+     */
+    public @NotNull String getLockedAgoText() {
+        try {
+            Location loc = this.get();
+            if (loc.getWorld() == null) return "";
+            long lockedAt = new BlockNBTHandler(loc.getBlock()).getLockedAt();
+            if (lockedAt <= 0) return "";
+            long elapsedMs = System.currentTimeMillis() - lockedAt;
+            if (elapsedMs < 0) return "";
+            return "§8Locked " + formatElapsed(elapsedMs) + " ago";
+        } catch (Exception ignored) {
+            return "";
+        }
+    }
+
+    private static String formatElapsed(long ms) {
+        long secs    = ms / 1000L;
+        long minutes = secs / 60;
+        long hours   = minutes / 60;
+        long days    = hours / 24;
+        if (days   >= 1) return days   + (days   == 1 ? " day"    : " days");
+        if (hours  >= 1) return hours  + (hours  == 1 ? " hour"   : " hours");
+        if (minutes >= 1) return minutes + (minutes == 1 ? " minute" : " minutes");
+        return "just now";
     }
 }

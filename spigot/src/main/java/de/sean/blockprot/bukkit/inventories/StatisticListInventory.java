@@ -120,7 +120,8 @@ public final class StatisticListInventory extends BlockProtInventory {
 
         for (int i = 0; i < Math.min(list.size() - offset, max); ++i) {
             final ListStatisticItem<?, Material> entry = list.get(offset + i);
-            setItemStackWithLore(i, resolveDisplayMaterial(entry.getItemType()), entry.getTitle(), loreTP);
+            String lockedAgo = (entry instanceof LocationListEntry loc) ? loc.getLockedAgoText() : "";
+            setItemStackWithLore(i, resolveDisplayMaterial(entry.getItemType()), entry.getTitle(), loreTP, lockedAgo);
         }
 
         if (list.size() - offset > max) {
@@ -150,7 +151,7 @@ public final class StatisticListInventory extends BlockProtInventory {
         return raw;
     }
 
-    private void setItemStackWithLore(int index, Material material, String name, String loreTp) {
+    private void setItemStackWithLore(int index, Material material, String name, String loreTp, String lockedAgo) {
         ItemStack stack = new ItemStack(material, 1);
         ItemMeta meta = stack.getItemMeta();
         if (meta == null) {
@@ -160,6 +161,7 @@ public final class StatisticListInventory extends BlockProtInventory {
         meta.setDisplayName(name);
         List<String> lore = new ArrayList<>();
         lore.add(loreTp);
+        if (!lockedAgo.isEmpty()) lore.add(lockedAgo);
         meta.setLore(lore);
         stack.setItemMeta(meta);
         inventory.setItem(index, stack);

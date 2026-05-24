@@ -19,9 +19,9 @@
 package de.sean.blockprot.bukkit.listeners;
 
 import de.sean.blockprot.bukkit.BlockProt;
+import de.sean.blockprot.bukkit.BukkitCompat;
 import de.sean.blockprot.bukkit.events.BlockProtLockEvent;
 import de.sean.blockprot.bukkit.events.BlockProtUnlockEvent;
-import de.sean.blockprot.bukkit.util.BlockUtil;
 import org.bukkit.Color;
 import org.bukkit.Location;
 import org.bukkit.Particle;
@@ -33,7 +33,6 @@ import org.bukkit.inventory.DoubleChestInventory;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -189,7 +188,7 @@ public final class LockEffectListener implements Listener {
         for (int i = 0; i < PARTICLE_COUNT; i++) {
             double angle = step * i;
             center.getWorld().spawnParticle(
-                Particle.DUST,
+                BukkitCompat.PARTICLE_DUST,
                 center.getX() + Math.cos(angle) * RADIUS,
                 center.getY(),
                 center.getZ() + Math.sin(angle) * RADIUS,
@@ -206,7 +205,7 @@ public final class LockEffectListener implements Listener {
         for (int i = 0; i < PARTICLE_COUNT; i++) {
             double angle = step * i;
             center.getWorld().spawnParticle(
-                Particle.DUST_COLOR_TRANSITION,
+                BukkitCompat.PARTICLE_DUST_COLOR_TRANSITION,
                 center.getX() + Math.cos(angle) * RADIUS,
                 center.getY(),
                 center.getZ() + Math.sin(angle) * RADIUS,

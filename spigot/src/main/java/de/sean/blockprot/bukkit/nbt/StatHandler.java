@@ -246,7 +246,13 @@ public final class StatHandler extends NBTHandler<NBTCompound> {
                 // Only get the statistic if player is not null.
                 if (player != null) {
                     final Optional<StatHandler> stats = getStatsForPlayer(player.getUniqueId().toString());
-                    stats.ifPresent(handler -> handler.updateStatistic(statistic));
+                    stats.ifPresent(handler -> {
+                        handler.updateStatistic(statistic);
+                        // Purge stale location entries (broken blocks) and sync the global count.
+                        if (statistic instanceof de.sean.blockprot.bukkit.nbt.stats.PlayerBlocksStatistic pbs) {
+                            purgeStalePbsEntries(pbs);
+                        }
+                    });
                 }
 
                 // Let "ALL" fallthrough.
@@ -309,6 +315,34 @@ public final class StatHandler extends NBTHandler<NBTCompound> {
             return new StatHandler(nbtFile.getCompound(SERVER_SUB_KEY));
         } else {
             return new StatHandler(nbtFile.addCompound(SERVER_SUB_KEY));
+        }
+    }
+
+    /**
+     * Removes stale entries from a {@link PlayerBlocksStatistic} where the block
+     * no longer exists (AIR or unloaded world), and decrements the global count.
+     */
+    private static void purgeStalePbsEntries(
+            @NotNull PlayerBlocksStatistic pbs) {
+        var entries = pbs.get();
+        int removed = 0;
+        for (var entry : entries) {
+            try {
+                Location loc = entry.get();
+                if (loc.getWorld() == null
+                        || loc.getBlock().getType() == org.bukkit.Material.AIR) {
+                    pbs.remove(loc);
+                    removed++;
+                }
+            } catch (Exception ignored) {
+                removed++;
+            }
+        }
+        if (removed > 0) {
+            BlockCountStatistic countStat = new BlockCountStatistic();
+            StatHandler serverStats = getServerStats();
+            serverStats.updateStatistic(countStat);
+            for (int i = 0; i < removed; i++) countStat.decrement();
         }
     }
 }

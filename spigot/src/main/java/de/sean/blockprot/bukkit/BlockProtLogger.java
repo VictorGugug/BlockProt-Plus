@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 - 2025 spnda / SP26 fork
+ * Copyright (C) 2021 - 2025 spnda / BlockProt Reloaded (BPR)
  * This file is part of BlockProt <https://github.com/spnda/BlockProt>.
  *
  * BlockProt is free software: you can redistribute it and/or modify

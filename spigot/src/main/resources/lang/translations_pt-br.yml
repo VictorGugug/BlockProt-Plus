@@ -6,7 +6,7 @@ about:
   original_author: '§7Autor original: §fspnda'
   fork_maintainers: '§7Mantenedores do fork: §fVickey & Reim §8(alias ZarZey)'
   report_original: §x§c§3§e§e§a§7Reportar problemas (plugin original)
-  report_fork: §x§6§6§c§6§6§6Reportar problemas (fork SP26)
+  report_fork: §x§6§6§c§6§6§6Reportar problemas (BlockProt Reloaded)
 inventories:
   back: Voltar
   last_page: Última página
@@ -99,12 +99,12 @@ console:
   worlds_yml_save_failed: 'Não foi possível salvar worlds.yml: {error}'
   backup_dir_failed: Não foi possível criar a pasta de backup. Backup ignorado.
   backup_created: 'Dados BlockProt existentes encontrados; backup de segurança criado: backups/{file}'
-  backup_review_config: Revise config.yml antes de ativar funções SP26. Detalhes no log de sessão.
+  backup_review_config: Revise config.yml antes de ativar novas funções BPR. Detalhes no log de sessão.
   backup_failed: 'Falha no backup: {error}'
   config_language_missing: 'O arquivo de idioma configurado não existe: {file}'
   lang_keys_updated: '{file} atualizado com {count} chave(s) de tradução ausente(s).'
   lang_keys_save_failed: 'Não foi possível salvar o arquivo de idioma mesclado {file}: {error}'
-  config_keys_updated: 'config.yml atualizado com {count} opção(ões) ausente(s). Revise-o antes de ativar funções SP26.'
+  config_keys_updated: 'config.yml atualizado com {count} opção(ões) ausente(s). Revise-o antes de ativar novas funções BPR.'
   config_keys_save_failed: 'Não foi possível salvar config.yml mesclado: {error}'
   mysql_enabled: Índice MySQL híbrido ativado.
   mysql_disabled: 'Índice MySQL híbrido desativado: {error}'
@@ -113,7 +113,7 @@ console:
   mysql_cache_load_failed: 'Falha no carregamento do cache de confiança MySQL: {error}'
   mysql_operation_failed: 'Operação MySQL falhou: {error}'
   translations_incomplete: 'Traduções: {total} chave(s) incompleta(s) em {file}; {fallback} usando inglês como fallback, {missing} ausente(s) em ambos os arquivos. Detalhes no log de sessão.'
-  java_too_old: 'Versão Java muito antiga: {version} (BlockProt SP26 requer Java 25+)'
+  java_too_old: 'Versão Java muito antiga: {version} (BlockProt Reloaded requer Java 25+)'
   not_paper: Servidor não é Paper. A busca de jogadores por chat está desativada e usará a GUI de bigorna. Paper é recomendado.
   typed_views_fallback: Paper/Spigot 1.21.0-1.21.3 sem vistas de inventário tipadas. Serão usados fallbacks do AnvilInput.
 worlds:

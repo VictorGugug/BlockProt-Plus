@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 - 2025 spnda / SP26 fork
+ * Copyright (C) 2021 - 2025 spnda / BlockProt Reloaded (BPR)
  * This file is part of BlockProt <https://github.com/spnda/BlockProt>.
  *
  * BlockProt is free software: you can redistribute it and/or modify
@@ -91,12 +91,52 @@ public final class SkinCache {
         PlayerProfile cached = cache.get(key);
         if (cached != null) return cached;
 
-        // Return a plain profile now; start fetch in background.
+        // Return a plain profile now; start async fetch (Mojang or SkinsRestorer) in background.
         PlayerProfile placeholder = Bukkit.getServer().createPlayerProfile(offlineUuid, name);
         if (inflight.putIfAbsent(key, Boolean.TRUE) == null) {
             CompletableFuture.runAsync(() -> fetchAndCache(key, name, offlineUuid));
         }
         return placeholder;
+    }
+
+    /**
+     * Attempts to resolve a skin profile via the SkinsRestorer API (offline-safe).
+     * Must only be called from an async thread.
+     *
+     * @return a populated {@link PlayerProfile}, or {@code null} if SkinsRestorer is not present
+     *         or has no skin for this player.
+     */
+    @Nullable
+    public static PlayerProfile resolveSkinsRestorer(@NotNull UUID uuid, @NotNull String name) {
+        var plugin = Bukkit.getPluginManager().getPlugin("SkinsRestorer");
+        if (plugin == null || !plugin.isEnabled()) return null;
+        try {
+            Class<?> providerClass = Class.forName("net.skinsrestorer.api.SkinsRestorerProvider");
+            Object api = providerClass.getMethod("get").invoke(null);
+            Object playerStorage = api.getClass().getMethod("getPlayerStorage").invoke(api);
+            // getSkinForPlayer blocks on HTTP if the skin is not cached — must be async.
+            Object optional = playerStorage.getClass()
+                .getMethod("getSkinForPlayer", UUID.class, String.class)
+                .invoke(playerStorage, uuid, name);
+            boolean present = (boolean) optional.getClass().getMethod("isPresent").invoke(optional);
+            if (!present) return null;
+            Object skinProperty = optional.getClass().getMethod("get").invoke(optional);
+            String value     = (String) skinProperty.getClass().getMethod("getValue").invoke(skinProperty);
+            String decoded = new String(
+                java.util.Base64.getDecoder().decode(value),
+                java.nio.charset.StandardCharsets.UTF_8);
+            com.google.gson.JsonObject root = com.google.gson.JsonParser.parseString(decoded).getAsJsonObject();
+            if (!root.has("textures") || !root.getAsJsonObject("textures").has("SKIN")) return null;
+            String skinUrl = root.getAsJsonObject("textures")
+                .getAsJsonObject("SKIN").get("url").getAsString();
+            PlayerProfile profile = Bukkit.getServer().createPlayerProfile(uuid, name);
+            PlayerTextures textures = profile.getTextures();
+            textures.setSkin(URI.create(skinUrl).toURL());
+            profile.setTextures(textures);
+            return profile;
+        } catch (Exception ignored) {
+            return null;
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -105,7 +145,14 @@ public final class SkinCache {
 
     private static void fetchAndCache(@NotNull String key, @NotNull String name, @NotNull UUID fallbackUuid) {
         try {
-            // Step 1 — resolve the real Mojang UUID.
+            // 1. Try SkinsRestorer first (already async-safe here).
+            PlayerProfile srProfile = resolveSkinsRestorer(fallbackUuid, name);
+            if (srProfile != null) {
+                cache.put(key, srProfile);
+                return;
+            }
+
+            // 2. Resolve via Mojang API.
             String mojangUuidStr = fetchMojangUuid(name);
             UUID mojangUuid = mojangUuidStr != null ? parseUuid(mojangUuidStr) : null;
 

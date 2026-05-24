@@ -33,12 +33,19 @@ public final class AdminBlockListInventory extends BlockProtInventory {
     private @Nullable PlayerBlocksStatistic statistic;
     private @NotNull  String targetName = "?";
 
+    public AdminBlockListInventory() {
+        // Defer inventory creation to fill() so targetName is set before
+        // getTranslatedInventoryName() is called.
+        super(false);
+    }
+
     @Override int getSize() { return InventoryConstants.sextupletLine; }
 
     @Override
     @NotNull String getTranslatedInventoryName() {
-        return Translator.get(TranslationKey.INVENTORIES__ADMIN_BLOCK_LIST__TITLE)
-                         .replace("{player}", targetName);
+        String title = Translator.get(TranslationKey.INVENTORIES__ADMIN_BLOCK_LIST__TITLE);
+        if (title == null || title.isBlank()) title = "Blocks: {player}";
+        return title.replace("{player}", targetName);
     }
 
     // ── click ──────────────────────────────────────────────────────────────
@@ -175,6 +182,8 @@ public final class AdminBlockListInventory extends BlockProtInventory {
         meta.setDisplayName(entry.getTitle());
         List<String> lore = new ArrayList<>();
         lore.add(loreTp);
+        String ago = entry.getLockedAgoText();
+        if (!ago.isEmpty()) lore.add(ago);
         meta.setLore(lore);
         stack.setItemMeta(meta);
         inventory.setItem(slot, stack);

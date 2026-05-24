@@ -28,6 +28,7 @@ import de.sean.blockprot.nbt.FriendModifyAction;
 import de.sean.blockprot.nbt.LockReturnValue;
 import de.tr7zw.changeme.nbtapi.NBTCompound;
 import de.sean.blockprot.bukkit.util.SkinCache;
+import de.sean.blockprot.bukkit.BukkitCompat;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
@@ -462,10 +463,9 @@ public abstract class BlockProtInventory implements InventoryHolder {
      * Create a player profile that prefers SkinRestorer skins when available,
      * and falls back to Mojang API lookup for offline/cracked servers.
      *
-     * <p>On cracked servers offline UUIDs don't match Mojang's database so the
-     * vanilla profile API returns no skin. {@link SkinCache} resolves the real
-     * Mojang UUID by username asynchronously; the first call returns a plain
-     * profile and subsequent calls return the skinned one once the fetch is done.
+     * <p>The first call returns a plain placeholder profile; subsequent calls
+     * after the async fetch completes will return the skinned profile.
+     * This method is safe to call from the main thread.
      *
      * @param uuid The player's UUID (may be offline/cracked).
      * @param name The player's current name.
@@ -474,61 +474,9 @@ public abstract class BlockProtInventory implements InventoryHolder {
      */
     @NotNull
     public static PlayerProfile createPlayerProfile(@NotNull final UUID uuid, @NotNull final String name) {
-        // 1. SkinRestorer takes priority (explicit user-installed skin plugin).
-        PlayerProfile skinRestorerProfile = resolveSkinRestorerProfile(uuid, name);
-        if (skinRestorerProfile != null) return skinRestorerProfile;
-
-        // 2. On online-mode servers Bukkit resolves skins fine.
-        //    On offline servers the UUID is a name-hash and the skin API returns nothing,
-        //    so we use SkinCache which fetches from Mojang by name and caches the result.
+        // SkinCache handles both SkinsRestorer (async) and Mojang API (async).
+        // No blocking HTTP on the main thread.
         return SkinCache.getOrFetch(name, uuid);
-    }
-
-    @Nullable
-    private static PlayerProfile resolveSkinRestorerProfile(@NotNull final UUID uuid, @NotNull final String name) {
-        var plugin = Bukkit.getPluginManager().getPlugin("SkinsRestorer");
-        if (plugin == null || !plugin.isEnabled()) return null;
-
-        try {
-            // SkinsRestorer v15 public API.
-            Class<?> providerClass = Class.forName("net.skinsrestorer.api.SkinsRestorerProvider");
-            Object api = providerClass.getMethod("get").invoke(null);
-
-            // api.getPlayerStorage().getSkinForPlayer(uuid, name) -> Optional<SkinProperty>
-            Object playerStorage = api.getClass().getMethod("getPlayerStorage").invoke(api);
-            Object optional = playerStorage.getClass()
-                .getMethod("getSkinForPlayer", UUID.class, String.class)
-                .invoke(playerStorage, uuid, name);
-
-            // Unbox Optional
-            boolean present = (boolean) optional.getClass().getMethod("isPresent").invoke(optional);
-            if (!present) return null;
-            Object skinProperty = optional.getClass().getMethod("get").invoke(optional);
-
-            // SkinProperty.getValue() and SkinProperty.getSignature()
-            String value     = (String) skinProperty.getClass().getMethod("getValue").invoke(skinProperty);
-            String signature = (String) skinProperty.getClass().getMethod("getSignature").invoke(skinProperty);
-
-            // Build a Bukkit PlayerProfile from the raw texture property.
-            PlayerProfile profile = Bukkit.getServer().createPlayerProfile(uuid, name);
-            PlayerTextures textures = profile.getTextures();
-
-            // Decode the base64 value to extract the skin URL.
-            String decoded = new String(
-                java.util.Base64.getDecoder().decode(value),
-                java.nio.charset.StandardCharsets.UTF_8);
-            com.google.gson.JsonObject root = com.google.gson.JsonParser.parseString(decoded).getAsJsonObject();
-            if (root.has("textures") && root.getAsJsonObject("textures").has("SKIN")) {
-                String skinUrl = root.getAsJsonObject("textures")
-                    .getAsJsonObject("SKIN").get("url").getAsString();
-                textures.setSkin(java.net.URI.create(skinUrl).toURL());
-                profile.setTextures(textures);
-            }
-            return profile;
-        } catch (Exception ignored) {
-            // SkinsRestorer not installed, wrong version, or API changed — fall through.
-        }
-        return null;
     }
 
     /**
@@ -660,9 +608,9 @@ public abstract class BlockProtInventory implements InventoryHolder {
         }
         if (meta != null) {
             if (meta.hasEnchants() && (toggle == null || !toggle)) {
-                meta.removeEnchant(Enchantment.INFINITY);
+                meta.removeEnchant(BukkitCompat.GLOW_ENCHANT);
             } else if (!meta.hasEnchants() && (toggle == null || toggle)) {
-                meta.addEnchant(Enchantment.INFINITY, 1, true);
+                meta.addEnchant(BukkitCompat.GLOW_ENCHANT, 1, true);
             }
             meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
             stack.setItemMeta(meta);
@@ -729,12 +677,13 @@ public abstract class BlockProtInventory implements InventoryHolder {
             if (pos != -1) {
                 name = name.substring(0, pos);
             }
+            Enchantment glow = BukkitCompat.GLOW_ENCHANT;
 
             if (meta.hasEnchants() && (toggle == null || !toggle)) {
-                meta.removeEnchant(Enchantment.INFINITY);
+                meta.removeEnchant(glow);
                 meta.setDisplayName(name + ": " + Translator.get(TranslationKey.DISABLED));
             } else if (!meta.hasEnchants() && (toggle == null || toggle)) {
-                meta.addEnchant(Enchantment.INFINITY, 1, true);
+                meta.addEnchant(glow, 1, true);
                 meta.setDisplayName(name + ": " + Translator.get(TranslationKey.ENABLED));
             }
             meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);

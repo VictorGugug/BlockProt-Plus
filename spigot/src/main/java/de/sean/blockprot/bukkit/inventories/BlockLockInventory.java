@@ -38,6 +38,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.function.Consumer;
 
 
 public class BlockLockInventory extends BlockProtInventory {
@@ -63,22 +64,8 @@ public class BlockLockInventory extends BlockProtInventory {
         if (BlockProt.getDefaultConfig().isLockable(block.getType()) && event.getSlot() == 0) {
             boolean isRemote = state.friendSearchState == InventoryState.FriendSearchState.FRIEND_SEARCH;
             var handler = getNbtHandlerOrNull(block);
-            boolean willUnlock = handler != null && !handler.isNotProtected();
-            if (isRemote && willUnlock) {
-                InventoryState pending = InventoryState.get(player.getUniqueId());
-                if (pending != null && pending.remoteLockPendingConfirm) {
-                    pending.remoteLockPendingConfirm = false;
-                    applyChanges(player, (h) -> h.lockBlock(player), null);
-                    closeAndOpen(player, null);
-                } else {
-                    if (pending != null) pending.remoteLockPendingConfirm = true;
-                    player.sendActionBar(LegacyComponentSerializer.legacySection().deserialize(
-                        Translator.get(TranslationKey.MESSAGES__REMOTE_UNLOCK_WARNING)));
-                }
-            } else {
-                applyChanges(player, (h) -> h.lockBlock(player), null);
-                closeAndOpen(player, null);
-            }
+            applyChanges(player, (h) -> h.lockBlock(player), null);
+            closeAndOpen(player, null);
         } else {
             switch (item.getType()) {
                 case PLAYER_HEAD -> {
@@ -116,21 +103,30 @@ public class BlockLockInventory extends BlockProtInventory {
                 }
                 case NAME_TAG -> {
                     player.closeInventory();
-                    var currentName = new BlockNBTHandler(block).getName();
-                    AnvilInput.open(player, BlockProt.getInstance(), currentName,
-                        Translator.get(TranslationKey.INVENTORIES__SET_BLOCK_NAME),
-                        text -> {
-                            var invState = InventoryState.get(player.getUniqueId());
-                            if (invState != null && invState.getBlock() != null) {
-                                new BlockNBTHandler(invState.getBlock()).setName(text);
-                                Inventory inventory = new BlockLockInventory().fill(player, block.getType(), new BlockNBTHandler(block));
-                                if (inventory != null) player.openInventory(inventory);
-                            }
-                        });
+                    // Capture block reference before close potentially clears the state
+                    final Block nameBlock = block;
+                    var currentName = new BlockNBTHandler(nameBlock).getName();
+                    Consumer<String> handleName = text -> {
+                        new BlockNBTHandler(nameBlock).setName(text);
+                        Inventory inventory = new BlockLockInventory().fill(player, nameBlock.getType(), new BlockNBTHandler(nameBlock));
+                        if (inventory != null) player.openInventory(inventory);
+                    };
+                    if (SignInput.isSupported()) {
+                        SignInput.open(player, BlockProt.getInstance(),
+                            Translator.get(TranslationKey.INVENTORIES__SET_BLOCK_NAME), handleName);
+                    } else {
+                        AnvilInput.open(player, BlockProt.getInstance(), currentName,
+                            Translator.get(TranslationKey.INVENTORIES__SET_BLOCK_NAME), handleName);
+                    }
                 }
                 case ENDER_PEARL -> {
+                    // Preserve the block reference before closing the inventory, because
+                    // closeInventory() can trigger InventoryCloseEvent listeners that clear
+                    // or replace InventoryState, making state.getBlock() null inside the
+                    // ChatInput/AnvilInput callback.
+                    final Block transferBlock = block;
                     player.closeInventory();
-                    TransferSearchInventory.openSearch(player);
+                    TransferSearchInventory.openSearch(player, transferBlock);
                 }
                 case SPYGLASS -> {
                     state.origin = InventoryState.MenuOrigin.BLOCK_LOCK;
@@ -179,9 +175,9 @@ public class BlockLockInventory extends BlockProtInventory {
 
         // ── Row 2 layout: Inspect(9) | ... | Log(13) | Paste(14) | Copy(15) | Info(16) | Back(17) ──
         boolean isOwnerOrAdmin = handler.isOwner(player.getUniqueId()) || isAdmin;
-        boolean showInspect = !isNotProtected && !handler.isOwner(player.getUniqueId())
+        boolean showInspect = !isNotProtected
             && (state.getBlock().getState() instanceof InventoryHolder)
-            && isAdmin;
+            && (isAdmin || handler.isOwner(player.getUniqueId()));
         if (showInspect) {
             setItemStack(9, Material.SPYGLASS, TranslationKey.INVENTORIES__INSPECT_CONTENTS);
         }
@@ -193,6 +189,9 @@ public class BlockLockInventory extends BlockProtInventory {
                 setItemStack(14, Material.KNOWLEDGE_BOOK, TranslationKey.INVENTORIES__PASTE_CONFIGURATION);
             }
             setItemStack(15, Material.PAPER, TranslationKey.INVENTORIES__COPY_CONFIGURATION);
+            setItemStack(16, Material.COMPASS, TranslationKey.INVENTORIES__BLOCK_INFO);
+        } else if (!isNotProtected && isAdmin) {
+            // Admin viewing someone else's block: show block info without full manager permissions.
             setItemStack(16, Material.COMPASS, TranslationKey.INVENTORIES__BLOCK_INFO);
         }
         // Slot 17: BARRIER as back button

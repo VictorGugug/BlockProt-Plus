@@ -41,6 +41,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Arrays;
 import java.util.Objects;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class FriendSearchResultInventory extends BlockProtInventory {
@@ -235,19 +236,18 @@ public class FriendSearchResultInventory extends BlockProtInventory {
             double minimumSimilarity = BlockProt.getDefaultConfig().getFriendSearchSimilarityPercentage();
             final var offlinePlayers = Bukkit.getOfflinePlayers();
 
-            final var stream = Arrays.stream(offlinePlayers)
-                .map(OfflinePlayer::getUniqueId)
-                // Other plugins/mods might use other UUID versions for NPCs or other players.
-                .filter(uuid -> uuid.version() == 3 || uuid.version() == 4 || uuid.version() == 0);
-
             try {
-                var filterStream = BlockProt.getProfileService().findAllByUuid(stream.toList()).stream()
-                    .filter(Objects::nonNull)
-                    .filter(p -> p.getName() != null && !p.getUniqueId().equals(player.getUniqueId()))
+                var filterStream = Arrays.stream(offlinePlayers)
+                    .filter(op -> op.getName() != null && !op.getUniqueId().equals(player.getUniqueId()))
+                    .filter(op -> {
+                        UUID uuid = op.getUniqueId();
+                        return uuid != null && (uuid.version() == 3 || uuid.version() == 4 || uuid.version() == 0);
+                    })
+                    .map(op -> new org.enginehub.squirrelid.Profile(op.getUniqueId(), op.getName()))
                     .map(p -> new ImmutablePair<>(p, compareStrings(p.getName(), searchQuery)))
-                    .filter(p -> p.right >= minimumSimilarity)
+                    .filter(pair -> pair.right >= minimumSimilarity)
                     .sorted((a, b) -> b.right.compareTo(a.right))
-                    .map(p -> p.left);
+                    .map(pair -> pair.left);
 
                 if (state.friendSearchState == InventoryState.FriendSearchState.FRIEND_SEARCH && state.getBlock() != null) {
                     filterStream = filterStream
