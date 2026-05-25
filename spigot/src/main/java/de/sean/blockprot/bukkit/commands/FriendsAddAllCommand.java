@@ -68,6 +68,13 @@ public final class FriendsAddAllCommand implements CommandExecutor {
     }
 
     private void handleAddAllCommand(@NotNull Player player, @NotNull String targetName) {
+        // Block self-add
+        if (targetName.equalsIgnoreCase(player.getName())) {
+            player.sendMessage(LegacyComponentSerializer.legacySection().deserialize(
+                Translator.get(TranslationKey.MESSAGES__TRANSFER_SELF)));
+            return;
+        }
+
         sendAction(player, Translator.get(TranslationKey.MESSAGES__FRIENDS_SEARCHING)
             .replace("{player}", targetName));
 
@@ -92,9 +99,16 @@ public final class FriendsAddAllCommand implements CommandExecutor {
                 return;
             }
 
+            final OfflinePlayer finalTarget = target;
             final String targetUuid = target.getUniqueId().toString();
 
             Bukkit.getScheduler().runTask(BlockProt.getInstance(), () -> {
+                // Block self-add (UUID check covers name aliases)
+                if (finalTarget.getUniqueId().equals(player.getUniqueId())) {
+                    player.sendMessage(LegacyComponentSerializer.legacySection().deserialize(
+                        Translator.get(TranslationKey.MESSAGES__TRANSFER_SELF)));
+                    return;
+                }
                 player.sendActionBar(Component.empty());
                 int modified = applyAddAllToOwnedBlocks(player, targetUuid);
 

@@ -16,18 +16,16 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * GUI for regular user operations. Opened via /bp user.
+ * GUI for regular user operations. Opened via /bp user or /bp settings.
  *
- * Layout (tripleLine = 27 slots, items centred row 1 slots 11-14).
+ * Layout (tripleLine = 27 slots, 4 items centred in row 1: slots 11-14).
  */
 public class UserMenuInventory extends BlockProtInventory {
 
-    private static final int SLOT_SETTINGS = 10;
-    private static final int SLOT_FRIENDS  = 11;
-    private static final int SLOT_STATS    = 12;
-    private static final int SLOT_TRANSFER = 13;
-    private static final int SLOT_TIMED    = 14;
-    private static final int SLOT_ABOUT    = 16;
+    private static final int SLOT_SETTINGS = 11;
+    private static final int SLOT_FRIENDS  = 12;
+    private static final int SLOT_STATS    = 13;
+    private static final int SLOT_ABOUT    = 14;
 
     public UserMenuInventory() { super(false); }
 
@@ -51,17 +49,11 @@ public class UserMenuInventory extends BlockProtInventory {
         inventory.setItem(SLOT_STATS, item(Material.BOOK,
             Translator.get(TranslationKey.INVENTORIES__USER_MENU__STATS),
             Translator.get(TranslationKey.INVENTORIES__USER_MENU__STATS_LORE)));
-        inventory.setItem(SLOT_TRANSFER, item(Material.ENDER_PEARL,
-            Translator.get(TranslationKey.INVENTORIES__USER_MENU__TRANSFER),
-            Translator.get(TranslationKey.INVENTORIES__USER_MENU__TRANSFER_LORE)));
-        inventory.setItem(SLOT_TIMED, item(Material.CLOCK,
-            Translator.get(TranslationKey.INVENTORIES__USER_MENU__TIMED),
-            Translator.get(TranslationKey.INVENTORIES__USER_MENU__TIMED_LORE)));
         inventory.setItem(SLOT_ABOUT, item(Material.NETHER_STAR,
             Translator.get(TranslationKey.INVENTORIES__USER_MENU__ABOUT),
             Translator.get(TranslationKey.INVENTORIES__USER_MENU__ABOUT_LORE)));
 
-        // Back button if opened from another menu (not standalone via command)
+        // Back button only when opened from within another menu, not from a command.
         InventoryState state = InventoryState.get(player.getUniqueId());
         if (state != null && state.origin != InventoryState.MenuOrigin.NONE) {
             setBackButton(getSize() - 1);
@@ -97,12 +89,6 @@ public class UserMenuInventory extends BlockProtInventory {
             newState.origin = InventoryState.MenuOrigin.USER_MENU;
             InventoryState.set(player.getUniqueId(), newState);
             player.openInventory(new StatisticsInventory().fill(player));
-        } else if (slot == SLOT_TRANSFER) {
-            player.closeInventory();
-            player.sendMessage(Translator.get(TranslationKey.MESSAGES__USER_TRANSFER_HINT));
-        } else if (slot == SLOT_TIMED) {
-            player.closeInventory();
-            player.sendMessage(Translator.get(TranslationKey.MESSAGES__USER_TIMED_HINT));
         } else if (slot == SLOT_ABOUT) {
             player.closeInventory();
             player.performCommand("blockprot about");

@@ -19,8 +19,7 @@
 package de.sean.blockprot.bukkit.commands;
 
 import de.sean.blockprot.bukkit.inventories.InventoryState;
-import de.sean.blockprot.bukkit.inventories.UserSettingsInventory;
-import de.sean.blockprot.bukkit.nbt.PlayerSettingsHandler;
+import de.sean.blockprot.bukkit.inventories.UserMenuInventory;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -34,11 +33,13 @@ public class SettingsCommand implements CommandExecutor {
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
         if (!(sender instanceof Player player)) return false;
 
+        // /bp settings opens the User Menu (top-level); UserSettingsInventory
+        // is accessed from within the menu via the "My Settings" button.
         InventoryState state = new InventoryState(null);
         state.friendSearchState = InventoryState.FriendSearchState.DEFAULT_FRIEND_SEARCH;
+        state.origin = InventoryState.MenuOrigin.NONE; // opened from command, no back button
         InventoryState.set(player.getUniqueId(), state);
-        player.openInventory(new UserSettingsInventory().fill(player));
-        new PlayerSettingsHandler(player).setHasPlayerInteractedWithMenu(true);
+        player.openInventory(new UserMenuInventory().fill(player));
         return true;
     }
 

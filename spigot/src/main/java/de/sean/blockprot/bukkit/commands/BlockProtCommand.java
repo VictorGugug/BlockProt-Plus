@@ -66,8 +66,6 @@ public final class BlockProtCommand implements TabExecutor {
         register(false, "debug",        new DebugCommand());
         register(false, "disablehints", new HintsCommand());
         register(false, "friends",      new FriendsAddAllCommand());
-        register(false, "transfer",     new TransferCommand());
-        register(false, "timed",        new TimedAccessCommand());
         register(false, "info",         new InfoCommand());
         register(false, "help",         new HelpCommand());
     }

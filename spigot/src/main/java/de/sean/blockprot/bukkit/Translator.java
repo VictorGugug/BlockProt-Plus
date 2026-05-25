@@ -32,34 +32,36 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
+import java.util.regex.Pattern;
 
 /**
  * Helper to quickly obtain translations from a config by an enum key.
  *
  * <h3>Color and formatting support</h3>
- * <p>Translation values may use either the legacy {@code &} color code format
- * (e.g. {@code &6}, {@code &a}, {@code &l}) or the Adventure
- * <a href="https://docs.advntr.dev/minimessage/format.html">MiniMessage</a>
- * format (e.g. {@code <gold>}, {@code <bold>}, {@code <gradient:red:blue>}).
- * Both formats are auto-detected and processed correctly.
+ * <p>Translation values support two formats:
+ * <ul>
+ *   <li>Legacy {@code &} color codes (e.g. {@code &6}, {@code &a}, {@code &l})</li>
+ *   <li>Adventure <a href="https://docs.advntr.dev/minimessage/format.html">MiniMessage</a>
+ *       (e.g. {@code <gold>}, {@code <bold>}, {@code <gradient:red:blue>})</li>
+ * </ul>
  *
- * <p>Detection logic: if the raw value contains {@code <} followed by a
- * known MiniMessage tag name (closing or opening), it is parsed as MiniMessage
- * and then serialized back to a legacy section-symbol string for compatibility
- * with the existing Bukkit component APIs used throughout the plugin.
- * Otherwise, the legacy {@code &} translator is applied as before.
+ * <p>Detection uses a whitelist of known MiniMessage tag names. Placeholder tokens
+ * like {@code {player}} or {@code <player>} that appear in usage strings are NOT
+ * MiniMessage tags and are never passed to the MiniMessage parser.
+ *
+ * <p>If the raw string already contains section-symbol ({@code §}) color codes it
+ * is returned as-is — no further processing is applied to avoid double-escaping or
+ * passing pre-formatted strings to MiniMessage.
  *
  * <h3>BPR self-repair</h3>
- * <p>When a key is missing from the active language file but exists in the
- * bundled English file, the English value is used silently. Console output is
- * limited to one localized summary line; full details go to the session log.</p>
+ * <p>When a key is missing from the active language file but exists in the bundled
+ * English file, the English value is used silently.</p>
  *
  * @since 0.1.10
  */
 public final class Translator {
-    /**
-     * The list of all included translation files.
-     */
+
     public static final HashSet<String> DEFAULT_TRANSLATION_FILES = Sets.newHashSet(
         "translations_cs.yml", "translations_de.yml", "translations_en.yml",
         "translations_es.yml", "translations_fr.yml", "translations_it.yml",
@@ -68,65 +70,60 @@ public final class Translator {
         "translations_tr.yml", "translations_zh-CN.yml", "translations_zh-TW.yml"
     );
 
-    /**
-     * The default locale we use for default translation values.
-     *
-     * @since 0.4.6
-     */
     @NotNull
     public static final Locale defaultLocale = Locale.UK;
 
-    /**
-     * A HashMap of all possible translation values by key, loaded through
-     * {@link Translator#loadFromConfigs(YamlConfiguration, YamlConfiguration)}.
-     *
-     * @since 0.4.6
-     */
     @NotNull
     private static final HashMap<TranslationKey, TranslationValue> values = new HashMap<>();
 
-    /**
-     * Represents the locale of the translated values. Defaults to {@link #defaultLocale}.
-     *
-     * @since 0.4.6
-     */
     @NotNull
     private static Locale locale = defaultLocale;
 
     static String DEFAULT_FALLBACK = "";
 
-    /** Shared MiniMessage instance — stateless, safe to reuse. */
     private static final MiniMessage MINI_MESSAGE = MiniMessage.miniMessage();
 
-    /**
-     * Converts Adventure components back to legacy section-symbol strings
-     * for compatibility with Bukkit APIs used throughout the plugin.
-     */
     private static final LegacyComponentSerializer LEGACY_SERIALIZER =
         LegacyComponentSerializer.legacySection();
 
     /**
-     * @since 0.2.3
+     * Whitelist of known MiniMessage tag names (lowercase).
+     * Tokens not in this set are treated as plain text / placeholders, never passed to MM parser.
      */
-    private Translator() {
-    }
+    private static final Set<String> MM_TAGS = Set.of(
+        // Color names
+        "black", "dark_blue", "dark_green", "dark_aqua", "dark_red", "dark_purple",
+        "gold", "gray", "dark_gray", "blue", "green", "aqua", "red", "light_purple",
+        "yellow", "white",
+        // Formatting
+        "bold", "italic", "underlined", "strikethrough", "obfuscated", "reset",
+        // Special
+        "gradient", "rainbow", "hover", "click", "insertion", "font",
+        "color", "colour", "transition", "shadow_color",
+        // Decorations
+        "newline", "lang", "selector", "score", "nbt", "key"
+    );
 
     /**
-     * Initialize the translations from given configuration and sets the internal locale.
+     * Regex to extract the tag name from a {@code <tagname>} or {@code </tagname>} token.
+     * Group 1 is the name, stripped of leading slash and trailing content after colon/space.
+     */
+    private static final Pattern TAG_NAME_PATTERN = Pattern.compile("</?([a-zA-Z_][a-zA-Z0-9_]*)");
+
+    private Translator() {}
+
+    // ── Loading ───────────────────────────────────────────────────────────────
+
+    /**
+     * Initialize translations from configs and set the internal locale.
      *
-     * <p><b>BPR self-repair:</b> keys missing from {@code config} but present
-     * in {@code defaultConfig} are filled from English. Only one summary is
-     * printed to console; details are written to the session log.</p>
-     *
-     * @param defaultConfig The English reference configuration.
-     * @param config        The active language configuration.
+     * @param defaultConfig Bundled English reference.
+     * @param config        Active language config.
      * @since 0.4.6
      */
     public static void loadFromConfigs(@NotNull final YamlConfiguration defaultConfig,
                                        @NotNull final YamlConfiguration config) {
         String localeStr = config.getString("locale");
-        // Locale.forLanguageTag() replaces the deprecated new Locale(String) constructor.
-        // Translation files use underscores (e.g. "zh_CN"); IETF tags use hyphens ("zh-CN").
         Translator.locale = (localeStr == null || localeStr.isBlank())
             ? Locale.ROOT
             : Locale.forLanguageTag(localeStr.replace('_', '-'));
@@ -186,50 +183,61 @@ public final class Translator {
         }
     }
 
+    // ── Detection ─────────────────────────────────────────────────────────────
+
     /**
-     * Returns true if the string contains a MiniMessage opening or closing tag.
+     * Returns true only if the string contains at least one known MiniMessage tag.
      *
-     * <p>Conservative check: looks for {@code <letter} (opening) or {@code </} (closing).
-     * Avoids false positives on plain {@code <} characters used in math or HTML-like text.</p>
+     * <p>Tokens like {@code <player>}, {@code <seconds>}, {@code <count>} are
+     * plugin placeholders — they are not in the MM whitelist and return false.</p>
+     *
+     * <p>Also returns false if the string already contains section-symbol ({@code §})
+     * formatting, meaning it was already processed or hardcoded in the lang file.
+     * Passing pre-formatted strings to MiniMessage causes a parsing exception.</p>
      */
     private static boolean containsMiniMessage(@NotNull String text) {
-        int idx = text.indexOf('<');
-        while (idx != -1) {
-            if (idx + 1 < text.length()) {
-                char next = text.charAt(idx + 1);
-                if (Character.isLetter(next) || next == '/') return true;
-            }
-            idx = text.indexOf('<', idx + 1);
+        // Already contains section-symbol codes — skip MM parsing entirely.
+        if (text.indexOf('\u00A7') >= 0) return false;
+
+        var matcher = TAG_NAME_PATTERN.matcher(text);
+        while (matcher.find()) {
+            String tagName = matcher.group(1).toLowerCase(Locale.ROOT);
+            if (MM_TAGS.contains(tagName)) return true;
         }
         return false;
     }
 
+    // ── Processing ────────────────────────────────────────────────────────────
+
     /**
-     * Processes a raw translation string into a legacy section-symbol formatted string.
+     * Converts a raw lang-file string to a legacy section-symbol string.
      *
-     * <p>If MiniMessage tags are detected the string is parsed by Adventure and serialized
-     * back to legacy format. Otherwise, legacy {@code &} color codes are translated as before.</p>
+     * <ul>
+     *   <li>If it already contains {@code §} — returned as-is.</li>
+     *   <li>If it contains a known MM tag — parsed by MiniMessage, serialized to legacy.</li>
+     *   <li>Otherwise — {@code &} codes are translated to {@code §}.</li>
+     * </ul>
      */
     @NotNull
     private static String process(@NotNull String raw) {
+        // Already has section-symbol formatting; no further processing needed.
+        if (raw.indexOf('\u00A7') >= 0) return raw;
+
         if (containsMiniMessage(raw)) {
             Component component = MINI_MESSAGE.deserialize(raw);
             return LEGACY_SERIALIZER.serialize(component);
         }
+
         return ChatColor.translateAlternateColorCodes('&', raw);
     }
 
+    // ── Public API ────────────────────────────────────────────────────────────
+
     /**
-     * Get the translated String by translation key. This will use
-     * {@link TranslationValue#getValue()}, so values that are not
-     * translated still use their default value.
-     *
-     * <p>Supports both legacy color codes ({@code &6}, {@code &a}, {@code &l})
-     * and the Adventure MiniMessage format ({@code <gold>}, {@code <bold>},
-     * {@code <gradient:red:blue>}). Both formats are detected automatically.</p>
+     * Get the translated string by key.
      *
      * @param key the translation key to search for.
-     * @return A translated String or an empty string if not found.
+     * @return Translated string, or the key name if not found.
      * @since 0.1.10
      */
     @NotNull
@@ -240,9 +248,8 @@ public final class Translator {
     }
 
     /**
-     * Gets the appropriate translation for given {@link LockReturnValue.Reason}.
+     * Gets the translation for a {@link LockReturnValue.Reason}.
      *
-     * @return The translated string.
      * @since 1.0.3
      */
     @NotNull
@@ -254,9 +261,7 @@ public final class Translator {
     }
 
     /**
-     * Get the currently used locale for the current translator.
-     *
-     * @return The locale of translations.
+     * @return The locale of the currently loaded translations.
      * @since 0.4.6
      */
     @NotNull
@@ -265,7 +270,7 @@ public final class Translator {
     }
 
     /**
-     * Clears all translations.
+     * Clears all loaded translations.
      *
      * @since 1.0.0
      */
