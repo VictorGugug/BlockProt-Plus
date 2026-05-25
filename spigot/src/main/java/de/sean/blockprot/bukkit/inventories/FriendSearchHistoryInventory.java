@@ -42,6 +42,7 @@ import java.util.UUID;
  * had just searched for again.
  */
 public class FriendSearchHistoryInventory extends BlockProtInventory {
+    public FriendSearchHistoryInventory() { super(true); }
     private final int maxSkulls = getSize() - 2;
 
     @Override

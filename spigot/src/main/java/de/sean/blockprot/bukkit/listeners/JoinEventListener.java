@@ -37,7 +37,7 @@ public class JoinEventListener implements Listener {
             Bukkit.getScheduler().runTaskAsynchronously(
                 BlockProt.getInstance(),
                 new UpdateChecker(
-                    BlockProt.getInstance().getDescription(),
+                    BlockProt.getPluginVersion(),
                     Collections.singletonList(player)
                 )
             );

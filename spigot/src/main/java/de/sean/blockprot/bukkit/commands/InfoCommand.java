@@ -54,7 +54,7 @@ public final class InfoCommand implements CommandExecutor {
 
     @Override
     public boolean canUseCommand(@NotNull CommandSender sender) {
-        return sender.isOp() || sender.hasPermission(Permissions.ADMIN.key());
+        return sender.isOp() || sender.hasPermission(Permissions.USER_ADMIN.key());
     }
 
     @Override

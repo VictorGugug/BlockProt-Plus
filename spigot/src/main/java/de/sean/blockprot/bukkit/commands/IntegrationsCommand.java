@@ -14,7 +14,7 @@ import de.sean.blockprot.bukkit.BlockProtAPI;
 import de.sean.blockprot.bukkit.TranslationKey;
 import de.sean.blockprot.bukkit.Translator;
 import de.sean.blockprot.bukkit.integrations.PluginIntegration;
-import net.md_5.bungee.api.chat.ComponentBuilder;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.jetbrains.annotations.NotNull;
@@ -37,12 +37,10 @@ public class IntegrationsCommand implements CommandExecutor {
             .reduce((left, right) -> left + "§7, " + right)
             .orElse("§8-");
 
-        var builder = new ComponentBuilder();
-        builder.append(Translator.get(TranslationKey.MESSAGES__INTEGRATIONS_ENABLED)
-            .replace("{count}", String.valueOf(enabledIntegrations.size()))
-            .replace("{integrations}", names));
-
-        sender.spigot().sendMessage(builder.create());
+        sender.sendMessage(LegacyComponentSerializer.legacySection().deserialize(
+            Translator.get(TranslationKey.MESSAGES__INTEGRATIONS_ENABLED)
+                .replace("{count}", String.valueOf(enabledIntegrations.size()))
+                .replace("{integrations}", names)));
         return true;
     }
 

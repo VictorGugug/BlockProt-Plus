@@ -34,6 +34,8 @@ import java.util.UUID;
 // Owners see denied attempts. Admins also get a teleport button.
 public final class AuditInventory extends BlockProtInventory {
 
+    public AuditInventory() { super(true); }
+
     private static final int PAGE_SIZE = 45; // Five rows for entries, last row for controls.
     private static final SimpleDateFormat DATE_FMT = new SimpleDateFormat("dd/MM HH:mm");
 
@@ -96,7 +98,7 @@ public final class AuditInventory extends BlockProtInventory {
             }
             case COMPASS -> {
                 // Teleport to the block. Admins only.
-                if (player.hasPermission(Permissions.ADMIN.key())) {
+                if (player.hasPermission(Permissions.USER_ADMIN.key())) {
                     var world = Bukkit.getWorld(blockWorld);
                     if (world != null) {
                         player.closeInventory();
@@ -219,7 +221,7 @@ public final class AuditInventory extends BlockProtInventory {
 
         setItemStack(45, Material.CYAN_STAINED_GLASS_PANE,  TranslationKey.INVENTORIES__LAST_PAGE);
         setItemStack(46, Material.BLUE_STAINED_GLASS_PANE,  TranslationKey.INVENTORIES__NEXT_PAGE);
-        if (selectedPlayerUuid == null && player.hasPermission(Permissions.ADMIN.key())) {
+        if (selectedPlayerUuid == null && player.hasPermission(Permissions.USER_ADMIN.key())) {
             setItemStack(49, Material.COMPASS, TranslationKey.INVENTORIES__AUDIT__TELEPORT);
         }
 

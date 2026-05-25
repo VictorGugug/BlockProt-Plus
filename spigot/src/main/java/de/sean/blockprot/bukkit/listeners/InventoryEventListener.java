@@ -171,8 +171,8 @@ public class InventoryEventListener implements Listener {
                 if (!(handler.isNotProtected()
                     || handler.isOwner(playerUuid)
                     || (friend.isPresent() && friend.get().isManager())
-                    || event.getPlayer().hasPermission(Permissions.ADMIN.key())
-                    || event.getPlayer().hasPermission(Permissions.INFO.key()))) {
+                    || event.getPlayer().hasPermission(Permissions.USER_ADMIN.key())
+                    || event.getPlayer().hasPermission(Permissions.USER_ADMIN.key()))) {
                     event.setCancelled(true);
                     sendMessage(event.getPlayer(), Translator.get(TranslationKey.MESSAGES__NO_PERMISSION));
                 }

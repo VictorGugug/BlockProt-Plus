@@ -114,12 +114,14 @@ public class InteractEventListener implements Listener {
             if (!offHandItem.getType().isAir() && offHandItem.getType().isBlock()) return;
             event.setCancelled(true);
 
-            if (!player.hasPermission(Permissions.LOCK.key())) {
+            if (!player.hasPermission(Permissions.USER.key())) {
                 sendMessage(player, Translator.get(TranslationKey.MESSAGES__NO_PERMISSION));
                 return;
             }
 
-            Inventory inv = BlockProtAPI.getInstance().getLockInventoryForBlock(event.getClickedBlock(), player);
+            BlockProtAPI api = BlockProtAPI.getInstance();
+            if (api == null) return;
+            Inventory inv = api.getLockInventoryForBlock(event.getClickedBlock(), player);
             if (inv == null) {
                 sendMessage(player, Translator.get(TranslationKey.MESSAGES__NO_PERMISSION));
             } else {

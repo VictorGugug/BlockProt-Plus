@@ -50,6 +50,7 @@ import java.util.Optional;
  * </ul>
  */
 public final class FriendDetailInventory extends BlockProtInventory {
+    public FriendDetailInventory() { super(true); }
     @Nullable
     private FriendHandler playerHandler = null;
 

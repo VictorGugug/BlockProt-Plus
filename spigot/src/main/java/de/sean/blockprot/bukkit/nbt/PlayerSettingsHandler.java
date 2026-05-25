@@ -85,7 +85,7 @@ public final class PlayerSettingsHandler extends FriendSupportingHandler<NBTComp
     public boolean getLockOnPlace() {
         // We will default to 'true'. The default value for a boolean is 'false',
         // which would also be the default value for NBTCompound#getBoolean
-        if (!container.hasKey(LOCK_ON_PLACE_ATTRIBUTE))
+        if (!container.hasTag(LOCK_ON_PLACE_ATTRIBUTE))
             return BlockProt.getDefaultConfig().lockOnPlaceByDefault();
         return container.getBoolean(LOCK_ON_PLACE_ATTRIBUTE);
     }
@@ -110,7 +110,7 @@ public final class PlayerSettingsHandler extends FriendSupportingHandler<NBTComp
      */
     @Override
     protected void preFriendReadCallback() {
-        if (container.hasKey(DEFAULT_FRIENDS_ATTRIBUTE)
+        if (container.hasTag(DEFAULT_FRIENDS_ATTRIBUTE)
             && container.getType(DEFAULT_FRIENDS_ATTRIBUTE) == NBTType.NBTTagString) {
             final List<String> originalList = BlockProtUtil
                 .parseStringList(container.getString(DEFAULT_FRIENDS_ATTRIBUTE));
@@ -191,7 +191,7 @@ public final class PlayerSettingsHandler extends FriendSupportingHandler<NBTComp
      * @return true if the player has interacted with a menu at least once.
      */
     public boolean hasPlayerInteractedWithMenu() {
-        if (!container.hasKey(PLAYER_HAS_INTERACTED_WITH_MENU)) {
+        if (!container.hasTag(PLAYER_HAS_INTERACTED_WITH_MENU)) {
             return false;
         } else {
             return container.getBoolean(PLAYER_HAS_INTERACTED_WITH_MENU);

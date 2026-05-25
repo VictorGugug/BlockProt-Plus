@@ -42,6 +42,7 @@ import java.util.function.Consumer;
 
 
 public class BlockLockInventory extends BlockProtInventory {
+    public BlockLockInventory() { super(true); }
     @Override
     int getSize() {
         return InventoryConstants.doubleLine;
@@ -156,7 +157,7 @@ public class BlockLockInventory extends BlockProtInventory {
             return null;
         }
 
-        boolean isAdmin = player.hasPermission(Permissions.ADMIN.key());
+        boolean isAdmin = player.hasPermission(Permissions.USER_ADMIN.key());
 
         // Slot 0: lock / unlock button — no lore, always clean
         if (state.menuPermissions.contains(BlockAccessMenuEvent.MenuPermission.LOCK)) {

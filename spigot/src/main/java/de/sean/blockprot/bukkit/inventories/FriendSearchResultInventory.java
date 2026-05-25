@@ -45,6 +45,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class FriendSearchResultInventory extends BlockProtInventory {
+    public FriendSearchResultInventory() { super(true); }
     final ConcurrentLinkedQueue<Profile> resultQueue = new ConcurrentLinkedQueue<>();
 
     private final int maxResults = getSize() - 1;

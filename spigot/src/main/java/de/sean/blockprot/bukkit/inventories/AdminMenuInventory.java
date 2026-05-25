@@ -92,7 +92,7 @@ public class AdminMenuInventory extends BlockProtInventory {
             player.sendActionBar(LegacyComponentSerializer.legacySection().deserialize(
                 Translator.get(TranslationKey.INVENTORIES__ADMIN_MENU__UPDATE_LORE)));
             Bukkit.getScheduler().runTaskAsynchronously(BlockProt.getInstance(),
-                new UpdateChecker(BlockProt.getInstance().getDescription(),
+                new UpdateChecker(BlockProt.getPluginVersion(),
                     new ArrayList<>(Bukkit.getOnlinePlayers())));
 
         } else if (slot == SLOT_INTEGRATIONS) {

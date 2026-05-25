@@ -41,6 +41,7 @@ import java.util.List;
 import java.util.UUID;
 
 public final class FriendManageInventory extends BlockProtInventory {
+    public FriendManageInventory() { super(true); }
     private final int maxSkulls = getSize() - InventoryConstants.singleLine;
 
     @Override

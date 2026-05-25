@@ -35,10 +35,8 @@ public class UpdateCommand implements CommandExecutor {
         if (canUseCommand(sender)) {
             Bukkit.getScheduler().runTaskAsynchronously(
                 BlockProt.getInstance(),
-                new UpdateChecker(
-                    BlockProt.getInstance().getDescription(),
-                    new ArrayList<>(Bukkit.getOnlinePlayers())
-                )
+                new UpdateChecker(BlockProt.getPluginVersion(),
+                    new ArrayList<>(Bukkit.getOnlinePlayers()))
             );
             return true;
         }

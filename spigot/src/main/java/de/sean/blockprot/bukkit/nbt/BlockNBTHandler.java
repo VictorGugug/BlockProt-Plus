@@ -250,7 +250,7 @@ public final class BlockNBTHandler extends FriendSupportingHandler<NBTCompound> 
         if (owner.isEmpty()) {
             // Respect spawn-protection radius from server.properties
             if (BlockProt.getDefaultConfig().shouldRespectSpawnProtection()
-                    && !player.isOp() && !player.hasPermission(Permissions.ADMIN.key())) {
+                    && !player.isOp() && !player.hasPermission(Permissions.USER_ADMIN.key())) {
                 int spawnRadius = org.bukkit.Bukkit.getServer().getSpawnRadius();
                 if (spawnRadius > 0) {
                     org.bukkit.Location spawn = block.getWorld().getSpawnLocation();
@@ -278,7 +278,7 @@ public final class BlockNBTHandler extends FriendSupportingHandler<NBTCompound> 
             }
             HopperEventListener.invalidate(block);
             return new LockReturnValue(true, null);
-        } else if (owner.equals(playerUuid) || player.isOp() || player.hasPermission(Permissions.ADMIN.key())) {
+        } else if (owner.equals(playerUuid) || player.isOp() || player.hasPermission(Permissions.USER_ADMIN.key())) {
             return performUnlock(player);
         }
 

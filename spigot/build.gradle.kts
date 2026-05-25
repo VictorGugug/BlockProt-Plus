@@ -83,11 +83,13 @@ java {
     withSourcesJar()
 }
 
+val pluginVersion: String = project.version.toString()
+
 tasks.processResources {
-    inputs.property("version", project.version)
+    inputs.property("version", pluginVersion)
 
     filesMatching("plugin.yml") {
-        expand("version" to project.version)
+        expand("version" to pluginVersion)
     }
 }
 

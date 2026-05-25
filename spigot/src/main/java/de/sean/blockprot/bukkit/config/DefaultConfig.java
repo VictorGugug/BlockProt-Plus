@@ -107,9 +107,7 @@ public final class DefaultConfig extends BlockProtConfig {
                     try {
                         // Only back up when the plugin version has changed (fresh install or upgrade)
                         String storedVersion = config.getString("last_known_version", "");
-                        String currentVersion = de.sean.blockprot.bukkit.BlockProt.getInstance() != null
-                            ? de.sean.blockprot.bukkit.BlockProt.getInstance().getDescription().getVersion()
-                            : "";
+                        String currentVersion = de.sean.blockprot.bukkit.BlockProt.getPluginVersion();
                         boolean versionChanged = !storedVersion.equals(currentVersion) && !currentVersion.isEmpty();
                         if (versionChanged) {
                             File backupsDir = new File(dataFolder, "backups");

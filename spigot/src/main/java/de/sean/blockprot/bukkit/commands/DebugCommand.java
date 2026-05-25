@@ -44,12 +44,12 @@ public class DebugCommand implements CommandExecutor {
                              @NotNull String label, @NotNull String[] args) {
         if (!canUseCommand(sender)) return false;
         if (!(sender instanceof Player player)) {
-            sender.sendMessage("Only players can use this command.");
+            sender.sendMessage(Translator.get(TranslationKey.MESSAGES__ONLY_PLAYERS));
             return false;
         }
 
         if (args.length < 2) {
-            player.sendMessage("§eUsage: /blockprot debug <run|placeDebugChest|placeDebugShulker|clearSearchHistory>");
+            player.sendMessage(Translator.get(TranslationKey.MESSAGES__DEBUG_USAGE));
             return false;
         }
 

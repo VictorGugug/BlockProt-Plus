@@ -85,12 +85,12 @@ public final class PlaceholderAPIIntegration extends PluginIntegration {
 
         @Override
         public @NotNull String getAuthor() {
-            return BlockProt.getInstance().getDescription().getAuthors().toString();
+            return BlockProt.getPluginAuthors().toString();
         }
 
         @Override
         public @NotNull String getVersion() {
-            return BlockProt.getInstance().getDescription().getVersion();
+            return BlockProt.getPluginVersion();
         }
 
         @Override

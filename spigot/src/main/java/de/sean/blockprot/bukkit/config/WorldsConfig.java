@@ -3,7 +3,6 @@ package de.sean.blockprot.bukkit.config;
 import de.sean.blockprot.bukkit.BlockProtLogger;
 import de.sean.blockprot.bukkit.TranslationKey;
 import de.sean.blockprot.bukkit.Translator;
-import de.sean.blockprot.bukkit.TranslationKey;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.World;
@@ -97,7 +96,7 @@ public final class WorldsConfig {
                 try {
                     var stream = de.sean.blockprot.bukkit.BlockProt.getInstance().getResource("worlds.yml");
                     if (stream != null) {
-                        disk = YamlConfiguration.loadConfiguration(new java.io.BufferedReader(new java.io.InputStreamReader(stream)));
+                        disk = YamlConfiguration.loadConfiguration(new java.io.BufferedReader(new java.io.InputStreamReader(stream, java.nio.charset.StandardCharsets.UTF_8)));
                         disk.save(file);
                         logger.info(Translator.get(TranslationKey.CONSOLE__WORLDS_YML_RESTORED));
                     } else {

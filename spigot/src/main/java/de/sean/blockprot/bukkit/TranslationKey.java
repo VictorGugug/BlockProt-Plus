@@ -140,9 +140,13 @@ public enum TranslationKey {
     /** Emitted when the statistics file could not be saved to disk. */
     CONSOLE__STATS_SAVE_FAILED,
 
-    WORLDS__SCAN_START,
-    WORLDS__SCAN_WORLD_ADDED,
-    WORLDS__SCAN_COMPLETE,
+    // ── Legacy folder migration ───────────────────────────────────────────────
+    CONSOLE__MIGRATION_START,
+    CONSOLE__MIGRATION_DONE,
+    CONSOLE__MIGRATION_FAILED,
+
+    // ── Shutdown ──────────────────────────────────────────────────────────────
+    CONSOLE__SAVING_STATISTICS,
 
     INVENTORIES__AUDIT__TITLE,
     INVENTORIES__AUDIT__NO_ENTRIES,
@@ -231,8 +235,6 @@ public enum TranslationKey {
     INVENTORIES__USER_MENU__ABOUT_LORE,
     INVENTORIES__USER_MENU__CLOSE,
     INVENTORIES__USER_MENU__CLOSE_LORE,
-    MESSAGES__USER_TRANSFER_HINT,
-    MESSAGES__USER_TIMED_HINT,
     MESSAGES__HINTS_DISABLED,
     MESSAGES__COPY_DONE,
     MESSAGES__PASTE_DONE,
@@ -241,6 +243,9 @@ public enum TranslationKey {
     INVENTORIES__STATS__LORE_TP,
     INVENTORIES__STATS__LORE_NO_TP,
     MESSAGES__HINTS_ALREADY,
+
+    MESSAGES__DEBUG_USAGE,
+    MESSAGES__CONSOLE_WARN_PREFIX,
 
     INVENTORIES__ADMIN_MENU__TITLE,
     INVENTORIES__ADMIN_MENU__RELOAD,

@@ -36,6 +36,7 @@ import org.jetbrains.annotations.NotNull;
  * @since 0.4.13
  */
 public class RedstoneSettingsInventory extends BlockProtInventory {
+    public RedstoneSettingsInventory() { super(true); }
     private boolean currentProtection;
     private boolean hopperProtection;
     private boolean pistonProtection;

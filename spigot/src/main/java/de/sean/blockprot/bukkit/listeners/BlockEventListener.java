@@ -206,7 +206,7 @@ public class BlockEventListener implements Listener {
     @EventHandler
     public void onBlockPlace(BlockPlaceEvent event) {
         if (BlockProt.getDefaultConfig().isWorldExcluded(event.getBlock().getWorld())) return;
-        if (!event.getPlayer().hasPermission(Permissions.LOCK.key())) return;
+        if (!event.getPlayer().hasPermission(Permissions.USER.key())) return;
         if (!BlockProt.getDefaultConfig().isLockable(event.getBlock().getType(), event.getBlock().getWorld())) return;
 
         Block block = event.getBlockPlaced();

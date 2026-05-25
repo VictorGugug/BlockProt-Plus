@@ -49,6 +49,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.*;
@@ -84,6 +85,17 @@ public final class BlockProt extends JavaPlugin {
     @Nullable private static HybridDatabase hybridDatabase = null;
     @Nullable private ConfigFileWatcher fileWatcher = null;
 
+    // State carried from migrateFromLegacyFolders() to flushMigrationLog().
+    // Translator is not ready during migration, so messages are deferred.
+    @Nullable private String  pendingMigrationLog     = null;
+    private          boolean  pendingMigrationSuccess = false;
+    @Nullable private String  pendingMigrationError   = null;
+
+    /** Plugin version string cached at startup — avoids repeated getDescription() calls. */
+    @Nullable private static String pluginVersion = null;
+    /** Plugin authors list cached at startup. */
+    @Nullable private static List<String> pluginAuthors = null;
+
     /** Cross-platform scheduler (Spigot / Paper / Purpur / Pufferfish / Folia). */
     @Nullable private static FoliaLib foliaLib = null;
 
@@ -111,6 +123,9 @@ public final class BlockProt extends JavaPlugin {
         return Collections.unmodifiableList(integrations);
     }
 
+    @NotNull public static String getPluginVersion() { return pluginVersion != null ? pluginVersion : ""; }
+    @NotNull public static List<String> getPluginAuthors() { return pluginAuthors != null ? pluginAuthors : List.of(); }
+
     @NotNull public static ProfileCache    getProfileCache()   { assert playerProfileCache   != null; return playerProfileCache; }
     @NotNull public static ProfileService  getProfileService() { assert playerProfileService != null; return playerProfileService; }
     @Nullable public static WorldsConfig   getWorldsConfig()   { return worldsConfig; }
@@ -120,6 +135,8 @@ public final class BlockProt extends JavaPlugin {
     @Override
     public void onLoad() {
         instance = this;
+        pluginVersion = this.getDescription().getVersion();
+        pluginAuthors = this.getDescription().getAuthors();
         try {
             playerProfileCache   = new SQLiteCache(new File(Bukkit.getWorldContainer(), "blockprot_usercache.sqlite"));
             playerProfileService = new CachedProfileService(playerProfileCache);
@@ -146,10 +163,10 @@ public final class BlockProt extends JavaPlugin {
         migrateFromLegacyFolders();
 
         foliaLib = new FoliaLib(this);
-        foliaLib.getScheduler().runAsync(task -> new UpdateChecker(this.getDescription()).run());
+        foliaLib.getScheduler().runAsync(task -> new UpdateChecker(BlockProt.getPluginVersion()).run());
         MinecraftVersion.disableUpdateCheck();
         BlockProtLogger.init(this.getDataFolder());
-        String version = this.getDescription().getVersion();
+        String version = BlockProt.getPluginVersion();
 
         // Session header — written to the log file only, not the console.
         BlockProtLogger.log("=== Startup: BlockProt v" + version + " ===");
@@ -167,11 +184,11 @@ public final class BlockProt extends JavaPlugin {
         saveResourceSilent("blocks.yml", false);
         saveResourceSilent("mysql/mysql.yml", false);
         this.reloadConfigAndTranslations();
-        if (!getDescription().getVersion().equals(getConfig().getString("last_known_version", ""))) {
-            getConfig().set("last_known_version", getDescription().getVersion());
+        this.flushMigrationLog();
+        if (!BlockProt.getPluginVersion().equals(getConfig().getString("last_known_version", ""))) {
+            getConfig().set("last_known_version", BlockProt.getPluginVersion());
             saveConfig();
         }
-        VersionValidator.validateStartup();
 
         boolean hasUpgradeData = BackupTask.hasPriorData(this.getDataFolder());
         if (hasUpgradeData) {
@@ -219,6 +236,8 @@ public final class BlockProt extends JavaPlugin {
 
         BlockProtConsole.printStartupBanner(version);
 
+        new BlockProtAPI(this);
+
         /* Register Listeners */
         final PluginManager pm = getServer().getPluginManager();
         registerEvent(pm, new BlockEventListener(this));
@@ -254,7 +273,7 @@ public final class BlockProt extends JavaPlugin {
     @Override
     public void onDisable() {
         if (!isRunningCraftBukkit()) {
-            getLogger().info("Saving statistics to disk...");
+            BlockProtConsole.info(Translator.get(TranslationKey.CONSOLE__SAVING_STATISTICS));
             StatHandler.disable();
             getServer().getOnlinePlayers().forEach(HumanEntity::closeInventory);
         }
@@ -289,7 +308,7 @@ public final class BlockProt extends JavaPlugin {
             throw new RuntimeException("Failed to load the default language file. The plugin JAR may be corrupt.");
         }
         YamlConfiguration defaultLanguageConfig = YamlConfiguration.loadConfiguration(
-            new BufferedReader(new InputStreamReader(defaultLanguageStream)));
+            new BufferedReader(new InputStreamReader(defaultLanguageStream, StandardCharsets.UTF_8)));
 
         final String fileName = defaultConfig.getLanguageFile() == null
             ? defaultLanguageFile : defaultConfig.getLanguageFile();
@@ -349,7 +368,7 @@ public final class BlockProt extends JavaPlugin {
         InputStream jarStream = this.getResource(langFolder + resource);
         if (jarStream == null) return;
 
-        YamlConfiguration jarConfig  = YamlConfiguration.loadConfiguration(new BufferedReader(new InputStreamReader(jarStream)));
+        YamlConfiguration jarConfig  = YamlConfiguration.loadConfiguration(new BufferedReader(new InputStreamReader(jarStream, StandardCharsets.UTF_8)));
         YamlConfiguration diskConfig = YamlConfiguration.loadConfiguration(diskFile);
 
         int added = 0;
@@ -389,7 +408,7 @@ public final class BlockProt extends JavaPlugin {
         InputStream jarStream = this.getResource("config.yml");
         if (jarStream == null) return;
         YamlConfiguration template = YamlConfiguration.loadConfiguration(
-            new BufferedReader(new InputStreamReader(jarStream)));
+            new BufferedReader(new InputStreamReader(jarStream, StandardCharsets.UTF_8)));
 
         // Overlay user values onto the clean template (template keys only).
         for (String key : template.getKeys(true)) {
@@ -422,7 +441,7 @@ public final class BlockProt extends JavaPlugin {
         InputStream jarStream = this.getResource("config.yml");
         if (jarStream == null) return;
 
-        YamlConfiguration jarConfig  = YamlConfiguration.loadConfiguration(new BufferedReader(new InputStreamReader(jarStream)));
+        YamlConfiguration jarConfig  = YamlConfiguration.loadConfiguration(new BufferedReader(new InputStreamReader(jarStream, StandardCharsets.UTF_8)));
         YamlConfiguration diskConfig = YamlConfiguration.loadConfiguration(diskFile);
         int added = 0;
         for (String key : jarConfig.getKeys(true)) {
@@ -488,7 +507,6 @@ public final class BlockProt extends JavaPlugin {
      * </ul>
      */
     private void migrateFromLegacyFolders() {
-        // If the current data folder already has a config.yml, nothing to migrate.
         if (new File(this.getDataFolder(), "config.yml").exists()) return;
 
         final String[] legacyNames = {"BlockProt", "BlockProtPlus"};
@@ -498,23 +516,43 @@ public final class BlockProt extends JavaPlugin {
         for (String legacyName : legacyNames) {
             File legacyFolder = new File(pluginsDir, legacyName);
             if (!legacyFolder.isDirectory()) continue;
-            // Already migrated from this folder on a previous boot.
             if (new File(legacyFolder, ".migrated").exists()) continue;
-            // Only migrate if the legacy folder has meaningful content.
             if (!new File(legacyFolder, "config.yml").exists()) continue;
 
-            getLogger().info("[BlockProt] Migrating data from " + legacyName + " → " + this.getDataFolder().getName());
+            // Translator is not yet loaded at this point — store raw strings for post-init logging.
+            pendingMigrationLog = legacyName;
             try {
                 copyDirectoryContents(legacyFolder.toPath(), this.getDataFolder().toPath());
-                // Write marker so we don't re-migrate on subsequent boots.
-                new File(legacyFolder, ".migrated").createNewFile();
-                getLogger().info("[BlockProt] Migration from " + legacyName + " complete. The old folder was left intact.");
+                Files.createFile(legacyFolder.toPath().resolve(".migrated"));
+                pendingMigrationSuccess = true;
             } catch (IOException e) {
-                getLogger().warning("[BlockProt] Migration from " + legacyName + " failed: " + e.getMessage());
+                pendingMigrationError = e.getMessage();
             }
-            // Use only the first matching legacy folder.
             break;
         }
+    }
+
+    /**
+     * Emits the queued migration messages through Translator after translations are loaded.
+     * Called immediately after {@link #reloadConfigAndTranslations()}.
+     */
+    private void flushMigrationLog() {
+        if (pendingMigrationLog == null) return;
+        String source = pendingMigrationLog;
+        String target = this.getDataFolder().getName();
+        if (pendingMigrationSuccess) {
+            BlockProtConsole.info(Translator.get(TranslationKey.CONSOLE__MIGRATION_START)
+                .replace("{source}", source).replace("{target}", target));
+            BlockProtConsole.info(Translator.get(TranslationKey.CONSOLE__MIGRATION_DONE)
+                .replace("{source}", source));
+        } else {
+            BlockProtConsole.warn(Translator.get(TranslationKey.CONSOLE__MIGRATION_FAILED)
+                .replace("{source}", source)
+                .replace("{error}", pendingMigrationError != null ? pendingMigrationError : "unknown"));
+        }
+        pendingMigrationLog     = null;
+        pendingMigrationSuccess = false;
+        pendingMigrationError   = null;
     }
 
     /**

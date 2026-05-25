@@ -66,33 +66,39 @@ public final class UpdateChecker implements Runnable {
     private final List<Player> recipients;
 
     @NotNull
-    private final PluginDescriptionFile description;
+    private final String pluginVersion;
 
     @NotNull
     private final SemanticVersion currentVersion;
 
-    /**
-     * Creates a new update checker that only prints to the console.
-     *
-     * @param description The plugin.yml file of the plugin.
-     */
+    public UpdateChecker(@NotNull final String version) {
+        this.pluginVersion = version;
+        this.recipients = null;
+        this.currentVersion = new SemanticVersion(version);
+    }
+
+    /** @deprecated Use {@link #UpdateChecker(String)} instead. */
+    @Deprecated
     public UpdateChecker(@NotNull final PluginDescriptionFile description) {
-        this.description = description;
+        this.pluginVersion = description.getVersion();
         this.recipients = null;
         this.currentVersion = new SemanticVersion(description.getVersion());
     }
 
-    /**
-     * Creates a new update checker that messages the given players.
-     *
-     * @param description The plugin.yml file of the plugin.
-     * @param recipients  The list of players to message.
-     */
+    /** @deprecated Use the String-based constructor. */
+    @Deprecated
     public UpdateChecker(@NotNull final PluginDescriptionFile description,
                          @Nullable final List<Player> recipients) {
         this.recipients = recipients;
-        this.description = description;
+        this.pluginVersion = description.getVersion();
         this.currentVersion = new SemanticVersion(description.getVersion());
+    }
+
+    public UpdateChecker(@NotNull final String version,
+                         @Nullable final List<Player> recipients) {
+        this.recipients = recipients;
+        this.pluginVersion = version;
+        this.currentVersion = new SemanticVersion(version);
     }
 
     @Override
@@ -154,13 +160,13 @@ public final class UpdateChecker implements Runnable {
             // In-game notification for ops/admins on join.
             String message;
             if (isOutdated) {
-                message = description.getName() + " v" + currentVersion
+                message = "BlockProt Reloaded v" + currentVersion
                     + " is installed, but v" + latestVersion + " is available.";
             } else if (latestVersion.compareTo(currentVersion) < 0) {
-                message = description.getName() + " is running v" + currentVersion
+                message = "BlockProt Reloaded is running v" + currentVersion
                     + " (ahead of the latest release v" + latestVersion + ")";
             } else {
-                message = description.getName() + " is up to date (v" + currentVersion + ")";
+                message = "BlockProt Reloaded is up to date (v" + currentVersion + ")";
             }
             var comp = Component.text(message);
             if (isOutdated) {
@@ -176,13 +182,12 @@ public final class UpdateChecker implements Runnable {
             // Startup console check: only print a warning if outdated; log silently otherwise.
             if (isOutdated) {
                 BlockProt.getInstance().getLogger().warning(
-                    description.getName() + " v" + currentVersion
+                    "BlockProt Reloaded v" + currentVersion
                         + " — update available: v" + latestVersion
                         + " | " + RELEASE_URL);
             } else {
-                // Up to date — write to session log only, no console noise.
                 BlockProtLogger.log("update-checker",
-                    description.getName() + " is up to date (v" + currentVersion + ")");
+                    "BlockProt Reloaded is up to date (v" + currentVersion + ")");
             }
         }
     }

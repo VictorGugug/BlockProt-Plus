@@ -25,6 +25,7 @@ import de.sean.blockprot.bukkit.nbt.stats.BlockCountStatistic;
 import de.sean.blockprot.bukkit.nbt.stats.BukkitListStatistic;
 import de.sean.blockprot.bukkit.nbt.stats.BukkitStatistic;
 import de.sean.blockprot.bukkit.nbt.stats.PlayerBlocksStatistic;
+import de.sean.blockprot.nbt.stats.ListStatisticItem;
 import de.sean.blockprot.nbt.stats.StatisticOnClickAction;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -99,8 +100,8 @@ public final class StatisticsInventory extends BlockProtInventory {
     public void openStatInventory(@NotNull final BukkitStatistic<?> stat, @NotNull final Player player) {
         if (stat.getClickAction() == StatisticOnClickAction.NONE) return;
         if (player.getOpenInventory().getTopInventory().getHolder() instanceof StatisticListInventory) return;
-        if (stat.getClickAction() == StatisticOnClickAction.LIST_MENU && stat instanceof BukkitListStatistic) {
-            closeAndOpen(player, new StatisticListInventory().fill(player, (BukkitListStatistic) stat));
+        if (stat.getClickAction() == StatisticOnClickAction.LIST_MENU && stat instanceof BukkitListStatistic<?, ?> listStat) {
+            closeAndOpen(player, new StatisticListInventory().fill(player, (BukkitListStatistic<ListStatisticItem<?, Material>, ?>) listStat));
         }
     }
 

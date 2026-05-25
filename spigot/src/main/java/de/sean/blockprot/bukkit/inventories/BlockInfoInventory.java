@@ -36,6 +36,7 @@ import org.jetbrains.annotations.NotNull;
 import java.util.UUID;
 
 public class BlockInfoInventory extends BlockProtInventory {
+    public BlockInfoInventory() { super(true); }
     private final int maxSkulls = getSize() - InventoryConstants.singleLine;
 
     @Override

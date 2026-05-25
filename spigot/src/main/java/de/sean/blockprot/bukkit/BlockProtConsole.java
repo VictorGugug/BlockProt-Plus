@@ -103,7 +103,7 @@ public final class BlockProtConsole {
         if (pluginLogger != null) {
             pluginLogger.warning(message);
         } else {
-            Bukkit.getConsoleSender().sendMessage("[BlockProt] WARN: " + message);
+            Bukkit.getConsoleSender().sendMessage(Translator.get(TranslationKey.MESSAGES__CONSOLE_WARN_PREFIX) + message);
         }
     }
 

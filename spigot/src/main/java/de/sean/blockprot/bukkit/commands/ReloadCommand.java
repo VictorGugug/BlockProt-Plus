@@ -21,7 +21,7 @@ package de.sean.blockprot.bukkit.commands;
 import de.sean.blockprot.bukkit.BlockProt;
 import de.sean.blockprot.bukkit.TranslationKey;
 import de.sean.blockprot.bukkit.Translator;
-import net.md_5.bungee.api.chat.TextComponent;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.jetbrains.annotations.NotNull;
@@ -37,7 +37,8 @@ public class ReloadCommand implements CommandExecutor {
             // reloadConfigAndTranslations() has a chance to repair/overwrite any file.
             new de.sean.blockprot.bukkit.tasks.BackupTask(BlockProt.getInstance().getDataFolder(), true).run();
             BlockProt.getInstance().reloadConfigAndTranslations();
-            sender.spigot().sendMessage(new TextComponent(Translator.get(TranslationKey.MESSAGES__RELOAD_DONE)));
+            sender.sendMessage(LegacyComponentSerializer.legacySection().deserialize(
+                Translator.get(TranslationKey.MESSAGES__RELOAD_DONE)));
             return true;
         }
         return false;

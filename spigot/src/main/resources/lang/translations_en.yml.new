@@ -193,8 +193,6 @@ messages:
   admin_info_player_not_found: "§cPlayer not found: {player}"
   admin_info_no_blocks: "§7{player} owns no locked blocks."
   # ── User / Admin menus ────────────────────────────────────────────────────
-  user_transfer_hint: "§7Look at a block you own then use: §f/bp transfer <player>"
-  user_timed_hint: "§7Look at a block you own then use: §f/bp timed <player> <seconds>"
   hints_disabled: "§aProtection hints disabled."
   hints_already: "§7Hints already managed. Adjust them in My Settings."
   copy_done: "§aConfiguration copied."
@@ -205,6 +203,8 @@ messages:
   admin_integrations: "§7[BP Admin] Integrations ({count}): {integrations}"
   admin_info_hint: "§7[BP Admin] Use §f/bp info <player>§7 to list their protected blocks."
   admin_debug_hint: "§7[BP Admin] Running diagnostics..."
+  debug_usage: "§eUsage: /blockprot debug <run|placeDebugChest|placeDebugShulker|clearSearchHistory>"
+  console_warn_prefix: "[BlockProt] WARN: "
 
 console:
   config_change_detected: "Configuration change detected; reloading..."
@@ -213,8 +213,6 @@ console:
   audit_logger_started: "Audit logger started."
   audit_logger_failed: "Could not start audit logger: {error}"
   worldedit_listener_enabled: "WorldEdit paste auto-lock listener enabled."
-  claims_system_enabled: "Claims system enabled."
-  claims_system_disabled: "Claims system disabled (claims_enabled=false)."
   worlds_yml_syntax_error: "worlds.yml has a YAML syntax error; restoring from defaults: {error}"
   worlds_yml_restored: "worlds.yml restored from internal defaults."
   worlds_yml_restore_failed: "Could not restore worlds.yml: {error}"

@@ -43,7 +43,7 @@ public class RedstoneSettingsHandler extends NBTHandler<NBTCompound> {
      * @since 0.4.13
      */
     public boolean getCurrentProtection() {
-        if (!container.hasKey(CURRENT_PROTECTION_ATTRIBUTE)) return DEFAULT_PROTECTION_VALUE;
+        if (!container.hasTag(CURRENT_PROTECTION_ATTRIBUTE)) return DEFAULT_PROTECTION_VALUE;
         return container.getBoolean(CURRENT_PROTECTION_ATTRIBUTE);
     }
 
@@ -60,7 +60,7 @@ public class RedstoneSettingsHandler extends NBTHandler<NBTCompound> {
      * @since 0.4.13
      */
     public boolean getPistonProtection() {
-        if (!container.hasKey(PISTON_PROTECTION_ATTRIBUTE)) return DEFAULT_PROTECTION_VALUE;
+        if (!container.hasTag(PISTON_PROTECTION_ATTRIBUTE)) return DEFAULT_PROTECTION_VALUE;
         return container.getBoolean(PISTON_PROTECTION_ATTRIBUTE);
     }
 
@@ -77,7 +77,7 @@ public class RedstoneSettingsHandler extends NBTHandler<NBTCompound> {
      * @since 0.4.13
      */
     public boolean getHopperProtection() {
-        if (!container.hasKey(HOPPER_PROTECTION_ATTRIBUTE)) return DEFAULT_PROTECTION_VALUE;
+        if (!container.hasTag(HOPPER_PROTECTION_ATTRIBUTE)) return DEFAULT_PROTECTION_VALUE;
         return container.getBoolean(HOPPER_PROTECTION_ATTRIBUTE);
     }
 
