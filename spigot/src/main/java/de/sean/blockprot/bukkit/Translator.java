@@ -20,6 +20,9 @@ package de.sean.blockprot.bukkit;
 
 import com.google.common.collect.Sets;
 import de.sean.blockprot.nbt.LockReturnValue;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.minimessage.MiniMessage;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.ChatColor;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.jetbrains.annotations.NotNull;
@@ -31,13 +34,25 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * Helper to quickly obtain translations from a config by a enum key.
+ * Helper to quickly obtain translations from a config by an enum key.
+ *
+ * <h3>Color and formatting support</h3>
+ * <p>Translation values may use either the legacy {@code &} color code format
+ * (e.g. {@code &6}, {@code &a}, {@code &l}) or the Adventure
+ * <a href="https://docs.advntr.dev/minimessage/format.html">MiniMessage</a>
+ * format (e.g. {@code <gold>}, {@code <bold>}, {@code <gradient:red:blue>}).
+ * Both formats are auto-detected and processed correctly.
+ *
+ * <p>Detection logic: if the raw value contains {@code <} followed by a
+ * known MiniMessage tag name (closing or opening), it is parsed as MiniMessage
+ * and then serialized back to a legacy section-symbol string for compatibility
+ * with the existing Bukkit component APIs used throughout the plugin.
+ * Otherwise, the legacy {@code &} translator is applied as before.
  *
  * <h3>BPR self-repair</h3>
  * <p>When a key is missing from the active language file but exists in the
  * bundled English file, the English value is used silently. Console output is
- * limited to one localized summary line; the full details go to the session
- * log to avoid flooding the server console.</p>
+ * limited to one localized summary line; full details go to the session log.</p>
  *
  * @since 0.1.10
  */
@@ -80,6 +95,16 @@ public final class Translator {
 
     static String DEFAULT_FALLBACK = "";
 
+    /** Shared MiniMessage instance — stateless, safe to reuse. */
+    private static final MiniMessage MINI_MESSAGE = MiniMessage.miniMessage();
+
+    /**
+     * Converts Adventure components back to legacy section-symbol strings
+     * for compatibility with Bukkit APIs used throughout the plugin.
+     */
+    private static final LegacyComponentSerializer LEGACY_SERIALIZER =
+        LegacyComponentSerializer.legacySection();
+
     /**
      * @since 0.2.3
      */
@@ -109,15 +134,12 @@ public final class Translator {
         final String langFile = BlockProt.getDefaultConfig().getLanguageFile();
         TranslationKey[] translations = TranslationKey.values();
 
-        // Summary lists; individual keys are written only to the session log.
         List<String> missingInBoth   = new ArrayList<>();
         List<String> missingInActive = new ArrayList<>();
 
         for (TranslationKey translation : translations) {
             String translationKey = translation.toString();
 
-            // Missing in both files: use the YAML key as fallback instead of a
-            // generic 'Unknown Translation' placeholder, so the log is actionable.
             if (!defaultConfig.contains(translationKey, true)
                     && !config.contains(translationKey, true)) {
                 values.put(translation, new TranslationValue(translationKey));
@@ -125,19 +147,16 @@ public final class Translator {
                 continue;
             }
 
-            // Bundled English fallback value.
             Object defaultValue = defaultConfig.get(translationKey);
             TranslationValue translatedValue =
                 (defaultValue instanceof String)
                     ? new TranslationValue((String) defaultValue)
                     : TranslationValue.UNKNOWN_TRANSLATION_VALUE;
 
-            // Active language value.
             Object activeValue = config.get(translationKey);
             if (activeValue instanceof String) {
                 translatedValue.setTranslatedValue((String) activeValue);
             } else {
-                // Missing in the active language: use English silently.
                 missingInActive.add(translationKey);
             }
 
@@ -168,13 +187,46 @@ public final class Translator {
     }
 
     /**
+     * Returns true if the string contains a MiniMessage opening or closing tag.
+     *
+     * <p>Conservative check: looks for {@code <letter} (opening) or {@code </} (closing).
+     * Avoids false positives on plain {@code <} characters used in math or HTML-like text.</p>
+     */
+    private static boolean containsMiniMessage(@NotNull String text) {
+        int idx = text.indexOf('<');
+        while (idx != -1) {
+            if (idx + 1 < text.length()) {
+                char next = text.charAt(idx + 1);
+                if (Character.isLetter(next) || next == '/') return true;
+            }
+            idx = text.indexOf('<', idx + 1);
+        }
+        return false;
+    }
+
+    /**
+     * Processes a raw translation string into a legacy section-symbol formatted string.
+     *
+     * <p>If MiniMessage tags are detected the string is parsed by Adventure and serialized
+     * back to legacy format. Otherwise, legacy {@code &} color codes are translated as before.</p>
+     */
+    @NotNull
+    private static String process(@NotNull String raw) {
+        if (containsMiniMessage(raw)) {
+            Component component = MINI_MESSAGE.deserialize(raw);
+            return LEGACY_SERIALIZER.serialize(component);
+        }
+        return ChatColor.translateAlternateColorCodes('&', raw);
+    }
+
+    /**
      * Get the translated String by translation key. This will use
      * {@link TranslationValue#getValue()}, so values that are not
      * translated still use their default value.
      *
-     * <p>Legacy color codes using {@code &} are translated to their
-     * {@code §} equivalents, supporting all standard Minecraft formatting
-     * codes (e.g. {@code &6}, {@code &a}, {@code &l}).</p>
+     * <p>Supports both legacy color codes ({@code &6}, {@code &a}, {@code &l})
+     * and the Adventure MiniMessage format ({@code <gold>}, {@code <bold>},
+     * {@code <gradient:red:blue>}). Both formats are detected automatically.</p>
      *
      * @param key the translation key to search for.
      * @return A translated String or an empty string if not found.
@@ -184,7 +236,7 @@ public final class Translator {
     public static String get(@NotNull final TranslationKey key) {
         TranslationValue value = values.get(key);
         String raw = value == null ? key.toString() : value.getValue();
-        return ChatColor.translateAlternateColorCodes('&', raw);
+        return process(raw);
     }
 
     /**

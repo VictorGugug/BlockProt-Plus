@@ -22,6 +22,25 @@
 
 ---
 
+## Table of Contents
+
+- [Screenshots](#screenshots)
+- [Installing](#installing)
+- [File Layout](#file-layout)
+- [GUI Overview](#gui-overview)
+- [Commands](#commands)
+- [Permissions](#permissions)
+- [Features](#features)
+- [Configuration Reference](#configuration-reference)
+- [Integrations](#integrations)
+- [Compatibility](#compatibility)
+- [Translating](#translating)
+- [Roadmap](#roadmap)
+- [Contact / Support](#contact--support)
+- [License](#license)
+
+---
+
 ## Screenshots
 
 ### Block Lock Menu
@@ -94,7 +113,7 @@ Admin tool to view all blocks owned by any player. Click to teleport to each blo
 Download the latest JAR from [Releases](https://github.com/VictorGugug/BlockProt-Reloaded/releases)
 and drop it in your `plugins/` folder. Requires **Java 25** and **Paper/Spigot 1.20+**.
 
-### Build from source
+### Build from Source
 
 ```bash
 git clone https://github.com/VictorGugug/BlockProt-Reloaded.git
@@ -113,46 +132,46 @@ Output → `spigot/build/libs/BlockProt-VERSION.jar`
 
 | Value | Output |
 |---|---|
-| *(blank)* | `BlockProt-1.3.0.jar` — stable release |
-| `SNAPSHOT` | `BlockProt-1.3.0-SNAPSHOT.jar` |
-| `alpha.1` | `BlockProt-1.3.0-alpha.1.jar` |
-| `beta.1` | `BlockProt-1.3.0-beta.1.jar` |
-| `rc.1` | `BlockProt-1.3.0-rc.1.jar` |
-| `exp` | `BlockProt-1.3.0-exp.jar` — experimental |
+| *(blank)* | `BlockProt-1.3.1.jar` — stable release |
+| `SNAPSHOT` | `BlockProt-1.3.1-SNAPSHOT.jar` |
+| `alpha.1` | `BlockProt-1.3.1-alpha.1.jar` |
+| `beta.1` | `BlockProt-1.3.1-beta.1.jar` |
+| `rc.1` | `BlockProt-1.3.1-rc.1.jar` |
+| `exp` | `BlockProt-1.3.1-exp.jar` — experimental |
 
 ---
 
-## File layout
+## File Layout
 
 ```
 plugins/BlockProt/
-├── config.yml              ← Main configuration
-├── blocks.yml              ← Lockable block lists (generated on first start)
-├── worlds.yml              ← Per-world overrides (optional)
+├── config.yml                          ← Main configuration
+├── blocks.yml                          ← Lockable block lists (generated on first start)
+├── worlds.yml                          ← Per-world overrides (optional)
 ├── mysql/
-│   ├── mysql.yml               ← MySQL/Storage configuration
-│   └── blockprot_audit.sqlite  ← SQLite access audit log
+│   ├── mysql.yml                       ← MySQL/Storage configuration
+│   └── blockprot_audit.sqlite          ← SQLite access audit log
 ├── lang/
-│   └── translations_*.yml
+│   └── translations_*.yml              ← 15 bundled language files
 ├── logs/
-│   └── session-YYYY-MM-DD.log
+│   └── session-YYYY-MM-DD.log          ← Per-session log file
 └── backups/
     └── config-backup-YYYY-MM-DD_HH-MM.yml   ← Created on plugin version upgrade
 ```
 
-`blocks.yml` is generated automatically. If your old `config.yml` had lockable block lists, those values are migrated and removed from `config.yml` automatically.
+`blocks.yml` is generated automatically on first start. If your existing `config.yml` contained lockable block lists, those values are migrated to `blocks.yml` and removed from `config.yml` automatically.
 
 ---
 
-## GUI overview
+## GUI Overview
 
-### Block lock (sneak + right-click any lockable block)
+### Block Lock Menu (Sneak + Right-Click Any Lockable Block)
 
 Two-row inventory. Top row holds functional buttons; bottom row holds utility buttons.
 
 **Top row (slots 0–8):**
 
-| Slot | Item | Condition |
+| Slot | Item | Function |
 |---|---|---|
 | 0 | Block icon | Lock / Unlock toggle |
 | 1 | Redstone | Redstone / piston / hopper settings |
@@ -169,57 +188,53 @@ Two-row inventory. Top row holds functional buttons; bottom row holds utility bu
 | 14 | Knowledge Book — Paste config | Manager + clipboard has data |
 | 15 | Paper — Copy config | Manager |
 | 16 | Compass — Block info | Manager |
-| 17 | **Barrier — Back** | Always |
+| 17 | Barrier — Back | Always |
 
-Copying sends **"Configuration copied."** in the action bar.
-Pasting sends **"Configuration pasted."** in the action bar.
+Copying sends **"Configuration copied."** in the action bar. Pasting sends **"Configuration pasted."** in the action bar. Pasting **replaces** the friend list entirely rather than appending — this matches the expected behavior and resolves upstream issue [#268](https://github.com/spnda/BlockProt/issues/268).
 
-### Statistics list
+### Statistics List
 
-Each entry shows the **real block icon** (White Shulker Box, Barrel, Copper Chest, Shelf, etc.) and a title with the block type and coordinates. Each entry also shows **how long ago the block was locked** (e.g. `Locked 3 days ago`) when a timestamp is available. Click any entry to **teleport** to that block (requires `blockprot.blocks.tp`).
+Each entry displays the **real block icon** (White Shulker Box, Barrel, Copper Chest, Shelf, etc.) with a title showing the block type and coordinates, plus **how long ago the block was locked** (e.g. `Locked 3 days ago`) when a timestamp is available. Click any entry to **teleport** to that block (requires `blockprot.blocks.tp`). Stale entries (blocks that no longer exist at that location) are automatically filtered out.
 
-Broken blocks (AIR at that location) are automatically filtered from the list.
+### User Menu (`/bp user`, requires `use_menus: true`)
 
-### User menu (`/bp user`, requires `use_menus: true`)
-
-Three-row inventory. Items span slots 10–16 of the middle row (27-slot inventory):
+Three-row inventory. Items span slots 10–16 of the middle row:
 
 | Slot | Item | Material | Action |
 |---|---|---|---|
 | 10 | My Settings | Writable Book | Lock-on-place, hints, global friends |
 | 11 | Friends | Player Head | Default friend list |
 | 12 | Statistics | Book | Block statistics |
-| 13 | Transfer block | Ender Pearl | Sends chat hint: look at a block → `/bp transfer <player>` |
-| 14 | Timed access | Clock | Sends chat hint: look at a block → `/bp timed <player> <seconds>` |
-| 16 | About | Nether Star | Plugin/fork info |
+| 13 | Transfer block | Ender Pearl | Chat hint: look at a block → `/bp transfer <player>` |
+| 14 | Timed access | Clock | Chat hint: look at a block → `/bp timed <player> <seconds>` |
+| 16 | About | Nether Star | Plugin / fork information |
 
-### Admin menu (`/bp admin`, requires `use_menus: true` + `blockprot.user.admin`)
+### Admin Menu (`/bp admin`, requires `use_menus: true` + `blockprot.user.admin`)
 
 Three-row inventory. Items in the middle row:
 
 | Slot | Item | Action |
 |---|---|---|
-| 11 | Comparator | Reload config + translations |
+| 11 | Comparator | Reload config and translations |
 | 12 | Spyglass | Check for updates |
 | 13 | Chain | List active integrations |
 | 14 | Book | Open server statistics |
 | 15 | Command Block | Run diagnostics (`/bp debug run`) |
-| 16 | **Player Head** | **Open player block-list GUI** |
+| 16 | Player Head | Open player block-list GUI |
 
-### Player block-list (`/bp info <player>` or Admin menu → Player Head)
+### Player Block-List (`/bp info <player>` or Admin Menu → Player Head)
 
-Six-row GUI listing every block owned by the selected player. Each entry shows the **real block icon** with coordinates and time since locking. Click any entry to **teleport** (requires `blockprot.blocks.tp`). Supports pagination. Back button (Barrier) returns to admin menu when opened from there.
+Six-row GUI listing every block owned by the selected player. Each entry shows the **real block icon** with coordinates and time since locking. Click any entry to **teleport** (requires `blockprot.blocks.tp`). Supports pagination. Back button (Barrier, slot 53) returns to the admin menu when opened from there.
 
-Requires `blockprot.user.admin`.
+Works for **offline players** — reads their stats directly from the NBT file. Requires `blockprot.user.admin`.
 
 ---
 
 ## Commands
 
-Extra commands are **disabled by default** when `use_menus: true`.
-Set `use_menus: true` in `config.yml` to activate the GUI menus (`/bp user`, `/bp admin`) and disable the CLI subcommands.
+Extra commands are **disabled by default** when `use_menus: true`. Set `use_menus: true` in `config.yml` to activate the GUI menus (`/bp user`, `/bp admin`) and disable the CLI subcommands.
 
-| Command | Permission | Available when |
+| Command | Permission | Available When |
 |---|---|---|
 | `/bp user` | `blockprot.user` | `use_menus: true` |
 | `/bp admin` | `blockprot.user.admin` | `use_menus: true` |
@@ -238,8 +253,7 @@ Set `use_menus: true` in `config.yml` to activate the GUI menus (`/bp user`, `/b
 
 Alias: `/blockprot`.
 
-> **`/bp info <player>`** opens a live GUI for Player senders and falls back to chat output for Console.
-> Works for **offline players** too — reads their stats directly from the NBT file.
+> **`/bp info <player>`** opens a live GUI for player senders and falls back to chat output for the console. Works for **offline players** — reads their stats directly from the NBT file.
 
 ---
 
@@ -251,68 +265,64 @@ Alias: `/blockprot`.
 | `blockprot.user.admin` | `op` | Admin actions: reload, debug, info, integrations, update |
 | `blockprot.bypass` | `false` | Bypass all block protections |
 | `blockprot.blocks.tp` | `op` | Teleport to a block from the statistics or admin block-list |
-| `blockprot.lockmax` | `false` | Check for specific lock limits defined by the `blockprot.locklimit.<number>` nodes |
+| `blockprot.lockmax` | `false` | Enable specific lock limits via `blockprot.locklimit.<number>` nodes |
 | `blockprot.locklimit.<number>` | `false` | Limit the maximum number of locked blocks for a player to `<number>` |
 
 ---
 
 ## Features
 
-### Core block protection (upstream)
+### Core Block Protection (Upstream)
 
 - Sneak + right-click any lockable block to open the protection GUI.
 - Add friends with **Read / Write / Manager** permission levels.
 - Redstone, hopper, and piston protection toggles per block.
-- Copy / paste protection settings between blocks.
+- Copy / paste protection settings between blocks (paste replaces, not appends).
 - Per-player default friend list applied to all new locks.
 
 ---
 
-### BlockProt Reloaded additions
+### BlockProt Reloaded Additions
 
 #### 1. Java 25 / Paper 1.20–26.x Compatibility
 
-Compiles against Paper/Spigot 1.20.6 API and runs on any version from 1.20 through 26.1.x.
-Detects both `1.x` and year-based `26.x` server version schemes at runtime.
-APIs introduced after 1.20.6 (typed inventory views in 1.21.4, sign editor in 1.20) are accessed
-via `VersionCompat` checks and reflection — zero `NoClassDefFoundError` on older servers.
-Validates Java version, Paper availability, and typed inventory view support on startup.
+Compiles against the Paper/Spigot 1.20.6 API and runs on any version from 1.20 through 26.1.x. Detects both `1.x` and year-based `26.x` server version schemes at runtime. APIs introduced after 1.20.6 (typed inventory views in 1.21.4, native sign editor in 1.20) are accessed via `VersionCompat` checks and reflection — zero `NoClassDefFoundError` on older servers. Validates Java version, Paper availability, and typed inventory view support on startup.
 
 #### 2. Persistent Session Logging
 
-One timestamped log file per server session under `plugins/BlockProt/logs/`. Logs plugin version, server version, and compatibility results. Console stays clean.
+One timestamped log file per server session under `plugins/BlockProt/logs/`. Logs plugin version, server version, and compatibility results. Console output remains clean.
 
 #### 3. Hybrid MySQL / NBT Backend *(optional)*
 
-NBT remains the source of truth. MySQL/MariaDB is an optional index for fast lookups via HikariCP connection pool. All SQL is asynchronous with an in-memory trust cache. Configure in `mysql/mysql.yml`.
+NBT remains the source of truth. MySQL/MariaDB is an optional index for fast lookups via a HikariCP connection pool. All SQL operations are fully asynchronous with an in-memory trust cache. Configured in `mysql/mysql.yml`.
 
 #### 4. Separate Block Definitions (`blocks.yml`)
 
-Lockable block lists live in `blocks.yml`, not `config.yml`. Old lists are migrated automatically. Edit and run `/bp reload` — no restart needed.
+Lockable block lists live in `blocks.yml` rather than `config.yml`. Old lists are migrated automatically. Edit the file and run `/bp reload` — no server restart is required.
 
 #### 5. Master Friend List & `/bp friends addall`
 
-`/bp friends addall <player>` adds a player to every block you own at once.
+`/bp friends addall <player>` adds a player to every block you own in a single operation.
 
 #### 6. SQLite Access Audit Log
 
-Stored at `mysql/blockprot_audit.sqlite`. Records `ACCESS_DENIED`, `ACCESS_GRANTED`, `OPENED`, `ITEM_TAKEN`, `ITEM_PLACED`. All writes asynchronous; automatic pruning at 50,000 entries. In-game GUI accessible from the block lock (Clock button, slot 13). **Owner access is never logged** — only friends and other players appear in the log.
+Stored at `mysql/blockprot_audit.sqlite`. Records `ACCESS_DENIED`, `ACCESS_GRANTED`, `OPENED`, `ITEM_TAKEN`, and `ITEM_PLACED` events. All writes are asynchronous; automatic pruning activates at 50,000 entries. In-game GUI is accessible from the block lock menu (Clock button, slot 13). Owner access is never logged — only friends and unauthorized players appear in the log.
 
 #### 7. Automatic Backup on Version Upgrade
 
-A config backup is created under `plugins/BlockProt/backups/` **only when the plugin version changes** (upgrade). No backup is created on routine restarts. The stored version is tracked in `config.yml` as `last_known_version`.
+A configuration backup is created under `plugins/BlockProt/backups/` **only when the plugin version changes** (upgrade). No backup is created on routine restarts. The stored version is tracked in `config.yml` as `last_known_version`.
 
 #### 8. Inactivity Cleanup *(optional)*
 
-`inactivity_cleanup_days: -1` (disabled). Removes protections from blocks owned by long-inactive players on startup. Asynchronous execution prevents server thread hang.
+`inactivity_cleanup_days: -1` (disabled by default). Removes protections from blocks owned by long-inactive players on startup. Execution is asynchronous to prevent main-thread hang.
 
 #### 9. Per-World Configuration (`worlds.yml`)
 
-Each world can override lockable block lists and enable/disable protection entirely. Missing worlds added automatically on startup.
+Each world can override lockable block lists and enable or disable protection entirely. Missing worlds are added automatically on startup. This addresses upstream issue [#318](https://github.com/spnda/BlockProt/issues/318), which requested the ability to configure what blocks can be locked on a per-world basis.
 
 #### 10. Config File Watcher
 
-Watches `config.yml`, `worlds.yml`, `blocks.yml`, `mysql/mysql.yml`, and `lang/*.yml`. Auto-reloads on change, debounced 2 seconds to prevent race conditions.
+Watches `config.yml`, `worlds.yml`, `blocks.yml`, `mysql/mysql.yml`, and `lang/*.yml`. Auto-reloads on change, debounced by 2 seconds to prevent race conditions.
 
 #### 11. Security Options
 
@@ -320,70 +330,72 @@ Watches `config.yml`, `worlds.yml`, `blocks.yml`, `mysql/mysql.yml`, and `lang/*
 |---|---|---|
 | `protect_locked_blocks_from_explosions` | `true` | Explosions cannot destroy locked blocks |
 | `block_protected_block_piston_movement` | `true` | Pistons cannot move locked blocks |
-| `allow_break_protected_blocks` | `false` | Any player can break (for reinforcement servers) |
-| `respect_spawn_protection` | `true` | No locking inside spawn-protection radius |
-| `clear_protection_on_shulker_break` | `false` | Shulker drops without lock NBT |
+| `allow_break_protected_blocks` | `false` | Allow any player to break a protected block (protection data is cleared on break) |
+| `respect_spawn_protection` | `true` | Prevent locking blocks inside the spawn-protection radius |
+| `clear_protection_on_shulker_break` | `false` | Remove protection data when a shulker box is broken (the dropped item has no lock) |
+
+`allow_break_protected_blocks` addresses upstream issue [#324](https://github.com/spnda/BlockProt/issues/324) (reinforcement plugin compatibility). `clear_protection_on_shulker_break` addresses upstream issue [#346](https://github.com/spnda/BlockProt/issues/346) (shulker gifting workflow).
 
 #### 12. WorldEdit / FAWE Paste Auto-Lock *(optional)*
 
-Auto-locks unprotected blocks near a `//paste` origin. `worldedit_paste_autolock.enabled: false` by default. Configurable radius and max blocks per paste.
+Auto-locks unprotected blocks near a `//paste` origin. Disabled by default (`worldedit_paste_autolock.enabled: false`). Configurable radius and maximum blocks per paste.
 
 #### 13. Floodgate / Geyser Bedrock Support
 
-Configurable `bedrock_username_prefixes` for Bedrock player name resolution. Players joining via Bedrock clients are correctly identified.
+Configurable `bedrock_username_prefixes` for Bedrock player name resolution. Players joining via Bedrock clients are correctly identified without triggering Mojang UUID lookups.
 
-#### 14. Self-Repair: Config & Lang Key Merging
+#### 14. Self-Repair: Config and Language Key Merging
 
-Missing keys added from JAR defaults on every startup and `/bp reload`. Obsolete keys removed automatically. Translation files are auto-updated with missing entries.
+Missing keys are added from JAR defaults on every startup and on `/bp reload`. Obsolete keys are removed automatically. Translation files are auto-updated with missing entries from the reference English file.
 
 #### 15. Colored Particle Effects & Sounds
 
-Lock → green dust ring + sound. Unlock → red dust ring + sound. Shulker boxes use shulker open/close sounds. Toggleable via `block_lock_effects` and `block_lock_sounds`.
+Lock → green dust ring + sound. Unlock → red dust ring + sound. Shulker boxes use shulker open/close sounds. Toggleable independently via `block_lock_effects` and `block_lock_sounds`.
 
-#### 16. Pet Protection *(default: disabled)*
+#### 16. Pet Protection *(disabled by default)*
 
 Protects tamed animals (wolves, cats, parrots, horses, llamas, etc.).
 
 | Toggle | Description |
 |---|---|
-| `enabled` | Master switch (default **false**) |
+| `enabled` | Master switch (default `false`) |
 | `auto_protect_on_tame` | Protect automatically when tamed |
-| `no_damage` | Block other players from damaging the pet |
-| `no_interact` | Block right-click (feeding, naming, sitting) |
-| `no_leash` | Block leash/unleash by others |
-| `no_pickup` | Block parrot shoulder-pickup by others |
+| `no_damage` | Prevent other players from damaging the pet |
+| `no_interact` | Prevent right-click interactions (feeding, naming, sitting) |
+| `no_leash` | Prevent leash / unleash by other players |
+| `no_pickup` | Prevent parrot shoulder-pickup by other players |
 
 Right-click your pet while holding the configured `menu_item` (default: Stick) to open the settings GUI.
 
 #### 17. Update Checker
 
-Queries GitHub Releases API once per session. Detects SNAPSHOT, alpha, beta, rc builds. Console warning + optional op join message when outdated.
+Queries the GitHub Releases API once per session. Detects SNAPSHOT, alpha, beta, rc, and experimental builds. Issues a console warning and an optional operator join message when an update is available.
 
 #### 18. Ownership Transfer (`/bp transfer` or GUI)
 
-`/bp transfer <player>` — look at any block you own and run the command. The target becomes new owner; original owner is added as friend automatically.
+`/bp transfer <player>` — look at any block you own and run the command. The target player becomes the new owner; the original owner is added as a friend automatically.
 
-#### 19. Copy-Paste (fixed, GitHub #268)
+#### 19. Copy-Paste (Upstream Fix — Issue #268)
 
-Pasting **replaces** the friend list (not appends), matching expected behavior. Owner is never overwritten.
+Pasting **replaces** the friend list rather than appending to it, matching expected behavior. The owner is never overwritten during a paste operation.
 
 #### 20. Time-Limited Friend Access (`/bp timed`)
 
-`/bp timed <player> <seconds>` — grants temporary access to a looked-at block. Access revoked automatically when the timer elapses. Configurable max duration via `timed_access_max_duration_days`.
+`/bp timed <player> <seconds>` — grants temporary access to a looked-at block. Access is revoked automatically when the timer elapses. The maximum configurable duration is controlled by `timed_access_max_duration_days`.
 
 #### 21. Admin Player Block-List (`/bp info <player>`)
 
-Opens a full-page GUI showing every block the player currently owns, with the **correct block icon** (shulker box, barrel, copper chest, shelf, etc.), coordinates, and time since locking. Click any entry to teleport. Works for **offline players**. Requires `blockprot.user.admin`.
+Opens a full-page GUI showing every block the target player currently owns, with the correct block icon, coordinates, and time since locking. Click any entry to teleport. Works for **offline players**. Requires `blockprot.user.admin`.
 
 Also accessible from the admin menu (Player Head button, slot 16) via an in-game name search.
 
-#### 22. Stats: Real Block Icons + Lock Timestamp
+#### 22. Statistics: Real Block Icons + Lock Timestamp
 
-The statistics list reads the **live block type** at each stored location. Shulker boxes show their correct coloured icon; copper chests, barrels, trapped chests, shelves, decorated pots, and all other block types display their real material. Each entry shows **how long ago the block was locked** (e.g. `Locked 3 days ago`) when a timestamp is available — blocks locked before this feature was added show no time. Stale entries (blocks that no longer exist) are filtered out automatically.
+The statistics list reads the **live block type** at each stored location. Shulker boxes display their correct coloured icon; copper chests, barrels, trapped chests, shelves, decorated pots, and all other block types display their real material. Each entry shows how long ago the block was locked when a timestamp is available. Blocks locked before this feature was introduced show no time. Stale entries are filtered automatically.
 
 #### 23. Stat Cleanup on Block Break
 
-When a shulker box or any protected block is broken by its owner, the entry is immediately removed from the statistics file. No stale entries remain.
+When a shulker box or any protected block is broken by its owner, the corresponding statistics entry is removed immediately. No stale entries accumulate in the statistics file.
 
 #### 24. GUI / Command Mode Toggle (`use_menus`)
 
@@ -392,14 +404,14 @@ When a shulker box or any protected block is broken by its owner, the entry is i
 use_menus: false   # default
 ```
 
-| `use_menus` | `/bp user`, `/bp admin` (GUI) | Extra CLI commands (transfer, timed, stats, etc.) | Tab-complete shows |
-|---|---|---|---|
-| `false` (default) | ❌ Hidden from tab-complete and disabled | ✅ Active | CLI subcommands |
-| `true` | ✅ Active | ❌ Hidden from tab-complete and disabled | `user` / `admin` |
+| `use_menus` | `/bp user`, `/bp admin` (GUI) | Extra CLI commands (transfer, timed, stats, etc.) |
+|---|---|---|
+| `false` (default) | Disabled and hidden from tab-complete | Active |
+| `true` | Active | Disabled and hidden from tab-complete |
 
-#### 25. Sign Editor Input (zero NMS)
+#### 25. Sign Editor Input (Zero NMS)
 
-Where text input is needed (player name search, block rename) the plugin uses the native sign editor (`player.openSign()`) introduced in Bukkit 1.20 instead of the anvil GUI. No XP cost display, no item required, cleaner UX. The sign is never written to the world — `SignChangeEvent` is cancelled and only line 0 is captured. On pre-1.20 servers the anvil GUI is used as fallback. No NMS, no external libraries.
+Where text input is required (player name search, block rename) the plugin uses the native sign editor (`player.openSign()`) introduced in Bukkit 1.20. No XP cost, no item required, cleaner UX. The sign is never written to the world — `SignChangeEvent` is cancelled and only line 0 is captured. On pre-1.20 servers the anvil GUI is used as a fallback. No NMS, no external libraries.
 
 #### 26. Comprehensive Block Coverage
 
@@ -415,36 +427,36 @@ BlockProt Reloaded protects every storage and interactable block in the game, co
 | Furnaces | Furnace, Smoker, Blast Furnace |
 | Transport | Hopper, Dispenser, Dropper |
 | Misc storage | Barrel, Brewing Stand |
-| Shelves *(1.21.9 / 26.1+)* | Oak, Spruce, Birch, Jungle, Acacia, Dark Oak, Mangrove, Cherry, Pale Oak, Bamboo, Crimson, Warped — **12 variants**. Stores 3 item stacks displayed on the front face; interacting swaps your hand item with a slot. |
+| Shelves *(1.21.9 / 26.1+)* | Oak, Spruce, Birch, Jungle, Acacia, Dark Oak, Mangrove, Cherry, Pale Oak, Bamboo, Crimson, Warped — **12 variants** |
 | Decorated Pot *(1.20+)* | Stores 1 item stack; hopper-compatible |
 | Chiseled Bookshelf *(1.20+)* | Stores up to 6 books; redstone-readable slot access |
 | Crafter *(1.21+)* | Automated crafting block; full 3×3 item grid |
 | Jukebox *(1.21+)* | Stores 1 music disc; hopper-accessible |
 | Lectern | Holds and displays a single book |
-| Beehive / Bee Nest | Protect honey and honeycomb production |
+| Beehive / Bee Nest | Protects honey and honeycomb production |
 
 **Interactive blocks (non-storage):**
 
-| Block | Why protect it |
+| Block | Reason to Protect |
 |---|---|
-| **Dragon Egg** | Right-clicking teleports it away — locking prevents other players from stealing or teleporting your dragon egg |
-| Composter | Block others from depositing items or stealing bone meal |
-| Cauldron (all variants) | Water, Lava, Powder Snow — block filling or draining by others |
+| Dragon Egg | Right-clicking teleports it — locking prevents theft or unwanted teleportation |
+| Composter | Prevent other players from depositing items or stealing bone meal |
+| Cauldron (all variants) | Prevent filling or draining by other players |
 | Bell | Prevent unwanted ringing |
-| Note Block | Protect creative music builds from pitch changes by others |
-| Enchanting Table | Block others from using your table and spending your XP levels |
-| Grindstone | Block disenchanting of items by others |
-| Stonecutter | Block use by others |
-| Loom | Block banner design changes by others |
-| Cartography Table | Block map editing by others |
-| Smithing Table | Block others from using your smithing table |
-| Anvils | Anvil, Chipped Anvil, Damaged Anvil |
+| Note Block | Protect creative music builds from pitch changes |
+| Enchanting Table | Prevent other players from using your table and spending your XP levels |
+| Grindstone | Prevent disenchanting of items by other players |
+| Stonecutter | Prevent use by other players |
+| Loom | Prevent banner design changes by other players |
+| Cartography Table | Prevent map editing by other players |
+| Smithing Table | Prevent use by other players |
+| Anvils (all damage stages) | Anvil, Chipped Anvil, Damaged Anvil |
 
-**Doors, trapdoors, and gates:**
+**Doors, trapdoors, and fence gates:**
 
 | Category | Variants |
 |---|---|
-| Wooden doors | Oak, Spruce, Birch, Jungle, Acacia, Dark Oak, Mangrove, Cherry, Pale Oak, Bamboo, Crimson, Warped |
+| Wooden doors | All 12 wood variants |
 | Iron door | Iron Door |
 | Copper doors *(1.21+)* | 4 oxidation stages + waxed/unwaxed = **9 variants** |
 | Wooden trapdoors | All 12 wood variants |
@@ -452,58 +464,57 @@ BlockProt Reloaded protects every storage and interactable block in the game, co
 | Copper trapdoors *(1.21+)* | 4 oxidation stages + waxed/unwaxed = **9 variants** |
 | Fence gates | All 12 wood variants |
 
-> All blocks added in versions newer than 1.20 are registered via `Material.matchMaterial()` at startup — the plugin never crashes on older servers where those materials do not exist yet. Unknown names are silently skipped.
+> All blocks added in versions newer than 1.20 are registered via `Material.matchMaterial()` at startup. The plugin never crashes on older servers where those materials do not exist — unknown names are silently skipped. This addresses upstream issues [#295](https://github.com/spnda/BlockProt/issues/295) (trapdoors and iron doors) and [#343](https://github.com/spnda/BlockProt/issues/343) / [#345](https://github.com/spnda/BlockProt/issues/345) (modern version support).
 
 #### 27. Auto-Drop to Inventory
 
-Shulker boxes and other valuable items drop directly into the owner's inventory when broken, preventing item theft. Configurable per-block via `auto_drop_to_inventory` section.
+Shulker boxes and other configured items drop directly into the owner's inventory when broken, preventing item theft on break. Configurable per-block type in the `auto_drop_to_inventory` section of `blocks.yml`.
 
-#### 28. Hopper Protection & Caching
+#### 28. Hopper Protection & Event Caching
 
-Hoppers and other transport blocks respect block protections. Event caching with TTL prevents lag on hopper-heavy setups.
+Hoppers and other transport blocks fully respect block protections. Event caching with a configurable TTL prevents lag on hopper-intensive setups. This directly addresses the server lag reported in upstream issue [#306](https://github.com/spnda/BlockProt/issues/306), which identified `HopperEventListener` as the primary performance bottleneck.
 
 #### 29. Folia Support
 
-Plugin is Folia-compatible, allowing async chunk handling on modern Paper versions.
+The plugin is Folia-compatible, enabling asynchronous chunk handling on modern Paper forks that implement the Folia scheduler.
 
 #### 30. PlaceholderAPI Integration
 
-Exposes block lock stats and protection status as PlaceholderAPI placeholders for use in scoreboards, tab lists, and other plugins. Requires **PlaceholderAPI** plugin to be installed.
+Exposes block lock statistics and protection status as PlaceholderAPI placeholders for use in scoreboards, tab lists, and other plugins. Requires **PlaceholderAPI** to be installed.
 
 **Available Placeholders:**
 
-| Placeholder | Type | Description |
+| Placeholder | Scope | Description |
 |---|---|---|
 | `%blockprot_global_block_count%` | Global | Total blocks locked on the entire server |
-| `%blockprot_own_block_count%` | Per-player | Number of blocks locked by the player |
-| `%blockprot_default_friends%` | Per-player | Comma-separated list of a player's default friends |
+| `%blockprot_own_block_count%` | Per-player | Number of blocks locked by the requesting player |
+| `%blockprot_default_friends%` | Per-player | Comma-separated list of the player's default friends |
 
 **Usage Examples:**
 
-Scoreboard (via plugins like Tablist):
 ```
-%blockprot_own_block_count% blocks locked
-Global: %blockprot_global_block_count%
-Friends: %blockprot_default_friends%
-```
+# Scoreboard line
+%blockprot_own_block_count% blocks locked | Server total: %blockprot_global_block_count%
 
-Chat (via plugins like LiteBans, TAB, etc.):
-```
-Player {player} has {blockprot_own_block_count} protected blocks
-Server total: {blockprot_global_block_count}
+# Friends list display
+Friends: %blockprot_default_friends%
 ```
 
 #### 31. Towny, WorldGuard, Lands, ClaimChunk Integration
 
-Respects town permissions, region flags, claim ownership, and other protection plugins' restrictions. Cannot lock blocks in areas you don't own.
+Respects town and nation permissions, WorldGuard region flags, Lands claim ownership, and ClaimChunk claim restrictions. Players cannot lock blocks in areas they do not own. ClaimChunk integration addresses upstream issue [#298](https://github.com/spnda/BlockProt/issues/298).
 
 #### 32. SkinsRestorer Support
 
-Displays correct player head icons in offline-mode servers using SkinsRestorer's cache.
+Displays correct player head icons in offline-mode servers using SkinsRestorer's skin cache.
+
+#### 33. MiniMessage / Adventure Color Support
+
+All translatable messages support the **MiniMessage** format (`<red>`, `<gold>`, `<gradient:...>`, etc.) in addition to legacy color codes (`&a`, `§6`). This addresses upstream issue [#334](https://github.com/spnda/BlockProt/issues/334), which requested configurable prompt message colors. Both formats are accepted in the `lang/*.yml` files.
 
 ---
 
-## Configuration reference
+## Configuration Reference
 
 ### `config.yml`
 
@@ -524,15 +535,15 @@ lock_on_place_by_default: true
 public_is_friend_by_default: false
 player_max_locked_block_count: -1    # -1 = unlimited
 lock_hint_cooldown_in_seconds: 10
-friend_search_similarity: 0.5        # 0.0–1.0
+friend_search_similarity: 0.5        # 0.0 – 1.0
 disable_friend_functionality: false
 redstone_disallowed_by_default: false
 
 # ── 3. Safety & Protection Behavior ─────────────────────────────────
 protect_locked_blocks_from_explosions: true
 block_protected_block_piston_movement: true
-clear_protection_on_shulker_break: false
-allow_break_protected_blocks: false
+clear_protection_on_shulker_break: false   # true = drop clears protection (issue #346)
+allow_break_protected_blocks: false         # true = reinforcement-plugin mode (issue #324)
 respect_spawn_protection: true
 
 # ── 4. Pet Protection ────────────────────────────────────────────────
@@ -555,15 +566,7 @@ worldedit_paste_autolock:
   max_blocks_per_paste: 5000
   delay_ticks: 20
 
-# ── 8. Auto-Drop to Inventory ────────────────────────────────────────
-auto_drop_to_inventory:
-  enabled: true
-  blocks:
-    - SHULKER_BOX
-    - WHITE_SHULKER_BOX
-    # ... (all 17 shulker variants)
-
-# ── 9. Menus & Commands ──────────────────────────────────────────────
+# ── 8. Menus & Commands ──────────────────────────────────────────────
 use_menus: false
 ```
 
@@ -579,87 +582,42 @@ mysql:
   password: ""
 ```
 
-### `blocks.yml`
+### `blocks.yml` (Annotated Summary)
 
-The full default file is generated at `plugins/BlockProt/blocks.yml` on first start. Below is an annotated summary of every section.
+The full default file is generated at `plugins/BlockProt/blocks.yml` on first start. Sections include:
 
 ```yaml
-# ── Tile entities (storage + interactive blocks with NBT) ─────────────
 lockable_tile_entities:
-  # Standard & copper chests
   - CHEST
   - TRAPPED_CHEST
   - ENDER_CHEST
   - COPPER_CHEST                        # 1.21.9+
-  - EXPOSED_COPPER_CHEST                # 1.21.9+
-  - WEATHERED_COPPER_CHEST              # 1.21.9+
-  - OXIDIZED_COPPER_CHEST               # 1.21.9+
-  - WAXED_COPPER_CHEST                  # 1.21.9+
-  - WAXED_EXPOSED_COPPER_CHEST          # 1.21.9+
-  - WAXED_WEATHERED_COPPER_CHEST        # 1.21.9+
-  - WAXED_OXIDIZED_COPPER_CHEST         # 1.21.9+
-  - COPPER_TRAPPED_CHEST                # 1.21.9+
-  # ... (8 more copper trapped chest variants)
-
-  # Shelves (all 12 wood variants — 1.21.9+)
-  - OAK_SHELF
-  - SPRUCE_SHELF
-  - BIRCH_SHELF
-  - JUNGLE_SHELF
-  - ACACIA_SHELF
-  - DARK_OAK_SHELF
-  - MANGROVE_SHELF
-  - CHERRY_SHELF
-  - PALE_OAK_SHELF
-  - BAMBOO_SHELF
-  - CRIMSON_SHELF
-  - WARPED_SHELF
-
-  # Furnaces
+  # ... (all copper chest and trapped chest variants)
+  - OAK_SHELF                           # 1.21.9+
+  # ... (all 12 shelf variants)
   - FURNACE
   - SMOKER
   - BLAST_FURNACE
-
-  # Transport
   - HOPPER
   - DISPENSER
   - DROPPER
-
-  # Misc storage
   - BARREL
   - BREWING_STAND
-  - DECORATED_POT          # 1.20+ — stores 1 stack, hopper-compatible
-  - CHISELED_BOOKSHELF     # 1.20+ — stores 6 books, redstone-readable
-  - CRAFTER                # 1.21+ — automated 3x3 crafting
-  - JUKEBOX                # stores 1 disc, hopper-accessible in 1.21+
+  - DECORATED_POT                       # 1.20+
+  - CHISELED_BOOKSHELF                  # 1.20+
+  - CRAFTER                             # 1.21+
+  - JUKEBOX                             # 1.21+
   - LECTERN
   - BEEHIVE
   - BEE_NEST
 
-# ── Shulker boxes (all 17 variants) ─────────────────────────────────
 lockable_shulker_boxes:
   - SHULKER_BOX
   - WHITE_SHULKER_BOX
-  - LIGHT_GRAY_SHULKER_BOX
-  - GRAY_SHULKER_BOX
-  - BLACK_SHULKER_BOX
-  - BROWN_SHULKER_BOX
-  - RED_SHULKER_BOX
-  - ORANGE_SHULKER_BOX
-  - YELLOW_SHULKER_BOX
-  - LIME_SHULKER_BOX
-  - GREEN_SHULKER_BOX
-  - CYAN_SHULKER_BOX
-  - LIGHT_BLUE_SHULKER_BOX
-  - BLUE_SHULKER_BOX
-  - PURPLE_SHULKER_BOX
-  - MAGENTA_SHULKER_BOX
-  - PINK_SHULKER_BOX
+  # ... (all 17 shulker box variants)
 
-# ── Interactive blocks (non-storage) ────────────────────────────────
 lockable_blocks:
-  # Special
-  - DRAGON_EGG             # prevents teleportation theft
+  - DRAGON_EGG
   - COMPOSTER
   - CAULDRON
   - WATER_CAULDRON
@@ -667,36 +625,47 @@ lockable_blocks:
   - POWDER_SNOW_CAULDRON
   - BELL
   - NOTE_BLOCK
-  # Workstations
   - GRINDSTONE
   - STONECUTTER
   - LOOM
   - CARTOGRAPHY_TABLE
   - SMITHING_TABLE
   - ENCHANTING_TABLE
-  # Anvils
   - ANVIL
   - CHIPPED_ANVIL
   - DAMAGED_ANVIL
-  # Fence gates (12 wood variants)
   - OAK_FENCE_GATE
-  # ... (all 12 wood variants)
-  # Trapdoors (wooden + iron + copper)
+  # ... (all 12 wood fence gate variants)
   - OAK_TRAPDOOR
   - IRON_TRAPDOOR
-  - COPPER_TRAPDOOR         # 1.21+
-  # ... (all oxidation variants)
+  - COPPER_TRAPDOOR                     # 1.21+
+  # ... (all trapdoor oxidation variants)
 
-# ── Doors ────────────────────────────────────────────────────────────
 lockable_doors:
-  # Wooden doors (12 variants)
   - OAK_DOOR
-  # ...
-  # Iron door
   - IRON_DOOR
-  # Copper doors 1.21+ (9 variants)
-  - COPPER_DOOR
-  # ...
+  - COPPER_DOOR                         # 1.21+
+  # ... (all door variants)
+
+auto_drop_to_inventory:
+  enabled: true
+  blocks:
+    - SHULKER_BOX
+    - WHITE_SHULKER_BOX
+    # ... (all 17 shulker variants)
+```
+
+### `worlds.yml`
+
+```yaml
+# Per-world overrides. If worlds_config_enabled: false in config.yml, this file is ignored.
+# Each world can override which blocks are lockable and whether protection is active.
+world:
+  enabled: true
+  lockable_tile_entities: []    # empty = use global blocks.yml
+  lockable_blocks: []
+  lockable_doors: []
+  lockable_shulker_boxes: []
 ```
 
 ---
@@ -709,11 +678,11 @@ lockable_doors:
 | **WorldGuard** | Honors region flags |
 | **PlaceholderAPI** | Exposes stats and protection status as placeholders |
 | **Lands** | Supports Lands claim permission checks |
-| **ClaimChunk** | Prevents locking in chunks you don't own |
+| **ClaimChunk** | Prevents locking blocks in chunks you do not own |
 | **SkinsRestorer** | Correct player heads in offline-mode servers |
 | **WorldEdit / FAWE** | Optional paste auto-lock |
 | **Floodgate / Geyser** | Bedrock player name resolution |
-| **Folia** | Async chunk handling support |
+| **Folia** | Asynchronous chunk handling support |
 
 ---
 
@@ -722,7 +691,7 @@ lockable_doors:
 | | |
 |---|---|
 | **Minecraft** | 1.20, 1.20.x, 1.21, 1.21.x, 26.1.x |
-| **Server** | Paper, Spigot, Folia |
+| **Server software** | Paper, Spigot, Folia |
 | **Java** | 25+ required |
 | **MySQL** | MySQL 8+, MariaDB 10.5+ (optional) |
 | **Languages** | EN, ES, DE, FR, IT, PT-BR, RU, JA, KO, ZH-CN, ZH-TW, CS, SK, PL, TR |
@@ -731,15 +700,37 @@ lockable_doors:
 
 ## Translating
 
-Language files in `spigot/src/main/resources/lang/`. All values support legacy color codes (`§a`, `§l`, etc.).
-The English file (`translations_en.yml`) is the reference — all other files are auto-updated with missing keys on startup.
+Language files are located in `spigot/src/main/resources/lang/`. All values support both legacy color codes (`§a`, `§l`) and the MiniMessage format (`<gold>`, `<bold>`). The English file (`translations_en.yml`) is the reference — all other files are auto-updated with missing keys on startup and on `/bp reload`.
+
+Pull requests for new or improved translations are welcome.
+
+---
+
+## Roadmap
+
+The following items are tracked as open issues in the upstream [spnda/BlockProt](https://github.com/spnda/BlockProt/issues) repository. Items marked as implemented have been resolved in this fork.
+
+| Issue | Description | Status |
+|---|---|---|
+| [#346](https://github.com/spnda/BlockProt/issues/346) | Option to remove protection when a shulker box is broken (`clear_protection_on_shulker_break`) | ✅ Implemented |
+| [#334](https://github.com/spnda/BlockProt/issues/334) | Configurable message colors via MiniMessage formatting in translation files | ✅ Implemented |
+| [#324](https://github.com/spnda/BlockProt/issues/324) | Option to allow breaking protected blocks (`allow_break_protected_blocks`) | ✅ Implemented |
+| [#318](https://github.com/spnda/BlockProt/issues/318) | Ability to configure which blocks can be locked per world (`worlds.yml`) | ✅ Implemented |
+| [#306](https://github.com/spnda/BlockProt/issues/306) | Server lag caused by `HopperEventListener` | ✅ Mitigated via event caching with TTL |
+| [#303](https://github.com/spnda/BlockProt/issues/303) | Respect vanilla spawn-protection radius (`respect_spawn_protection`) | ✅ Implemented |
+| [#298](https://github.com/spnda/BlockProt/issues/298) | ClaimChunk integration | ✅ Implemented |
+| [#295](https://github.com/spnda/BlockProt/issues/295) | Lock trapdoors and iron doors | ✅ Implemented |
+| [#282](https://github.com/spnda/BlockProt/issues/282) | MySQL support | ✅ Implemented (hybrid NBT/MySQL backend) |
+| [#344](https://github.com/spnda/BlockProt/issues/344) | Console spam from `NbtApiException` when a shulker box does not yet have a BlockEntity | 🔧 Planned — guard check before NBT write on placed blocks |
+| [#345](https://github.com/spnda/BlockProt/issues/345) | Official 26.1.x support | ✅ Implemented |
+| [#343](https://github.com/spnda/BlockProt/issues/343) | 1.21.11 support | ✅ Implemented |
 
 ---
 
 ## Contact / Support
 
 Maintained by **Zar**.
-[Open an issue](https://github.com/VictorGugug/BlockProt-Reloaded/issues) for bugs or suggestions.
+[Open an issue](https://github.com/VictorGugug/BlockProt-Reloaded/issues) for bugs or feature suggestions.
 
 ---
 

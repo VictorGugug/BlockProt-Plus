@@ -1,6 +1,6 @@
 name: Publish Release
 
-# Fires automatically when you publish a GitHub Release,
+# Fires automatically when the release workflow publishes a GitHub Release,
 # OR manually from Actions → Publish Release → Run workflow.
 on:
   release:
@@ -8,19 +8,18 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Release tag to publish (e.g. 1.2.9)"
+        description: "Release tag to publish (e.g. 1.3.1)"
         required: true
 
 jobs:
-  # ────────────────────────────────────────────────────────────────────────────
-  # 1. Build the JAR once and share it with the publish jobs below.
-  # ────────────────────────────────────────────────────────────────────────────
+  # ── Build JAR ──────────────────────────────────────────────────────────────
   build:
     name: Build JAR
     runs-on: ubuntu-latest
     outputs:
-      jar_path: ${{ steps.find_jar.outputs.jar_path }}
-      version:  ${{ steps.find_jar.outputs.version }}
+      jar_path: ${{ steps.jar.outputs.path }}
+      version:  ${{ steps.jar.outputs.version }}
+      channel:  ${{ steps.jar.outputs.channel }}
 
     steps:
       - uses: actions/checkout@v4
@@ -39,108 +38,131 @@ jobs:
         run: chmod +x gradlew
 
       - name: Build shadow JAR
-        run: ./gradlew :blockprot-spigot:shadowJar --no-daemon
+        run: ./gradlew :spigot:shadowJar --no-daemon
 
-      - name: Locate JAR
-        id: find_jar
+      - name: Locate JAR and resolve metadata
+        id: jar
         run: |
-          JAR=$(find spigot/build/libs -name "BlockProt-*.jar" \
+          JAR=$(find spigot/build/libs -name "BlockProtReloaded-*.jar" \
                 ! -name "*-javadoc*" ! -name "*-sources*" | head -1)
-          echo "jar_path=$JAR" >> "$GITHUB_OUTPUT"
-          # Extract version string from filename: BlockProt-1.2.9-SNAPSHOT.jar → 1.2.9-SNAPSHOT
-          VERSION=$(basename "$JAR" .jar | sed 's/^BlockProt-//')
+          VERSION=$(basename "$JAR" .jar | sed 's/^BlockProtReloaded-//')
+
+          if echo "$VERSION" | grep -qiE 'snapshot|alpha|dev|nightly|wip'; then
+            CHANNEL="alpha"
+          elif echo "$VERSION" | grep -qiE 'beta|rc'; then
+            CHANNEL="beta"
+          else
+            CHANNEL="release"
+          fi
+
+          echo "path=$JAR"       >> "$GITHUB_OUTPUT"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "Built: $JAR  (version=$VERSION)"
+          echo "channel=$CHANNEL" >> "$GITHUB_OUTPUT"
+          echo "Built: $JAR  (version=$VERSION, channel=$CHANNEL)"
 
       - name: Upload JAR artifact
         uses: actions/upload-artifact@v4
         with:
           name: blockprot-jar
-          path: ${{ steps.find_jar.outputs.jar_path }}
+          path: ${{ steps.jar.outputs.path }}
           retention-days: 1
 
-  # ────────────────────────────────────────────────────────────────────────────
-  # 2. Modrinth — project: blockprot-reloaded
-  # ────────────────────────────────────────────────────────────────────────────
+  # ── Modrinth ───────────────────────────────────────────────────────────────
   publish_modrinth:
     name: Publish → Modrinth
     needs: build
     runs-on: ubuntu-latest
-    env:
-      MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
 
     steps:
       - uses: actions/download-artifact@v4
-        if: env.MODRINTH_TOKEN != ''
         with:
           name: blockprot-jar
           path: ./artifacts
 
-      - name: Determine release channel
-        if: env.MODRINTH_TOKEN != ''
-        id: channel
+      - name: Resolve changelog
+        id: notes
         run: |
-          VERSION="${{ needs.build.outputs.version }}"
-          if echo "$VERSION" | grep -qiE 'snapshot|alpha|dev|nightly|wip'; then
-            echo "type=alpha" >> "$GITHUB_OUTPUT"
-          elif echo "$VERSION" | grep -qiE 'beta|rc'; then
-            echo "type=beta" >> "$GITHUB_OUTPUT"
+          # Use the GitHub Release body when triggered by a release event,
+          # otherwise fall back to the tag name.
+          if [ "${{ github.event_name }}" = "release" ]; then
+            echo "body<<EOF"                             >> "$GITHUB_OUTPUT"
+            echo "${{ github.event.release.body }}"     >> "$GITHUB_OUTPUT"
+            echo "EOF"                                   >> "$GITHUB_OUTPUT"
           else
-            echo "type=release" >> "$GITHUB_OUTPUT"
+            echo "body=Release ${{ needs.build.outputs.version }}" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Upload to Modrinth
-        if: env.MODRINTH_TOKEN != ''
-        uses: HSGamer/action-mcreleaser@main
+        uses: Kir-Antipov/mc-publish@v3.3
         with:
-          files: |
-            ./artifacts/*.jar
-          platforms: modrinth
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
-          MODRINTH_PROJECT: blockprot-reloaded
-          MODRINTH_LOADERS: paper
+          modrinth-id: blockprot-reloaded
+          modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
 
-  # ────────────────────────────────────────────────────────────────────────────
-  # 3. Hangar — project: VictorGugug/BlockProtPlus
-  # ────────────────────────────────────────────────────────────────────────────
+          files: ./artifacts/*.jar
+          name: "BlockProt Reloaded ${{ needs.build.outputs.version }}"
+          version: ${{ needs.build.outputs.version }}
+          version-type: ${{ needs.build.outputs.channel }}
+          changelog: ${{ steps.notes.outputs.body }}
+
+          # Supported Minecraft versions
+          game-versions: |
+            1.21
+            1.21.1
+            1.21.4
+          loaders: |
+            paper
+            spigot
+          java: 21
+
+  # ── Hangar ─────────────────────────────────────────────────────────────────
   publish_hangar:
     name: Publish → Hangar
     needs: build
     runs-on: ubuntu-latest
-    env:
-      HANGAR_TOKEN: ${{ secrets.HANGAR_TOKEN }}
 
     steps:
       - uses: actions/download-artifact@v4
-        if: env.HANGAR_TOKEN != ''
         with:
           name: blockprot-jar
           path: ./artifacts
 
-      - name: Determine Hangar channel
-        if: env.HANGAR_TOKEN != ''
-        id: channel
+      - name: Resolve changelog
+        id: notes
         run: |
-          VERSION="${{ needs.build.outputs.version }}"
-          if echo "$VERSION" | grep -qiE 'snapshot|alpha|dev|nightly|wip'; then
-            echo "name=Snapshot" >> "$GITHUB_OUTPUT"
-          elif echo "$VERSION" | grep -qiE 'beta|rc'; then
-            echo "name=Beta" >> "$GITHUB_OUTPUT"
+          if [ "${{ github.event_name }}" = "release" ]; then
+            echo "body<<EOF"                             >> "$GITHUB_OUTPUT"
+            echo "${{ github.event.release.body }}"     >> "$GITHUB_OUTPUT"
+            echo "EOF"                                   >> "$GITHUB_OUTPUT"
           else
-            echo "name=Release" >> "$GITHUB_OUTPUT"
+            echo "body=Release ${{ needs.build.outputs.version }}" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Resolve Hangar channel
+        id: channel
+        run: |
+          case "${{ needs.build.outputs.channel }}" in
+            alpha)   echo "name=Snapshot" >> "$GITHUB_OUTPUT" ;;
+            beta)    echo "name=Beta"     >> "$GITHUB_OUTPUT" ;;
+            *)       echo "name=Release"  >> "$GITHUB_OUTPUT" ;;
+          esac
+
       - name: Upload to Hangar
-        if: env.HANGAR_TOKEN != ''
-        uses: HSGamer/action-mcreleaser@main
+        uses: Kir-Antipov/mc-publish@v3.3
         with:
-          files: |
-            ./artifacts/*.jar
-          platforms: hangar
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-          HANGAR_KEY: ${{ secrets.HANGAR_TOKEN }}
-          HANGAR_PROJECT: VictorGugug/BlockProtPlus
-          HANGAR_PLATFORM: paper
+          hangar-id: VictorGugug/BlockProtPlus
+          hangar-token: ${{ secrets.HANGAR_TOKEN }}
+
+          files: ./artifacts/*.jar
+          name: "BlockProt Reloaded ${{ needs.build.outputs.version }}"
+          version: ${{ needs.build.outputs.version }}
+          version-type: ${{ needs.build.outputs.channel }}
+          changelog: ${{ steps.notes.outputs.body }}
+
+          game-versions: |
+            1.21
+            1.21.1
+            1.21.4
+          loaders: |
+            paper
+            spigot
+          java: 21
