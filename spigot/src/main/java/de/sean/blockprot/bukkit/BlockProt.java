@@ -49,6 +49,8 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.*;
+import java.nio.file.*;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.*;
 import java.util.Objects;
 
@@ -140,11 +142,12 @@ public final class BlockProt extends JavaPlugin {
             return;
         }
 
+        // Migrate data from legacy plugin folder names before anything else reads disk.
+        migrateFromLegacyFolders();
+
         foliaLib = new FoliaLib(this);
         foliaLib.getScheduler().runAsync(task -> new UpdateChecker(this.getDescription()).run());
         MinecraftVersion.disableUpdateCheck();
-
-        new BlockProtAPI(this);
         BlockProtLogger.init(this.getDataFolder());
         String version = this.getDescription().getVersion();
 
@@ -461,5 +464,84 @@ public final class BlockProt extends JavaPlugin {
         } catch (ClassNotFoundException e) {
             return true;
         }
+    }
+
+    /**
+     * Copies data from known legacy plugin folder names into the current data folder.
+     *
+     * <p>Legacy names checked (in priority order):
+     * <ol>
+     *   <li>{@code BlockProt}       — original upstream plugin</li>
+     *   <li>{@code BlockProtPlus}   — intermediate fork name</li>
+     * </ol>
+     *
+     * <p>Rules:
+     * <ul>
+     *   <li>Only runs when the current data folder does NOT contain a {@code config.yml}
+     *       (i.e. first boot after rename). If the new folder already has data the
+     *       migration is skipped entirely to avoid overwriting admin changes.</li>
+     *   <li>Files are copied recursively; existing files in the destination are
+     *       never overwritten.</li>
+     *   <li>The legacy folder is left intact — the admin decides when to remove it.</li>
+     *   <li>A marker file {@code .migrated} is written to the source folder after a
+     *       successful copy so the migration never runs twice.</li>
+     * </ul>
+     */
+    private void migrateFromLegacyFolders() {
+        // If the current data folder already has a config.yml, nothing to migrate.
+        if (new File(this.getDataFolder(), "config.yml").exists()) return;
+
+        final String[] legacyNames = {"BlockProt", "BlockProtPlus"};
+        final File pluginsDir = this.getDataFolder().getParentFile();
+        if (pluginsDir == null) return;
+
+        for (String legacyName : legacyNames) {
+            File legacyFolder = new File(pluginsDir, legacyName);
+            if (!legacyFolder.isDirectory()) continue;
+            // Already migrated from this folder on a previous boot.
+            if (new File(legacyFolder, ".migrated").exists()) continue;
+            // Only migrate if the legacy folder has meaningful content.
+            if (!new File(legacyFolder, "config.yml").exists()) continue;
+
+            getLogger().info("[BlockProt] Migrating data from " + legacyName + " → " + this.getDataFolder().getName());
+            try {
+                copyDirectoryContents(legacyFolder.toPath(), this.getDataFolder().toPath());
+                // Write marker so we don't re-migrate on subsequent boots.
+                new File(legacyFolder, ".migrated").createNewFile();
+                getLogger().info("[BlockProt] Migration from " + legacyName + " complete. The old folder was left intact.");
+            } catch (IOException e) {
+                getLogger().warning("[BlockProt] Migration from " + legacyName + " failed: " + e.getMessage());
+            }
+            // Use only the first matching legacy folder.
+            break;
+        }
+    }
+
+    /**
+     * Recursively copies all files from {@code src} into {@code dst}.
+     * Existing files in {@code dst} are never overwritten.
+     * Directory structure is replicated as needed.
+     */
+    private static void copyDirectoryContents(@NotNull Path src, @NotNull Path dst) throws IOException {
+        Files.walkFileTree(src, new SimpleFileVisitor<>() {
+            @Override
+            public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
+                Path target = dst.resolve(src.relativize(dir));
+                if (!Files.exists(target)) Files.createDirectories(target);
+                return FileVisitResult.CONTINUE;
+            }
+
+            @Override
+            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                // Never copy the migration marker itself.
+                if (file.getFileName().toString().equals(".migrated")) return FileVisitResult.CONTINUE;
+                Path target = dst.resolve(src.relativize(file));
+                // Do not overwrite files that already exist in the destination.
+                if (!Files.exists(target)) {
+                    Files.copy(file, target, StandardCopyOption.COPY_ATTRIBUTES);
+                }
+                return FileVisitResult.CONTINUE;
+            }
+        });
     }
 }
