@@ -232,29 +232,48 @@ Works for **offline players** — reads their stats directly from the NBT file. 
 
 ## Commands
 
-Extra commands are **disabled by default** when `use_menus: true`. Set `use_menus: true` in `config.yml` to activate the GUI menus (`/bp user`, `/bp admin`) and disable the CLI subcommands.
+All commands are aliases for `/blockprot` as well. The command visibility is controlled by the **`use_menus`** config option:
 
-| Command | Permission | Available When |
+- **`use_menus: false`** (default) — **CLI Mode**: All legacy subcommands active (transfer, timed, stats, etc.); menu commands hidden.
+- **`use_menus: true`** — **GUI Mode**: Only `/bp user` and `/bp admin` shown; legacy commands hidden from tab-complete (but still functional).
+
+### GUI Menu Commands (shown when `use_menus: true`)
+
+| Command | Permission | Description |
 |---|---|---|
-| `/bp user` | `blockprot.user` | `use_menus: true` |
-| `/bp admin` | `blockprot.user.admin` | `use_menus: true` |
-| `/bp transfer <player>` | `blockprot.user` | `use_menus: false` |
-| `/bp timed <player> <seconds>` | `blockprot.user` | `use_menus: false` |
-| `/bp friends addall <player>` | `blockprot.user` | `use_menus: false` |
-| `/bp stats` | `blockprot.user` | `use_menus: false` |
-| `/bp info <player>` | `blockprot.user.admin` | `use_menus: false` |
-| `/bp reload` | `blockprot.user.admin` | `use_menus: false` |
-| `/bp update` | `blockprot.user.admin` | `use_menus: false` |
-| `/bp integrations` | `blockprot.user.admin` | `use_menus: false` |
-| `/bp debug <run\|...>` | `blockprot.user.admin` | `use_menus: false` |
-| `/bp disablehints` | `blockprot.user` | `use_menus: false` |
-| `/bp about` | any | Always |
-| `/bp help` | any | Always |
-| `/bp unlock <x> <y> <z> [world]` | `blockprot.user.admin` | Always |
+| `/bp user` | `blockprot.user` | Open User Menu (settings, friends, stats, transfer, timed, about) |
+| `/bp admin` | `blockprot.user.admin` | Open Admin Menu (reload, update, integrations, stats, debug, info) |
 
-Alias: `/blockprot`.
+### User Commands (shown when `use_menus: false`)
 
-> **`/bp info <player>`** opens a live GUI for player senders and falls back to chat output for the console. Works for **offline players** — reads their stats directly from the NBT file.
+| Command | Permission | Description |
+|---|---|---|
+| `/bp transfer <player>` | `blockprot.user` | Transfer ownership of looked-at block to another player |
+| `/bp timed <player> <seconds>` | `blockprot.user` | Grant temporary access to looked-at block for specified seconds |
+| `/bp friends addall <player>` | `blockprot.user` | Add player as friend to all your owned blocks |
+| `/bp stats` | `blockprot.user` | Open statistics/block list GUI |
+| `/bp settings` | `blockprot.user` | Open personal settings GUI |
+| `/bp disablehints` | `blockprot.user` | Toggle first-time protection hints |
+
+### Admin Commands (shown when `use_menus: false`)
+
+| Command | Permission | Description |
+|---|---|---|
+| `/bp info <player>` | `blockprot.user.admin` | View all blocks owned by a player (GUI for players, chat for console); works for offline players |
+| `/bp reload` | `blockprot.user.admin` | Reload config, blocks.yml, and translations |
+| `/bp update` | `blockprot.user.admin` | Check for plugin updates and notify online admins |
+| `/bp integrations` | `blockprot.user.admin` | List active plugin integrations |
+| `/bp debug <subcommand>` | `blockprot.debug` | Run diagnostics (subcommands: `run`, `placeDebugChest`, `placeDebugShulker`, `clearSearchHistory`) |
+| `/bp unlock <x> <y> <z> [world]` | `blockprot.user.admin` | Remove protection from block at coordinates (remote unlock) |
+
+### Universal Commands (always shown)
+
+| Command | Permission | Description |
+|---|---|---|
+| `/bp about` | any | Display plugin version, maintainers, and fork information |
+| `/bp help` | any | Show all available commands based on your permissions and active mode |
+
+> Running `/bp` with no arguments opens the appropriate GUI when `use_menus: true` (admin GUI for ops, user GUI for others). With `use_menus: false`, the command returns "not found".
 
 ---
 
@@ -262,12 +281,18 @@ Alias: `/blockprot`.
 
 | Permission | Default | Description |
 |---|---|---|
-| `blockprot.user` | `true` | All standard user actions (lock, friends, settings, stats, etc.) |
-| `blockprot.user.admin` | `op` | Admin actions: reload, debug, info, integrations, update |
-| `blockprot.bypass` | `false` | Bypass all block protections |
-| `blockprot.blocks.tp` | `op` | Teleport to a block from the statistics or admin block-list |
-| `blockprot.lockmax` | `false` | Enable specific lock limits via `blockprot.locklimit.<number>` nodes |
-| `blockprot.locklimit.<number>` | `false` | Limit the maximum number of locked blocks for a player to `<number>` |
+| `blockprot.user` | `true` | All standard user actions: lock/unlock, manage friends, settings, stats, transfer, timed access, hints |
+| `blockprot.user.admin` | `op` | Admin actions: reload config, check updates, view integrations, access debug, info, unlock remote blocks |
+| `blockprot.bypass` | `false` | Bypass all block protections (bypass cannot open/interact with protected blocks) |
+| `blockprot.blocks.tp` | `op` | Teleport to blocks from the statistics menu or admin block-list |
+| `blockprot.debug` | `false` | Access debug diagnostics command (`/bp debug`) |
+| `blockprot.lockmax` | `false` | Enable specific lock limits via permission nodes (see `blockprot.locklimit.<number>` below) |
+| `blockprot.locklimit.<number>` | `false` | Set max lockable block count to `<number>` for player (e.g., `blockprot.locklimit.100` = max 100 blocks); requires `blockprot.lockmax: true` |
+
+**Permission Hierarchy:**
+- `blockprot.user` is the base permission for all player actions.
+- `blockprot.user.admin` includes all admin functionality. Console and OPs always have full access.
+- `blockprot.bypass` is independent — players with this permission skip all protection checks.
 
 ---
 
