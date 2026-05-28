@@ -250,6 +250,7 @@ Extra commands are **disabled by default** when `use_menus: true`. Set `use_menu
 | `/bp disablehints` | `blockprot.user` | `use_menus: false` |
 | `/bp about` | any | Always |
 | `/bp help` | any | Always |
+| `/bp unlock <x> <y> <z> [world]` | `blockprot.user.admin` | Always |
 
 Alias: `/blockprot`.
 
@@ -512,11 +513,56 @@ Displays correct player head icons in offline-mode servers using SkinsRestorer's
 
 All translatable messages support the **MiniMessage** format (`<red>`, `<gold>`, `<gradient:...>`, etc.) in addition to legacy color codes (`&a`, `§6`). This addresses upstream issue [#334](https://github.com/spnda/BlockProt/issues/334), which requested configurable prompt message colors. Both formats are accepted in the `lang/*.yml` files.
 
+#### 34. Protection Expiry *(opt-in, disabled by default)*
+
+Block owners can set an optional expiry date on their own lock. When the timer elapses the block auto-unlocks — useful for temporary community chests, server events, or time-limited storage.
+
+- Open the Block Lock menu (sneak + right-click), then click the **Hopper** slot in the top row and type a duration: `30d`, `2h`, `1d12h`, `90s`.
+- A **green dye** slot replaces the hopper when an expiry is already active — click it to clear the expiry immediately.
+- Expired blocks are cleared on next player interaction, or at startup when `expiry_scan_on_startup: true` (requires MySQL index enabled).
+
+```yaml
+# config.yml
+enable_protection_expiry: false
+expiry_scan_on_startup: true   # requires mysql.enabled: true
+```
+
+#### 35. Access Notifications *(opt-in per player)*
+
+Block owners receive an action-bar notification when another player accesses their block. Toggle in **My Settings** (Bell slot). Rate-limited per the configured cooldown to prevent farm spam.
+
+```yaml
+# config.yml
+access_notifications_default: false
+access_notifications_cooldown_seconds: 30
+```
+
+#### 36. Discord Webhook Alerts *(opt-in, disabled by default)*
+
+Sends a Discord embed alert when a monitored audit action fires at a block. All HTTP I/O is asynchronous. A per-block cooldown prevents repeated notifications.
+
+```yaml
+# config.yml
+discord_webhook_url: ""                 # empty = disabled
+discord_webhook_events:                  # actions that trigger alerts
+  - ACCESS_DENIED
+discord_webhook_min_count: 1             # how many matching events before the first alert fires (1 = every event)
+discord_webhook_cooldown_minutes: 10     # per-block cooldown between alerts
+```
+
+Supported event names: `ACCESS_DENIED`, `ACCESS_GRANTED`, `OPENED`, `ITEM_TAKEN`, `ITEM_PLACED`, `ADMIN_UNLOCK`.
+
+#### 37. Legacy Folder Migration
+
+On first boot after renaming the plugin, BlockProt Reloaded automatically copies data from the old plugin folder (`BlockProt` or `BlockProtPlus`) into the new `BlockProtReloaded` folder. Existing files are never overwritten. The source folder is left intact with a `.migrated` marker so the migration never runs twice. A migration summary is printed to the session log.
+
+#### 38. Remote Admin Block Unlock
+
+`/bp unlock <x> <y> <z> [world]` — removes the protection from a block at the given coordinates without needing to stand next to it. If `[world]` is omitted the sender's current world is used. Console senders must supply the world name. The action is recorded in the audit log as `ADMIN_UNLOCK`. Requires `blockprot.user.admin`.
+
 ---
 
 ## Configuration Reference
-
-### `config.yml`
 
 ```yaml
 # ── 1. General ──────────────────────────────────────────────────────
@@ -568,6 +614,13 @@ worldedit_paste_autolock:
 
 # ── 8. Menus & Commands ──────────────────────────────────────────────
 use_menus: false
+
+# ── 9. Discord Webhook ───────────────────────────────────────────────
+discord_webhook_url: ""                  # empty = disabled
+discord_webhook_events:
+  - ACCESS_DENIED
+discord_webhook_min_count: 1             # 1 = alert on every matching event
+discord_webhook_cooldown_minutes: 10     # per-block cooldown between alerts
 ```
 
 ### `mysql/mysql.yml`
