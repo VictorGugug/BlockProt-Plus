@@ -264,7 +264,7 @@ All commands are aliases for `/blockprot` as well. The command visibility is con
 | `/bp update` | `blockprot.user.admin` | Check for plugin updates and notify online admins |
 | `/bp integrations` | `blockprot.user.admin` | List active plugin integrations |
 | `/bp debug <subcommand>` | `blockprot.debug` | Run diagnostics (subcommands: `run`, `placeDebugChest`, `placeDebugShulker`, `clearSearchHistory`) |
-| `/bp unlock <x> <y> <z> [world]` | `blockprot.user.admin` | Remove protection from block at coordinates (remote unlock) |
+| `/bp unlock <player>` | `blockprot.user.admin` | Open a GUI listing all blocks owned by the target player. Left-click: view contents (read-only). Right-click: remove the protection from that block. An action-bar message confirms which block and player were affected. |
 
 ### Universal Commands (always shown)
 
@@ -542,7 +542,18 @@ All translatable messages support the **MiniMessage** format (`<red>`, `<gold>`,
 
 Block owners can set an optional expiry date on their own lock. When the timer elapses the block auto-unlocks — useful for temporary community chests, server events, or time-limited storage.
 
-- Open the Block Lock menu (sneak + right-click), then click the **Hopper** slot in the top row and type a duration: `30d`, `2h`, `1d12h`, `90s`.
+- Open the Block Lock menu (sneak + right-click), then click the **Hopper** slot in the top row and type a duration:
+
+| Suffix | Unit | Max (default) |
+|---|---|---|
+| `s` | seconds | 60s |
+| `m` | minutes | 60m |
+| `h` | hours | 24h |
+| `d` | days | 28d |
+| `mo` or `mon` | months (28-day) | 12mo |
+| `y` | years (365-day, not recommended) | configurable |
+
+Units can be combined freely: `1d12h`, `2mo3d`, `1y6mo`. The maximum per unit is enforced by `DurationLimits` and is configurable in `config.yml`.
 - A **green dye** slot replaces the hopper when an expiry is already active — click it to clear the expiry immediately.
 - Expired blocks are cleared on next player interaction, or at startup when `expiry_scan_on_startup: true` (requires MySQL index enabled).
 
@@ -581,9 +592,14 @@ Supported event names: `ACCESS_DENIED`, `ACCESS_GRANTED`, `OPENED`, `ITEM_TAKEN`
 
 On first boot after renaming the plugin, BlockProt Reloaded automatically copies data from the old plugin folder (`BlockProt` or `BlockProtPlus`) into the new `BlockProtReloaded` folder. Existing files are never overwritten. The source folder is left intact with a `.migrated` marker so the migration never runs twice. A migration summary is printed to the session log.
 
-#### 38. Remote Admin Block Unlock
+#### 38. Admin Block Unlock GUI (`/bp unlock <player>`)
 
-`/bp unlock <x> <y> <z> [world]` — removes the protection from a block at the given coordinates without needing to stand next to it. If `[world]` is omitted the sender's current world is used. Console senders must supply the world name. The action is recorded in the audit log as `ADMIN_UNLOCK`. Requires `blockprot.user.admin`.
+`/bp unlock <player>` — opens a six-row GUI listing every block currently protected by the target player.
+
+- **Left-click** any block: opens its inventory contents in read-only mode. Items cannot be taken or placed — this is purely for inspection.
+- **Right-click** any block: removes the protection from that block entirely. The action bar immediately shows the block’s name, the player it was removed from, and the coordinates.
+
+Supports pagination for players with many protected blocks. Works for **offline players**. Requires `blockprot.user.admin`.
 
 ---
 
