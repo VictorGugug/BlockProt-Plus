@@ -178,6 +178,8 @@ Two-row inventory. Top row holds functional buttons; bottom row holds utility bu
 | 2 | Player Head | Manage friends |
 | 3 | Name Tag | Set custom block name |
 | 4 | Ender Pearl | Transfer block ownership |
+| 5 | Chain | Lock Group management GUI *(only when enabled)* |
+| 5 / 6 | Hopper or Lime Dye | Protection Expiry management *(only when enabled)* |
 
 **Bottom row (slots 9–17):**
 
@@ -601,6 +603,17 @@ On first boot after renaming the plugin, BlockProt Reloaded automatically copies
 
 Supports pagination for players with many protected blocks. Works for **offline players**. Requires `blockprot.user.admin`.
 
+#### 39. Lock Groups *(opt-in, disabled by default)*
+
+Link multiple blocks under one protection entry so that adding or removing a friend in any member block propagates to all others in the group automatically.
+
+- Open the Block Lock menu (sneak + right-click), then click the **Lock Group** button (slot 11, diamond icon) to open the Group Management GUI.
+- **Create group:** Generates a unique 8-character group ID. This block becomes the first member.
+- **Join group:** Prompted via an anvil interface to enter an existing group ID. Once joined, this block instantly shares the same friend list as other members in that group.
+- **Leave group:** Remove only this block from the group (its friend list is preserved but updates will no longer propagate).
+- **Dissolve group:** Disbands the group entirely, removing the group association from all member blocks.
+- Updates to any member block's friend list propagate to all online, chunk-loaded group members instantly.
+
 ---
 
 ## Configuration Reference
@@ -662,6 +675,19 @@ discord_webhook_events:
   - ACCESS_DENIED
 discord_webhook_min_count: 1             # 1 = alert on every matching event
 discord_webhook_cooldown_minutes: 10     # per-block cooldown between alerts
+
+# ── 10. Access Notifications ──────────────────────────────────────────
+access_notifications_default: false
+access_notifications_cooldown_seconds: 30
+
+# ── 11. Protection Expiry ─────────────────────────────────────────────
+enable_protection_expiry: false
+expiry_scan_on_startup: true             # requires mysql.enabled: true
+
+# ── 12. Lock Groups ───────────────────────────────────────────────────
+lock_groups:
+  enabled: false
+  max_size: -1
 ```
 
 ### `mysql/mysql.yml`
