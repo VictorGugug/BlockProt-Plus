@@ -154,7 +154,8 @@ plugins/BlockProt/
 ├── lang/
 │   └── translations_*.yml              ← 15 bundled language files
 ├── logs/
-│   └── session-YYYY-MM-DD.log          ← Per-session log file
+│   ├── blockprot-current.log           ← Active log file (shared across restarts)
+│   └── blockprot-YYYY-MM-DD--YYYY-MM-DD.log  ← Rotated archive (created after 24 h)
 └── backups/
     └── config-backup-YYYY-MM-DD_HH-MM.yml   ← Created on plugin version upgrade
 ```
@@ -318,7 +319,7 @@ Compiles against the Paper/Spigot 1.20.6 API and runs on any version from 1.20 t
 
 #### 2. Persistent Session Logging
 
-One timestamped log file per server session under `plugins/BlockProt/logs/`. Logs plugin version, server version, and compatibility results. Console output remains clean.
+One active log file (`blockprot-current.log`) is reused across server restarts. When the file exceeds 24 hours it is rotated: renamed to `blockprot-YYYY-MM-DD--YYYY-MM-DD.log` (start–end timestamps) and a fresh `blockprot-current.log` is created. Rotation also happens mid-session if the server stays up for more than 24 hours. Console output remains clean.
 
 #### 3. Hybrid MySQL / NBT Backend *(optional)*
 
@@ -437,9 +438,9 @@ use_menus: false   # default
 | `false` (default) | Disabled and hidden from tab-complete | Active |
 | `true` | Active | Disabled and hidden from tab-complete |
 
-#### 25. Sign Editor Input (Zero NMS)
+#### 25. Block Rename via Anvil GUI
 
-Where text input is required (player name search, block rename) the plugin uses the native sign editor (`player.openSign()`) introduced in Bukkit 1.20. No XP cost, no item required, cleaner UX. The sign is never written to the world — `SignChangeEvent` is cancelled and only line 0 is captured. On pre-1.20 servers the anvil GUI is used as a fallback. No NMS, no external libraries.
+When renaming a block (Name Tag button in the Block Lock menu), an anvil GUI is used as input across all supported versions (1.20.6 through 26.x). The current block name is pre-filled in the input slot. No XP cost is required — the repair cost is forced to 0 via a version-aware fallback that works on both pre-1.21.4 and post-1.21.4 servers.
 
 #### 26. Comprehensive Block Coverage
 
@@ -605,14 +606,28 @@ Supports pagination for players with many protected blocks. Works for **offline 
 
 #### 39. Lock Groups *(opt-in, disabled by default)*
 
-Link multiple blocks under one protection entry so that adding or removing a friend in any member block propagates to all others in the group automatically.
+Links multiple blocks under one shared protection entry. Adding or removing a friend on any member block automatically propagates the change to every other block in the group.
 
-- Open the Block Lock menu (sneak + right-click), then click the **Lock Group** button (slot 11, diamond icon) to open the Group Management GUI.
-- **Create group:** Generates a unique 8-character group ID. This block becomes the first member.
-- **Join group:** Prompted via an anvil interface to enter an existing group ID. Once joined, this block instantly shares the same friend list as other members in that group.
-- **Leave group:** Remove only this block from the group (its friend list is preserved but updates will no longer propagate).
-- **Dissolve group:** Disbands the group entirely, removing the group association from all member blocks.
-- Updates to any member block's friend list propagate to all online, chunk-loaded group members instantly.
+- Open the Block Lock menu on any protected block you own, then click the **Chain** button (visible only when `lock_groups.enabled: true`).
+- **Create group** — makes the current block the first member of a new group.
+- **Leave group** — removes only the current block from the group.
+- **Dissolve group** — removes all blocks from the group and deletes it.
+- Member count is shown in the GUI title.
+- Group membership is stored as an NBT key (`blockprot_group_id`) on each block. The registry is rebuilt in memory on the next interaction; no startup scan is required.
+- Friend sync is asynchronous — it never blocks the main thread.
+
+```yaml
+# config.yml
+lock_groups:
+  enabled: false
+  max_size: -1   # -1 = unlimited members per group
+```
+
+#### 40. Statistics Block Contents
+
+The statistics list shows the contents of each container block in the item tooltip. Shulker boxes, chests, barrels, and any other block with an inventory display up to 5 item types with counts. A blank separator line divides the block info from the contents. Blocks that are empty show “Empty”. Blocks without inventories (doors, fence gates, etc.) show no contents section.
+
+
 
 ---
 
