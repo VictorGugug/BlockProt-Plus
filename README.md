@@ -10,7 +10,7 @@
 
 **Fork created and maintained by [Zar](https://github.com/VictorGugug)**
 
-*Java 25 · Paper 26.x · MySQL index · per-world config · access audit · pet protection · auto-backup · ownership transfer · timed access · statistics TP*
+*Java 25 · Paper 26.x · MySQL index · per-world config · access audit · pet protection · auto-backup · ownership transfer · statistics TP*
 
 </div>
 
@@ -179,7 +179,6 @@ Two-row inventory. Top row holds functional buttons; bottom row holds utility bu
 | 2 | Player Head | Manage friends |
 | 3 | Name Tag | Set custom block name |
 | 4 | Ender Pearl | Transfer block ownership |
-| 5 | Chain | Lock Group management GUI *(only when enabled)* |
 | 5 / 6 | Hopper or Lime Dye | Protection Expiry management *(only when enabled)* |
 
 **Bottom row (slots 9–17):**
@@ -252,7 +251,7 @@ All commands are aliases for `/blockprot` as well. The command visibility is con
 | Command | Permission | Description |
 |---|---|---|
 | `/bp transfer <player>` | `blockprot.user` | Transfer ownership of looked-at block to another player |
-| `/bp timed <player> <seconds>` | `blockprot.user` | Grant temporary access to looked-at block for specified seconds |
+| `/bp transfer all <player>` | `blockprot.user` | Transfer ALL owned blocks to another player |
 | `/bp friends addall <player>` | `blockprot.user` | Add player as friend to all your owned blocks |
 | `/bp stats` | `blockprot.user` | Open statistics/block list GUI |
 | `/bp settings` | `blockprot.user` | Open personal settings GUI |
@@ -398,11 +397,13 @@ Right-click your pet while holding the configured `menu_item` (default: Stick) t
 
 #### 17. Update Checker
 
-Queries the GitHub Releases API once per session. Detects SNAPSHOT, alpha, beta, rc, and experimental builds. Issues a console warning and an optional operator join message when an update is available.
+Queries the GitHub Releases API once per session. Detects SNAPSHOT, alpha, beta, rc, and experimental builds. Issues a console warning when outdated. When `/bp update` is run, only the requesting player (or console) receives the notification — other online players are not notified.
 
 #### 18. Ownership Transfer (`/bp transfer` or GUI)
 
 `/bp transfer <player>` — look at any block you own and run the command. The target player becomes the new owner; the original owner is added as a friend automatically.
+
+`/bp transfer all <player>` — transfers **every block** in your stats list to the target player in one operation. Useful when handing over an entire base.
 
 #### 19. Copy-Paste (Upstream Fix — Issue #268)
 
@@ -535,7 +536,7 @@ Respects town and nation permissions, WorldGuard region flags, Lands claim owner
 
 #### 32. SkinsRestorer Support
 
-Displays correct player head icons in offline-mode servers using SkinsRestorer's skin cache.
+Displays correct player head icons in offline-mode servers using SkinsRestorer's skin cache. Player skins are pre-fetched asynchronously on login so that the first time a head appears in a GUI it is already skinned — no more blank heads on the first open.
 
 #### 33. MiniMessage / Adventure Color Support
 
@@ -600,41 +601,20 @@ On first boot after renaming the plugin, BlockProt Reloaded automatically copies
 `/bp unlock <player>` — opens a six-row GUI listing every block currently protected by the target player.
 
 - **Left-click** any block: opens its inventory contents in read-only mode. Items cannot be taken or placed — this is purely for inspection.
-- **Right-click** any block: removes the protection from that block entirely. The action bar immediately shows the block’s name, the player it was removed from, and the coordinates.
+- **Right-click** any block: removes the protection from that block entirely. The action bar immediately shows the block's name, the player it was removed from, and the coordinates.
 
 Supports pagination for players with many protected blocks. Works for **offline players**. Requires `blockprot.user.admin`.
 
-#### 39. Lock Groups *(opt-in, disabled by default)*
+#### 39. Statistics Block Contents
 
-Links multiple blocks under one shared protection entry. Adding or removing a friend on any member block automatically propagates the change to every other block in the group.
-
-- Open the Block Lock menu on any protected block you own, then click the **Chain** button (visible only when `lock_groups.enabled: true`).
-- **Create group** — makes the current block the first member of a new group.
-- **Leave group** — removes only the current block from the group.
-- **Dissolve group** — removes all blocks from the group and deletes it.
-- Member count is shown in the GUI title.
-- Group membership is stored as an NBT key (`blockprot_group_id`) on each block. The registry is rebuilt in memory on the next interaction; no startup scan is required.
-- Friend sync is asynchronous — it never blocks the main thread.
-
-```yaml
-# config.yml
-lock_groups:
-  enabled: false
-  max_size: -1   # -1 = unlimited members per group
-```
-
-#### 40. Statistics Block Contents
-
-The statistics list shows the contents of each container block in the item tooltip. Shulker boxes, chests, barrels, and any other block with an inventory display up to 5 item types with counts. A blank separator line divides the block info from the contents. Blocks that are empty show “Empty”. Blocks without inventories (doors, fence gates, etc.) show no contents section.
-
-
+The statistics list shows the contents of each container block in the item tooltip. Shulker boxes, chests, barrels, and any other block with an inventory display up to 5 item types with counts. A blank separator line divides the block info from the contents. Blocks that are empty show "Empty". Blocks without inventories (doors, fence gates, etc.) show no contents section.
 
 ---
 
 ## Configuration Reference
 
 ```yaml
-# ── 1. General ──────────────────────────────────────────────────────
+# -- 1. General
 language_file: translations_en.yml
 fallback_string: "Unknown translation"
 replace_translations: true
@@ -645,64 +625,59 @@ worlds_config_enabled: false
 bedrock_username_prefixes: [".", "*", "_"]
 inactivity_cleanup_days: -1          # -1 = disabled
 
-# ── 2. Player & Protection Defaults ─────────────────────────────────
+# -- 2. Player & Protection Defaults
 lock_on_place_by_default: true
 public_is_friend_by_default: false
 player_max_locked_block_count: -1    # -1 = unlimited
 lock_hint_cooldown_in_seconds: 10
-friend_search_similarity: 0.5        # 0.0 – 1.0
+friend_search_similarity: 0.5        # 0.0 - 1.0
 disable_friend_functionality: false
 redstone_disallowed_by_default: false
 
-# ── 3. Safety & Protection Behavior ─────────────────────────────────
+# -- 3. Safety & Protection Behavior
 protect_locked_blocks_from_explosions: true
 block_protected_block_piston_movement: true
-clear_protection_on_shulker_break: false   # true = drop clears protection (issue #346)
-allow_break_protected_blocks: false         # true = reinforcement-plugin mode (issue #324)
+clear_protection_on_shulker_break: false
+allow_break_protected_blocks: false
 respect_spawn_protection: true
 
-# ── 4. Pet Protection ────────────────────────────────────────────────
+# -- 4. Pet Protection
 pet_protection:
   enabled: false
   auto_protect_on_tame: true
   menu_item: STICK
 
-# ── 5. Effects ────────────────────────────────────────────────────────
+# -- 5. Effects
 block_lock_effects: true
 block_lock_sounds: true
 
-# ── 6. Timed Access ──────────────────────────────────────────────────
+# -- 6. Timed Access
 timed_access_max_duration_days: 90
 
-# ── 7. WorldEdit Integration ─────────────────────────────────────────
+# -- 7. WorldEdit Integration
 worldedit_paste_autolock:
   enabled: false
   radius: 24
   max_blocks_per_paste: 5000
   delay_ticks: 20
 
-# ── 8. Menus & Commands ──────────────────────────────────────────────
+# -- 8. Menus & Commands
 use_menus: false
 
-# ── 9. Discord Webhook ───────────────────────────────────────────────
-discord_webhook_url: ""                  # empty = disabled
+# -- 9. Discord Webhook
+discord_webhook_url: ""
 discord_webhook_events:
   - ACCESS_DENIED
-discord_webhook_min_count: 1             # 1 = alert on every matching event
-discord_webhook_cooldown_minutes: 10     # per-block cooldown between alerts
+discord_webhook_min_count: 1
+discord_webhook_cooldown_minutes: 10
 
-# ── 10. Access Notifications ──────────────────────────────────────────
+# -- 10. Access Notifications
 access_notifications_default: false
 access_notifications_cooldown_seconds: 30
 
-# ── 11. Protection Expiry ─────────────────────────────────────────────
+# -- 11. Protection Expiry
 enable_protection_expiry: false
-expiry_scan_on_startup: true             # requires mysql.enabled: true
-
-# ── 12. Lock Groups ───────────────────────────────────────────────────
-lock_groups:
-  enabled: false
-  max_size: -1
+expiry_scan_on_startup: true         # requires mysql.enabled: true
 ```
 
 ### `mysql/mysql.yml`
@@ -794,7 +769,6 @@ auto_drop_to_inventory:
 
 ```yaml
 # Per-world overrides. If worlds_config_enabled: false in config.yml, this file is ignored.
-# Each world can override which blocks are lockable and whether protection is active.
 world:
   enabled: true
   lockable_tile_entities: []    # empty = use global blocks.yml
